@@ -1,42 +1,115 @@
 # Vision Learning Hub · 视觉学习实验室
 
-从像素和 NumPy 开始，学习 OpenCV、经典视觉算法、YOLO 数据处理与 Linux / 嵌入式基础。通过课程阅读、手敲代码、图像对照和多样例验收积累自己的视觉工程。
+**从读懂图像，到独立交付一个能运行、能验证的视觉工程。**
 
-**0.6.0：八个工程支持独立挑战与分块引导，兼容网页版和可选VS Code扩展。** 插件提供学习面板，代码使用 VS Code 原生编辑器；课程与基础实验可离线使用，官方资料链接需要联网。
+面向视觉初学者的本地学习平台：阅读课程、手敲 Python、观察处理结果，再通过多场景验收检验实现。支持网页版和可选安装的 VS Code 扩展，使用 OpenCV、NumPy 和普通 Python 模块组织代码。
 
-## 能做什么
+[![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
+
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.6.0.md)
+
+> 当前源码版本为 **0.6.0**。安装包以 GitHub Releases 实际发布版本为准；如果尚无 0.6.0 安装包，可按下文运行源码或自行构建 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 平台概览
 
 | 模块 | 当前能力 |
 | --- | --- |
-| 学习路线 | 32 章，包含原理、适用情况、易错点、自查与笔记 |
-| 编程实践 | 44 道基础练习 + 8 个多文件工程（40个任务块）；每项5组正式验收，源码变化后重新判断进度 |
-| 图像实验室 | 12 种 OpenCV 方法、4 类内置场景、自定义图片与参数对照 |
-| 学习资料 | 35 份官方资料索引，支持搜索、阶段筛选和收藏 |
-| VS Code | 侧栏路线、原生 Python 文件、终端运行、Python 断点调试、测试资源管理器 |
-| 本地记录 | SQLite 笔记、历史、收藏、代码快照，ZIP 备份恢复 |
-| 清除功能 | 分别清除实验缓存、验收历史、全部学习记录；保留源码；单题重置先备份代码 |
+| 学习路线 | **32 章**，从 Python / NumPy、OpenCV 到经典算法、YOLO 数据处理及 Linux / 嵌入式基础 |
+| 基础练习 | **44 道**，包含题目契约、提示、参考实现与每题 5 组正式验收样例 |
+| 工程实训 | **8 个多文件工程、40 个任务块**，可独立挑战，也可跟随分块引导 |
+| 图像实验室 | **12 种方法、4 类内置场景**，支持调参、中间图对照和自有图片探索 |
+| 学习资料 | **35 份官方资料索引**，支持搜索、筛选与收藏；工程另附相关官方教程 |
+| 开发环境 | VS Code 原生编辑器、终端、调试入口和测试资源管理器；工程可导出到 PyCharm / 命令行运行 |
+| 学习记忆 | SQLite 保存代码快照、笔记、当前任务、提示状态与验收历史，支持 ZIP 备份恢复 |
 
-YOLO 目前提供标签、坐标与指标练习，尚未接入真实训练、模型推理及完整 mAP 评价。Linux / 嵌入式包含课程与离线日志练习，尚未连接开发板或终端。VS Code 插件不会自动安装到你的编辑器。
+## 界面预览
 
-## 仓库结构
+学习总览：课程、练习和工程集中在同一个学习空间。
+
+![学习总览](VisionLearningHub/docs/images/learning-overview.png)
+
+分块引导：查看交付约定、展开提示、打开真实代码文件，再检查当前任务块。
+
+![工程分块引导](VisionLearningHub/docs/images/guided-learning.png)
+
+截图来自 0.6.0 本地运行界面，使用独立演示数据。
+
+## 八个工程案例
+
+| 编号 | 工程 | 需要交付的结果 | 主要训练内容 |
+| --- | --- | --- | --- |
+| E01 | 批量硬币计数与定位 | 数量、中心坐标、标注图、坏图记录 | 目录读图、轮廓、筛选、批处理 |
+| E02 | 纹理表面缺陷与放行判断 | 缺陷框、accept/reject、标注图 | 曝光补偿、图像差分、区域提取 |
+| E03 | 单据定位与透视校正 | 四角、统一尺寸校正图、定位图 | 点序、透视变换、空场景处理 |
+| E04 | 传送带跟踪与双向过线计数 | 连续 ID、目标中心、双向事件 | 时序关联、短时缺失、事件去重 |
+| E05 | 颜色零件分拣与批量统计 | 类别、中心坐标、统计与标注图 | HSV、红色跨端点、噪点过滤 |
+| E06 | 平面零件尺寸测量 | 毫米尺寸、标尺缺失状态、标注图 | 像素比例、旋转矩形、测量条件 |
+| E07 | 纹理标签定位与漏贴检查 | 标签四角、存在/缺失判断 | ORB、匹配筛选、RANSAC、几何映射 |
+| E08 | 九宫格拼图身份与方向恢复 | 图块身份、恢复角度、排列有效性 | 网格切分、旋转比较、缺块与重复块 |
+
+工程使用真正的 PNG 文件、配置文件和多份 Python 源码。你可以自行定义函数、增加根目录模块，通过普通 `import` 组合流程。最终验收读取程序生成的 JSON、标注图、校正图或事件记录。
+
+素材包含公开硬币照片、CC0 纹理及明确标注的教学合成变化。来源、许可和 SHA-256 见 [素材说明](VisionLearningHub/content/engineering/NOTICE.md)。这些教学数据的通过结果不能代替现场设备验收。
+
+## 独立完成，或跟着任务块学习
+
+| | 独立挑战 | 分块引导 |
+| --- | --- | --- |
+| 从哪里开始 | 阅读需求、输入和交付标准 | 选择当前任务块，阅读目标与约定 |
+| 如何组织代码 | 自己设计函数、模块和流程 | 参考建议，逐块实现普通 Python 检查入口 |
+| 如何获取帮助 | 按需打开资料、提示与参考工程 | 前置题、官方资料、分层提示随任务提供 |
+| 如何验证 | 直接运行开发样例和完整验收 | 单块检查 → 联调 → 完整验收 |
+
+两种方式共享同一份源码，随时切换。引导模式包含五个可运行任务块：
 
 ```text
-VisionLearningHub/                 # 本仓库根目录，唯一的 .git 在这里
-├─ README.md
-├─ .github/workflows/check.yml
-└─ VisionLearningHub/              # 应用工程，普通目录
-   ├─ backend/                    # API、图像实验和文件工作区
-   ├─ frontend/                   # 网页 / VS Code 共用学习界面
-   ├─ learning/                   # 课程练习、判题、存储和调试入口
-   ├─ extensions/vscode/          # 可选 VS Code 扩展源码
-   ├─ content/                    # 官方资料索引
-   ├─ docs/
-   └─ tests/
+读写与输入检查 → 算法结果 → 可视化与模块衔接 → 完整批处理 → 多场景完整验收
 ```
 
-## 方式一：网页版
+读写、算法和可视化可单独验证；只实现读图模块，也能得到反馈。可视化支持使用标准检测结果先练习绘图，或接入自己的检测结果检查模块衔接。标准输入练习与自己的输入分别记录。
 
-需要 Python 3.12 和 Node.js 22。下面从仓库根目录执行，Windows PowerShell 示例：
+**完整工程通关仍以自己的完整程序通过 5 批正式验收为准。** 修改源码后，旧报告保留，当前状态提示重新检查。保存学习方式、当前任务、输入来源、提示展开状态和复盘笔记。
+
+建议零基础先从 **S00 → P01 → P02** 开始；想体验工程拆分，可以先做 **E05 颜色分拣**。详见 [双模式工程学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md)。
+
+## 使用方式一：VS Code 扩展
+
+### 安装与首次使用
+
+1. 从 [GitHub Releases](https://github.com/CaoYujie-code/VisionLearningHub/releases) 下载实际已发布的 `.vsix`；也可以按下文自行构建当前源码版本。
+2. VS Code → 扩展 → 右上角 `…` → **从 VSIX 安装**。
+3. 打开一个可信任的本地文件夹作为学习工作区，为其准备 Python 3.12 环境并安装应用内的 `requirements.lock.txt`。
+4. 打开“视觉学习”，执行 **Vision: Python 环境设置与检查**，选择兼容的解释器。
+5. 打开题目或工程，点击“打开代码文件”或“打开本块代码”，在原生编辑器中编写并运行。
+
+扩展是可选安装的，禁用或卸载使用 VS Code 标准扩展操作。Python 断点调试需自行安装 Microsoft Python Debugger（`ms-python.debugpy`）；建议安装 Python 与 Pylance 获取编辑支持。
+
+### 更新
+
+0.3.1 及之后的扩展可执行 **Vision: 检查插件更新**。扩展从 GitHub Releases 检查新版，校验安装包后使用 VS Code 的安装命令更新，按提示重载窗口。也可每 24 小时自动检查，通过 `visionLearning.checkUpdates` 配置开关。
+
+更新依赖已发布的 Release，只有源码提交时不会产生可下载的新版本。私有仓库需通过 VS Code 登录有权限的 GitHub 账号。参见 [插件更新与发布](VisionLearningHub/docs/插件更新与发布.md)。
+
+### 实际源码在哪里
+
+```text
+<你的学习工作区>/.vision-learning/
+├─ exercises/                 # 基础题 Python 文件
+├─ projects/E01/              # 多文件工程，E02–E08 同理
+│  ├─ main.py                 # 完整工程入口
+│  ├─ imaging.py              # 读写模块
+│  ├─ pipeline.py             # 算法与流程
+│  ├─ checkpoint.py           # 可选分块入口
+│  ├─ config.json             # 参数
+│  └─ data/sample/            # 开发素材
+└─ data/learning.sqlite3      # 学习记录
+```
+
+旧工程可主动点击“添加分块入口”，只创建缺少的 `checkpoint.py`。现有同名文件会保留。工程 ZIP 可导出到 VS Code、PyCharm 或命令行独立运行。
+
+## 使用方式二：从源码运行网页版
+
+开发环境：Python **3.12**、Node.js **22**。从仓库根目录执行，以下为 Windows PowerShell 示例：
 
 ```powershell
 cd VisionLearningHub
@@ -48,58 +121,20 @@ npm run build
 .\.venv\Scripts\python.exe launch.py
 ```
 
-配置好后，双击工程中的 `启动学习平台.cmd`；结束时使用 `停止学习平台.cmd`。关闭浏览器不等于停止网页版服务。虚拟环境不随仓库提交，移动目录后建议重建；不要依赖另一台电脑复制来的 `.venv`。
+配置完成后，可双击应用目录的 `启动学习平台.cmd`；使用 `停止学习平台.cmd` 结束服务。关闭浏览器标签页不会停止后台服务。虚拟环境不随仓库提交，换电脑或移动路径后应重新创建。
 
-## 方式二：VS Code 扩展
+网页版默认记录在 `%LOCALAPPDATA%\VisionLearningHub`；插件记录属于当前工作区，两者不自动共享数据库，可通过备份迁移。
 
-### 安装与卸载
+## 保存、备份与清除
 
-从 [GitHub Releases](https://github.com/CaoYujie-code/VisionLearningHub/releases) 或维护者提供的安装包取得 `vision-learning-hub-0.6.0.vsix`，或按下文自行构建。VS Code → 扩展 → 右上角 `…` → **从 VSIX 安装**，由你决定是否安装。当前版本未发布到 Visual Studio Marketplace，不能承诺在商店中搜索得到。
+- **保存与记忆**：代码、笔记、收藏、任务块状态和验收快照保存到本地 SQLite。
+- **备份恢复**：在“记录与设置”导出 ZIP。VS Code 恢复时把旧源码放入 `data/restored-code/` 供比较，保留当前编辑文件。
+- **清除范围**：分别清除实验缓存、验收历史、全部学习记录，操作前需输入 `CLEAR`；保留练习及工程源码。
+- **自有图片**：E01/E03 支持平台内上传 PNG/JPEG 探索；全部工程可导出后接入自己的数据。没有人工真值的探索不会计入正式通关。
 
-禁用和卸载使用 VS Code 扩展面板的标准操作，按编辑器提示重载窗口。扩展停用时结束自身的 Python 服务；异常退出时通过父进程管道关闭服务。代码和学习记录保留，卸载前可主动备份或清除。
+## 构建 VSIX 与开发验证
 
-### 后续更新
-
-首次安装 0.3.1 后，可通过 **Vision: 检查插件更新** 更新，无需再次手动导入。插件每 24 小时自动检查 GitHub Releases，发现新版本后由你点击“更新”，校验并安装后重载窗口。可通过 `visionLearning.checkUpdates` 关闭自动检查。
-
-私有仓库需要通过 VS Code 登录有权限的 GitHub 账号。0.3.0 仍需先安装一次新版。维护者推送版本标签后，由 GitHub Actions 构建并发布安装包。详见 [插件更新与发布](VisionLearningHub/docs/插件更新与发布.md)。
-
-### 首次使用
-
-1. 在桌面 VS Code 中打开一个可信任的本地文件夹作为学习工程。
-2. 为该工程创建 Python 3.12 虚拟环境并安装项目 `requirements.lock.txt`。也可以使用已有的兼容环境。
-3. 打开左侧“视觉学习”，执行 **Vision: Python 环境设置与检查**，需要时选择解释器。安装依赖按钮会展示目标解释器，确认后才运行 pip。
-4. 从课程选择练习，点击“打开代码文件”。写在 `.vision-learning/exercises/*.py` 中的是真实源码。
-5. “终端运行”用于探索；“断点调试”需要自行安装 Microsoft Python Debugger（`ms-python.debugpy`）。建议同时安装 Python 与 Pylance 获得补全。
-6. 点击“多样例验收”，或使用 VS Code 测试资源管理器。执行前保存练习文件，结果绑定保存后的代码快照。
-
-解释器可通过 `visionLearning.pythonPath` 指定。扩展的终端任务、调试配置和验收服务使用同一个解释器。未指定时先发现工程 `.venv`，再尝试 Python 扩展选择的环境与系统 Python。
-
-### 学习记录与清除范围
-
-插件数据属于当前工程，保存在 `<打开的工程>/.vision-learning/`：
-
-| 路径 | 用途 |
-| --- | --- |
-| `exercises/` | 基础题代码，清除学习记录不会删除 |
-| `projects/E01/` 等 | 工程源码、配置与开发素材，清除学习记录不会删除 |
-| `data/learning.sqlite3` | 笔记、收藏、验收历史与代码快照 |
-| `data/runs/` | 验收样例和结果图 |
-| `data/restored-code/` | 恢复旧备份时暂存的代码，供手动比较 |
-| `.vision-backups/` | 重置单题之前保存的原代码 |
-
-通过“记录与设置”或 **Vision: 清除学习记录或缓存** 操作，输入 `CLEAR` 才执行：
-
-- **实验缓存**：删除实验图片、上传图片和可重新生成的预览，保留进度。
-- **验收历史**：删除历史与运行图片，通关归零，保留笔记、收藏和源码。
-- **全部学习记录**：同时清除笔记、收藏、图片以及当前数据目录中的导出备份。先把需要的备份导出到其他位置。源码与单题重置备份保留。
-- **重置当前练习**：另一个独立命令，经确认后把原代码备份，再恢复 TODO 模板。
-
-旧网页版 ZIP 备份可在插件中恢复。插件恢复笔记和历史，但将备份代码另存到 `data/restored-code/`，不覆盖正在编辑的文件；代码不同的历史成绩显示为旧版本。网页与插件默认使用不同数据空间，不自动共享数据库。
-
-## 构建 VSIX
-
-先完成前端构建，再在应用目录执行：
+完成应用依赖安装与前端构建后，在内层应用目录执行：
 
 ```powershell
 npm ci --prefix extensions/vscode
@@ -108,60 +143,50 @@ npm --prefix extensions/vscode test
 npm --prefix extensions/vscode run package
 ```
 
-安装包输出到仓库根目录 `releases/`。构建不会调用 VS Code 安装命令，也不会发布到扩展市场。VSIX 包含界面和 Python 业务源码，不包含 Python 解释器、虚拟环境或 GPU 依赖。
-
-## 开发与验证
+安装包生成在外层仓库的 `releases/`。VSIX 包含前端资源、Python 业务代码与教学素材；Python 解释器及依赖使用本机环境。
 
 ```powershell
-# 在内层应用目录执行；测试使用临时数据空间
+# 在内层应用目录执行；各测试使用独立学习数据
 .\.venv\Scripts\python.exe tests\test_platform.py
 .\.venv\Scripts\python.exe tests\test_acceptance_v020.py
 .\.venv\Scripts\python.exe tests\test_workspace.py
 .\.venv\Scripts\python.exe tests\test_content_v040.py
 .\.venv\Scripts\python.exe tests\test_projects.py
-npm run check
-npm run build
-npm --prefix extensions/vscode test
+.\.venv\Scripts\python.exe tests\test_guides.py
 ```
 
-浏览器测试会修改学习记录，应只针对独立测试服务运行。VS Code 集成测试入口在 `extensions/vscode/test/host.cjs`，必须使用独立用户目录与测试工作区；参阅 [插件开发与验收](VisionLearningHub/docs/VSCode插件开发与验收.md)。
+0.6.0 本机验收通过 **39 组 Python/API 检查、64 项浏览器流程、29 项隔离 VS Code 检查**。52 项基础题与工程参考实现覆盖 260 组完整验收输入；另有分块专项测试。具体环境、证据和验证边界见 [0.6.0 验收记录](VisionLearningHub/docs/验收记录-0.6.0.md)。
 
-平台代码仅提供课程与运行组织，练习使用 OpenCV / NumPy 官方 API；新工程的组合题采用普通 Python 模块导入。旧网页版的辅助调用暂保留兼容。当前依赖使用 headless OpenCV，通过面板看图；需要 `cv2.imshow` 时应在独立学习环境中改用对应 GUI 包，不能同时安装多个提供 `cv2` 的包。
+## 仓库结构
 
-学生代码按当前用户权限运行，进程隔离和超时不是权限沙箱。请运行自己理解的代码。本版本未完成 Marketplace 发布、独立 EXE 或实物设备验收。
+```text
+VisionLearningHub/                 # 外层仓库，唯一的 .git 位于这里
+├─ README.md                       # GitHub 展示首页
+├─ .github/workflows/              # 检查与 VSIX 发布
+└─ VisionLearningHub/              # 应用工程
+   ├─ backend/                     # API、图像实验与原生工作区
+   ├─ frontend/                    # 网页 / VS Code 共用界面
+   ├─ learning/                    # 课程、工程、任务块与验收
+   ├─ extensions/vscode/           # 可选扩展源码
+   ├─ content/engineering/         # 图片与来源说明
+   ├─ docs/                        # 指南、截图与验收证据
+   └─ tests/
+```
 
-资料：[完整学习路线](VisionLearningHub/docs/学习路线-0.4.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [版本验收](VisionLearningHub/docs/验收记录-0.6.0.md)
+## 当前范围
 
-## 0.4.0 内容扩展
+OpenCV 与经典视觉工程可在本地运行。YOLO 目前提供标签、坐标处理和评价练习，尚未接入真实模型训练、推理或完整 mAP 评价；Linux / 嵌入式目前为课程及离线日志练习，尚未连接 SSH、摄像头或开发板。
 
-新增图像缩放与增强、连通域与距离图、模板与特征匹配、相机标定、视频运动、检测数据审计、Linux 缓冲与性能、模型量化对照。学习路线支持按题号、标题和知识点搜索。
+E06 的自动验收限定正视同平面测量；E08 限定固定九宫格，不包含自由散落拼图检测或机械执行。当前未交付独立 EXE。练习进程具有当前用户的本机权限，超时与独立进程不构成权限沙箱。
 
-参见 [分阶段学习路线与新增题目](VisionLearningHub/docs/学习路线-0.4.0.md)。新题继续使用 OpenCV、NumPy 和 Python 标准库，不增加运行依赖；实机扩展与自动验收边界在各章单独说明。更新保留原有代码、笔记和验收记录。
+## 文档入口
 
-## 0.5.0 工程项目实训
-
-新增 **工程项目** 入口，将文件读取、独立函数与模块、参数配置、异常处理和结果交付连接起来。
-
-| 工程 | 场景与交付 |
-| --- | --- |
-| E01 | 批量硬币计数：数量、中心坐标与标注图 |
-| E02 | 纹理表面缺陷：曝光补偿、缺陷框与放行判断 |
-| E03 | 单据透视校正：四角、统一尺寸校正图、空场景拒绝 |
-| E04 | 传送带跟踪：连续ID、双向过线事件、短时缺失处理 |
-
-每个工程包含5个实施阶段、真实PNG文件、多个可编辑Python文件与5批正式验收输入。VS Code使用 `.vision-learning/projects/E01/` 等实际目录；网页版支持多文件编辑和添加模块。导出后可在VS Code/PyCharm独立运行，E01/E03还支持平台内上传自己的图片探索。
-
-素材来自公开硬币照片与CC0纹理，已记录来源、许可说明和SHA-256；缺陷、单据和运动是明确标注的教学变体。扩展不增加运行依赖，也不会把自有图片探索计入正式通关。
-
-详见 [工程项目实训指南](VisionLearningHub/docs/工程项目实训指南.md)。先更新插件并重载窗口，再进入左侧“工程项目”。
-
-
-## 0.6.0 双模式与八个工程
-
-每个工程都支持“独立挑战 / 分块引导”，共用同一份Python源码，切换不重置文件。五个可运行任务块为：读写、算法、可视化、完整批处理、多场景验收。每块提供输入输出约定、提示、前置题与官方资料。
-
-新增颜色零件分拣、平面尺寸测量、纹理标签定位、九宫格拼图恢复；共44道基础练习 + 8个工程、32章课程、40个任务块。采用原生OpenCV/NumPy，不增加运行依赖。场景使用公开照片与明确标注的合成变化。
-
-可视化可选择标准检测结果或自己的上游结果；标准输入通过不代表工程通关。保存学习方式、当前块、提示、输入来源和验收记录；源码变化后提示重新验证。旧工程按需添加checkpoint.py，已有文件保留。工程导出包含分块说明和标准中间数据，可独立运行。
-
-参见 [双模式工程学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md)。
+- [第一次使用与学习指南](VisionLearningHub/docs/第一次使用与学习指南.md)
+- [双模式工程学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md)
+- [工程输入输出与素材说明](VisionLearningHub/docs/工程项目实训指南.md)
+- [分阶段学习路线](VisionLearningHub/docs/学习路线-0.4.0.md)
+- [官方学习资料导航](VisionLearningHub/docs/官方学习资料导航.md)
+- [VS Code 插件开发与验收](VisionLearningHub/docs/VSCode插件开发与验收.md)
+- [插件更新与发布](VisionLearningHub/docs/插件更新与发布.md)
+- [版本更新记录](VisionLearningHub/extensions/vscode/CHANGELOG.md)
+- [各版本验收记录](VisionLearningHub/docs/验收记录.md)
