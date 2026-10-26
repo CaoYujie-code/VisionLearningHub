@@ -44,14 +44,14 @@ class PlatformChecks(unittest.TestCase):
         return self.wait_job(response.json()['id'])
 
     def test_01_all_reference_contracts(self):
-        self.assertEqual(len(LESSONS), 44)
+        self.assertEqual(len(LESSONS), 48)
         for lesson in LESSONS:
             with self.subTest(lesson=lesson['id']):
                 response = execute(dict(lesson=lesson['id'], codes=self.references, verify=True,
                                         folder=str(Path(TEMP.name)/'reference'/lesson['id'])))
                 self.assertTrue(response['passed'], json.dumps(response,ensure_ascii=False))
                 self.assertEqual(len(response['reports']),5)
-        print('44 reference solutions / 220 fixtures passed')
+        print('48 reference solutions / 240 fixtures (44 exercises + 4 multi-file projects) passed')
 
     def test_02_local_access_and_assets(self):
         self.assertEqual(self.client.get('/api/bootstrap',headers={'X-VLH-Token':''}).status_code,403)
@@ -60,7 +60,7 @@ class PlatformChecks(unittest.TestCase):
         self.assertEqual(self.client.get('/api/assets/learning.sqlite3').status_code,404)
         self.assertEqual(self.client.post('/api/shutdown').status_code,403)
         boot=self.client.get('/api/bootstrap').json()
-        self.assertEqual(len(boot['courses']),24)
+        self.assertEqual(len(boot['courses']),28)
         self.assertEqual(len(boot['resources']),35)
         assigned=[key for c in boot['courses'] for key in c['lessons']]
         self.assertEqual(sorted(assigned),sorted(self.references))

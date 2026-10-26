@@ -115,9 +115,9 @@ class Hub {
       this.updateStatus();this.events.fire();return this.service;
     }catch(error){await this.stop();throw error;}
   }
-  file(key) {return path.join(this.root,'exercises',lessonKey(key,this.known)+'.py');}
+  file(key) {key=lessonKey(key,this.known);return key.startsWith('E')?path.join(this.root,'projects',key,'main.py'):path.join(this.root,'exercises',key+'.py');}
   async saveFiles() {
-    for(const doc of vscode.workspace.textDocuments){if(doc.isDirty&&doc.uri.scheme==='file'&&inside(path.join(this.root,'exercises'),doc.uri.fsPath)){if(!await doc.save())throw new Error('代码未保存，已取消运行。');}}
+    for(const doc of vscode.workspace.textDocuments){if(doc.isDirty&&doc.uri.scheme==='file'&&(inside(path.join(this.root,'exercises'),doc.uri.fsPath)||inside(path.join(this.root,'projects'),doc.uri.fsPath))){if(!await doc.save())throw new Error('代码未保存，已取消运行。');}}
   }
   async request(route,method='GET',body) {
     apiPath(route);if(!this.service){if(this.failure)throw new Error(this.failure);await this.ensure();}
@@ -130,7 +130,7 @@ class Hub {
   }
   async refresh(){if(!this.service)return;this.boot=await this.request('/bootstrap');this.updateStatus();this.events.fire();this.panel?.webview.postMessage({type:'vlh-refresh'});}
   async getChildren(item) {
-    try {await this.ensure();if(item?.course)return this.boot.lessons.filter(l=>l.course===item.course).map(l=>({lesson:l.id,label:l.id+' '+l.title}));if(item)return [];return [{page:'continue',label:'继续上次练习'},{page:'home',label:'学习总览'},...this.boot.courses.map(c=>({course:c.id,label:c.id+' '+c.title})),{page:'lab',label:'图像实验室'},{page:'resources',label:'学习资料库'},{page:'records',label:'记录、备份与清除'}];}
+    try {await this.ensure();if(item?.course)return this.boot.lessons.filter(l=>l.course===item.course).map(l=>({lesson:l.id,label:l.id+' '+l.title}));if(item)return [];return [{page:'continue',label:'继续上次练习'},{page:'home',label:'学习总览'},{page:'projects',label:'工程项目实训'},...this.boot.courses.map(c=>({course:c.id,label:c.id+' '+c.title})),{page:'lab',label:'图像实验室'},{page:'resources',label:'学习资料库'},{page:'records',label:'记录、备份与清除'}];}
     catch(error){this.output.appendLine(error.message);return [{page:'setup',label:'配置环境 / 打开学习工程'}];}
   }
   getTreeItem(item) {
@@ -184,12 +184,20 @@ class Hub {
       return Buffer.isBuffer(result)?{status:200,base64:result.toString('base64')}:{status:200,json:await this.images(result)};
     }
     if(action==='download'){
-      if(!['/backup','/export-code'].includes(args.path))throw new Error('不支持的导出');await this.saveFiles();
+      if(!['/backup','/export-code'].includes(args.path)&&!/^\/projects\/E\d{2}\/export$/.test(args.path))throw new Error('不支持的导出');await this.saveFiles();
       const destination=await vscode.window.showSaveDialog({defaultUri:vscode.Uri.file(path.join(this.project,path.basename(args.name))),filters:{ZIP:['zip']}});
       if(!destination)throw new Error('已取消导出');const bytes=await this.request(args.path);await vscode.workspace.fs.writeFile(destination,bytes);return true;
     }
     if(action==='confirm')return (await vscode.window.showWarningMessage(String(args.message),{modal:true},'继续'))==='继续';
     if(action==='external'){const uri=vscode.Uri.parse(args.url);if(!['https','http'].includes(uri.scheme))throw new Error('仅支持文档网页链接');return vscode.env.openExternal(uri);}
+    if(action==='openProjectFile'||action==='openProjectFolder'){
+      await this.ensure();const key=lessonKey(args.key,this.known);if(!key.startsWith('E'))throw new Error('工程不存在');
+      const root=path.join(this.root,'projects',key);const name=action==='openProjectFolder'?'README.md':args.name;
+      if(typeof name!=='string'||!(/^[a-z][a-z0-9_]{0,47}\.py$/.test(name)||['config.json','README.md'].includes(name)))throw new Error('工程文件名无效');
+      const file=path.join(root,name);const real=await fs.realpath(file);if(!inside(await fs.realpath(root),real))throw new Error('工程文件超出目录');
+      if(action==='openProjectFolder')return vscode.commands.executeCommand('revealInExplorer',vscode.Uri.file(root));
+      const document=await vscode.workspace.openTextDocument(vscode.Uri.file(file));await vscode.window.showTextDocument(document,{viewColumn:vscode.ViewColumn.One});return true;
+    }
     if(action==='openExercise')return this.openExercise(args.key,args.line);
     if(action==='runNative')return this.native(args.key,false);
     if(action==='debug')return this.native(args.key,true);
@@ -204,7 +212,7 @@ class Hub {
     const editor=await vscode.window.showTextDocument(document,{viewColumn:vscode.ViewColumn.One,preserveFocus:false});
     const position=new vscode.Position(Math.max(0,Math.min(Number(line)||1,document.lineCount)-1),0);editor.selection=new vscode.Selection(position,position);editor.revealRange(new vscode.Range(position,position));return true;
   }
-  currentKey(arg) {if(typeof arg==='string'&&this.known.includes(arg))return arg;const active=vscode.window.activeTextEditor?.document.uri.fsPath;if(active&&inside(path.join(this.root,'exercises'),active))return lessonKey(path.basename(active,'.py'),this.known);throw new Error('请先打开一份 exercises 中的练习代码。');}
+  currentKey(arg) {if(typeof arg==='string'&&this.known.includes(arg))return arg;const active=vscode.window.activeTextEditor?.document.uri.fsPath;if(active&&inside(path.join(this.root,'projects'),active))return lessonKey(path.relative(path.join(this.root,'projects'),active).split(path.sep)[0],this.known);if(active&&inside(path.join(this.root,'exercises'),active))return lessonKey(path.basename(active,'.py'),this.known);throw new Error('请先打开一份 exercises 中的练习代码。');}
   async native(key,debug) {
     await this.ensure();key=this.currentKey(key);await this.saveFiles();
     const args=['--workspace',this.root,'--lesson',key,'--output',path.join(this.data,'debug',key)];

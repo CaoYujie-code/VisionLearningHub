@@ -23,15 +23,15 @@ class ContentAcceptance(unittest.TestCase):
         return scope['solve'](image,copy.deepcopy(params))
 
     def test_01_content_graph_and_resources(self):
-        self.assertEqual(len(COURSES),24)
-        self.assertEqual(len(LESSONS),44)
-        self.assertEqual(len({l['id'] for l in LESSONS}),44)
+        self.assertEqual(len(COURSES),28)
+        self.assertEqual(len(LESSONS),48)
+        self.assertEqual(len({l['id'] for l in LESSONS}),48)
         catalog=json.loads((baseline.PROJECT/'content/resource_catalog.json').read_text(encoding='utf-8'))['resources']
         resources={r['id']:r for r in catalog}
         self.assertEqual(len(resources),35)
         self.assertEqual(len({r['url'] for r in catalog}),35)
         ordered=[key for course in COURSES for key in course['lessons']]
-        self.assertEqual(len(ordered),44)
+        self.assertEqual(len(ordered),48)
         self.assertEqual(set(ordered),set(BY_ID))
         for i,key in enumerate(ordered):
             for dep in BY_ID[key]['prerequisites']:
@@ -92,7 +92,7 @@ class ContentAcceptance(unittest.TestCase):
         self.assertEqual(self.solve('L03',None,{'frames':[[1,2,3,4]]}),dict(mean_ms=10,p95_ms=10,serial_fps=100))
 
     def test_05_upgrade_preserves_old_source_notes_and_progress(self):
-        old=[lesson for lesson in LESSONS if lesson['id'] not in ADVANCED_IDS]
+        old=[lesson for lesson in LESSONS if lesson['id'] not in ADVANCED_IDS and not lesson['id'].startswith('E')]
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);code=native_code(BY_ID['P01']['reference'])+'\n# learner annotation\n'
             with patch('learning.storage.LESSONS',old),patch('backend.workspace.LESSONS',old):

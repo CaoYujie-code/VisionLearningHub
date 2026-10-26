@@ -17,6 +17,13 @@ def main():
     root = Path(args.workspace).resolve()
     sys.path.insert(0, str(root))
     folder = Path(args.output).resolve(); folder.mkdir(parents=True, exist_ok=True)
+    from learning.project_catalog import PROJECT_IDS
+    if args.lesson in PROJECT_IDS:
+        from learning.project_runner import run_main
+        source=root/'projects'/args.lesson
+        run_main(source,source/'data/sample',folder)
+        print('工程输出：',folder)
+        return
     image, params, _ = fixture(args.lesson, 17, folder)
     module = importlib.import_module('exercises.' + args.lesson)
     result = module.solve(image, params)

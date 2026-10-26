@@ -6,3 +6,19 @@
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 .ide-mode .page-content{padding:24px}.ide-mode .sidebar{width:180px}.ide-mode .workspace{margin-left:180px}.ide-mode .native-editor p{overflow-wrap:anywhere}.clear-panel{margin:22px 0}.clear-panel .actions{flex-wrap:wrap}.ide-mode .reference-code{white-space:pre-wrap}@media(max-width:1000px){.ide-mode .sidebar{position:static;width:auto}.ide-mode .workspace{margin-left:0}.ide-mode .practice-layout{display:block}.ide-mode .lesson-nav{display:none}.ide-mode .sidebar-bottom,.ide-mode .brand,.ide-mode .nav-caption{display:none}.ide-mode .sidebar nav{display:flex;overflow:auto}.ide-mode .sidebar nav button{flex-shrink:0}.ide-mode .topbar{height:45px}.ide-mode .page-content{padding:18px}.ide-mode .reader-layout,.ide-mode .record-top{grid-template-columns:1fr}}
+
+/* Engineering projects: photographic data, modular code, and deliverable-oriented review. */
+.engineering-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+.engineering-card{display:flex;flex-direction:column;gap:12px;overflow:hidden}
+.engineering-card>img{width:100%;height:180px;object-fit:contain;background:#edf1f4;border-radius:8px}
+.engineering-card h2,.engineering-card p{margin:0}.engineering-card>.primary{align-self:flex-start;margin-top:auto}
+.project-images{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.project-images img{max-width:100%;object-fit:contain}
+.source-entry{margin:18px 0;padding-bottom:14px;border-bottom:1px solid #e5ebf1}.source-entry p{font-size:13px;line-height:1.7}
+.project-code-layout{display:grid;grid-template-columns:200px minmax(0,1fr);gap:20px;margin:20px 0}
+.project-code-layout>.panel{min-width:0}.project-files{align-self:start;display:flex;flex-direction:column;gap:8px}
+.project-files>button{padding:10px;text-align:left;border:0;border-radius:6px;background:#f4f7fa;overflow-wrap:anywhere}
+.project-files>button.selected{background:#e9f1ff;color:#245cb4}.project-files input{width:100%;min-width:0;padding:9px;border:1px solid #dbe3ed;border-radius:6px;margin:12px 0 8px}
+.project-editor{width:100%;min-height:420px;padding:16px;border:1px solid #314052;border-radius:8px;background:#172333;color:#e0ebf9;font:13px/1.7 Consolas,monospace;resize:vertical;tab-size:4;white-space:pre}
+.project-actions{margin-top:18px;flex-wrap:wrap}.project-transfer{margin:20px 0}.project-transfer>.secondary{margin-right:12px}.upload-control{display:inline-flex;cursor:pointer}.upload-control input{display:none}
+.project-tabs{margin-bottom:24px}.project-code-layout .actions{flex-wrap:wrap}.project-code-layout pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:900px){.engineering-grid{grid-template-columns:1fr}.project-code-layout{grid-template-columns:1fr}.project-files{flex-direction:row;flex-wrap:wrap}.project-files h3,.project-files p,.project-files .field{width:100%}.project-images{grid-template-columns:1fr}.project-tabs{flex-wrap:wrap}}

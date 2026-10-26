@@ -1,0 +1,32 @@
+[
+  {
+    "file": "coins.png",
+    "sha256": "f8d773fc9cfa6f4d8e5942dc34d0a0788fcaed2a4fefbbed0aef5398d7ef4cba",
+    "download": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/coins.png",
+    "credit": "Brooklyn Museum Collection，经 scikit-image 分发",
+    "license": "No known copyright restrictions；上游未标为 CC0。",
+    "origin": "https://www.brooklynmuseum.org/opencollection/archives/image/51611",
+    "license_evidence": "https://github.com/scikit-image/scikit-image/blob/v0.25.2/skimage/data/_fetchers.py",
+    "checked_at": "2026-10-26"
+  },
+  {
+    "file": "brick.png",
+    "sha256": "7966caf324f6ba843118d98f7a07746d22f6a343430add0233eca5f6eaaa8fcf",
+    "download": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/brick.png",
+    "credit": "CC0Textures / ambientCG，经 scikit-image 变换分发",
+    "license": "CC0-1.0",
+    "origin": "https://ambientcg.com/",
+    "license_evidence": "https://github.com/scikit-image/scikit-image/blob/v0.25.2/skimage/data/_fetchers.py",
+    "checked_at": "2026-10-26"
+  },
+  {
+    "file": "gravel.png",
+    "sha256": "c48615b451bf1e606fbd72c0aa9f8cc0f068ab7111ef7d93bb9b0f2586440c12",
+    "download": "https://raw.githubusercontent.com/scikit-image/scikit-image/v0.25.2/skimage/data/gravel.png",
+    "credit": "CC0Textures / ambientCG，经 scikit-image 裁剪分发",
+    "license": "CC0-1.0",
+    "origin": "https://ambientcg.com/",
+    "license_evidence": "https://github.com/scikit-image/scikit-image/blob/v0.25.2/skimage/data/_fetchers.py",
+    "checked_at": "2026-10-26"
+  }
+]

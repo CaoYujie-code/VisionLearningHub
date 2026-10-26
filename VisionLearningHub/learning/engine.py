@@ -19,6 +19,7 @@ from .vision_lessons import VISION_IDS
 from . import vision_engine
 from .advanced_lessons import ADVANCED_IDS
 from . import advanced_engine
+from .project_catalog import PROJECT_IDS
 
 
 def read_image(path):
@@ -79,6 +80,9 @@ def layout_metrics(image, layout, target):
 
 
 def fixture(key, seed, folder, custom=None):
+    if key in PROJECT_IDS:
+        from .project_runner import preview_fixture
+        return preview_fixture(key,seed,folder)
     if key in ADVANCED_IDS:return advanced_engine.fixture(key,seed,folder)
     if key in VISION_IDS:return vision_engine.fixture(key,seed,folder)
     if key in DOMAIN_IDS:return domain_engine.fixture(key,seed,folder)
@@ -348,7 +352,7 @@ def compact_value(value,depth=0):
 def error_info(error):
     locations=[]
     for frame in traceback.extract_tb(error.__traceback__):
-        if re.fullmatch(r"[TPAYLV]\d{2}\.py",Path(frame.filename).name):
+        if re.fullmatch(r"[TPAYLVE]\d{2}\.py",Path(frame.filename).name):
             locations.append(dict(lesson=Path(frame.filename).stem,line=frame.lineno))
     if isinstance(error,SyntaxError) and error.filename:
         locations.append(dict(lesson=Path(error.filename).stem,line=error.lineno or 1))
@@ -378,6 +382,9 @@ def exercise_imports(folder, codes):
 
 
 def execute(request):
+    if request["lesson"] in PROJECT_IDS:
+        from .project_runner import execute as execute_project
+        return execute_project(request)
     folder=Path(request["folder"]);folder.mkdir(parents=True,exist_ok=True)
     key=request["lesson"];codes=request["codes"];stack=[];log=LimitedLog()
     def student(name,image,params):

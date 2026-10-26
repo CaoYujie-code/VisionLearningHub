@@ -30,6 +30,7 @@ with (root/'server.log').open('wb') as log:
         else:raise RuntimeError('Test server failed to start')
         subprocess.run([args.node,'tests/browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
         subprocess.run([args.node,'tests/check_images.mjs'],cwd=PROJECT,env=env,check=True,timeout=40)
+        subprocess.run([args.node,'tests/projects_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
     finally:
         process.stdin.close()
         try:process.wait(timeout=8)

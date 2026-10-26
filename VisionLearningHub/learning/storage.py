@@ -8,6 +8,8 @@ import zipfile
 from pathlib import Path, PurePosixPath, PureWindowsPath
 
 from .curriculum import BY_ID, LESSONS, COURSE_VERSION
+from .project_catalog import PROJECT_IDS
+from .project_runner import parse_files, materialize
 
 
 def data_root():
@@ -22,7 +24,7 @@ def fingerprint(key,codes):
     def collect(name):
         if name in selected:return
         selected[name]=codes.get(name,"")
-        for dep in BY_ID[name]["prerequisites"]:collect(dep)
+        for dep in (() if name in PROJECT_IDS else BY_ID[name]["prerequisites"]):collect(dep)
     collect(key)
     return hashlib.sha256(json.dumps([COURSE_VERSION,selected],sort_keys=True).encode()).hexdigest()
 
@@ -134,6 +136,8 @@ class Store:
                 raise ValueError("备份包含未知练习或过长的代码/笔记")
             if any(row[1] not in BY_ID or not isinstance(row[7],str) for row in attempts):
                 raise ValueError("备份包含无效的练习记录")
+            for key,code,note in drafts:
+                if key in PROJECT_IDS:parse_files(code)
             for key,value in settings:
                 if not isinstance(key,str) or not isinstance(value,str):
                     raise ValueError("设置格式无效")
@@ -237,6 +241,9 @@ def export_project(folder,codes,notes=None):
     (folder/"exercises").mkdir(exist_ok=True)
     (folder/"exercises"/"__init__.py").write_text("",encoding="utf-8")
     for key,code in codes.items():
+        if key in PROJECT_IDS:
+            materialize(key,folder/"projects"/key,parse_files(code),include_holdout=True)
+            continue
         (folder/"student"/(key+".py")).write_text(code,encoding="utf-8")
         (folder/"exercises"/(key+".py")).write_text(native_code(code),encoding="utf-8")
     (folder/"run_detector.py").write_text(EXPORT_RUNNER,encoding="utf-8")

@@ -209,5 +209,7 @@ from .vision_lessons import VISION_LESSONS
 LESSONS.extend(VISION_LESSONS)
 from .advanced_lessons import ADVANCED_LESSONS
 LESSONS.extend(ADVANCED_LESSONS)
+from .project_catalog import PROJECT_LESSONS
+LESSONS.extend(PROJECT_LESSONS)
 BY_ID = {item["id"]: item for item in LESSONS}
 COURSE_VERSION = 2

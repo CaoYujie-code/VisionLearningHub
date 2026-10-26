@@ -22,6 +22,8 @@ from backend.workspace import native_code
 from learning.curriculum import LESSONS
 from learning.storage import export_project
 from learning.engine import execute
+from learning.project_catalog import PROJECT_IDS, source_bundle
+from learning.project_runner import write_sources, parse_files, serialize
 
 
 class WorkspaceChecks(unittest.TestCase):
@@ -32,12 +34,13 @@ class WorkspaceChecks(unittest.TestCase):
         cls.client.get('/api/bootstrap').raise_for_status()
 
     def file(self, key):
-        return ROOT / 'workspace/exercises' / (key + '.py')
+        return server.WORKSPACE.file(key)
 
     def test_01_all_native_references_and_real_debug_entry(self):
         codes = {x['id']:native_code(x['reference']) for x in LESSONS}
         for key,code in codes.items():
-            self.file(key).write_text(code,encoding='utf-8')
+            if key in PROJECT_IDS:write_sources(self.file(key).parent,parse_files(code),overwrite=True)
+            else:self.file(key).write_text(code,encoding='utf-8')
             result=execute(dict(lesson=key,codes=codes,verify=True,folder=str(ROOT/'native'/key)))
             self.assertTrue(result['passed'], (key,result))
         result=subprocess.run([sys.executable,'-m','learning.debug_runner','--workspace',str(ROOT/'workspace'),'--lesson','T14','--output',str(ROOT/'debug')],cwd=PROJECT,capture_output=True,text=True,encoding='utf-8')
@@ -81,6 +84,28 @@ class WorkspaceChecks(unittest.TestCase):
         self.assertEqual(self.client.get('/api/bootstrap').json()['settings'],{})
         self.assertEqual(self.client.get('/api/lesson/P01').json()['note'],'')
         self.assertEqual(before,{p.name:p.read_bytes() for p in (ROOT/'workspace/exercises').glob('*.py')})
+
+    def test_06_engineering_files_are_authoritative(self):
+        project=self.file('E01').parent
+        files=source_bundle('E01',True);write_sources(project,files,overwrite=True)
+        (project/'custom_step.py').write_text('def label(): return "learner"\n',encoding='utf-8')
+        self.client.get('/api/bootstrap').raise_for_status()
+        data=self.client.get('/api/projects/E01').json()
+        self.assertIn('custom_step.py',data['files'])
+        before=(project/'pipeline.py').read_text(encoding='utf-8')
+        self.client.put('/api/lesson/E01',json={'code':serialize(source_bundle('E01')),'note':'native note'}).raise_for_status()
+        self.assertEqual((project/'pipeline.py').read_text(encoding='utf-8'),before)
+        # Invalid JSON while editing is a runnable error, not a platform-wide startup failure.
+        (project/'config.json').write_text('{ incomplete config',encoding='utf-8')
+        self.client.get('/api/bootstrap').raise_for_status()
+        (project/'config.json').write_text(files['config.json'],encoding='utf-8')
+        archive=self.client.get('/api/backup').content
+        (project/'custom_step.py').write_text('def label(): return "newer"\n',encoding='utf-8')
+        self.client.post('/api/restore',files={'file':('backup.zip',archive,'application/zip')}).raise_for_status()
+        self.assertIn('newer',(project/'custom_step.py').read_text(encoding='utf-8'))
+        self.assertTrue(list((ROOT/'data/restored-code').glob('*/E01.project.json')))
+        self.client.post('/api/clear',json={'scope':'all','confirmation':'CLEAR'}).raise_for_status()
+        self.assertTrue((project/'custom_step.py').is_file())
 
     def test_05_reset_backups_and_restore_does_not_overwrite(self):
         previous=self.file('P01').read_text(encoding='utf-8')

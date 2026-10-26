@@ -17,8 +17,8 @@ async function noOverflow(label){assert.equal(await page.evaluate(()=>document.d
 async function nav(name){await page.locator('.sidebar nav').getByRole('button',{name,exact:true}).click();}
 try{
  await page.goto(url);await page.getByRole('heading',{name:'沿着路线，一步步实践'}).waitFor();
- const boot=await local('/bootstrap');assert.equal(boot.courses.length,24);assert.equal(boot.lessons.length,44);
- await page.screenshot({path:'validation/01-home.png',fullPage:true});await noOverflow('desktop home');checked('home loads with 24 chapters and 44 exercises');
+ const boot=await local('/bootstrap');assert.equal(boot.courses.length,28);assert.equal(boot.lessons.length,48);
+ await page.screenshot({path:'validation/01-home.png',fullPage:true});await noOverflow('desktop home');checked('home loads with 28 chapters and 48 learning tasks');
  await nav('学习路线');await page.getByRole('button',{name:'YOLO',exact:true}).click();assert.equal(await page.locator('.course-card').count(),4);
  await page.locator('.course-card').first().click();await page.getByText('理解训练的闭环',{exact:false}).count();
  assert.ok(await page.locator('.reading').innerText());checked('route filter and lesson reader');
@@ -46,6 +46,7 @@ try{
  assert.ok(await page.getByRole('button',{name:/定位到 P01 第/}).isVisible());checked('TODO fails with an actionable line number');
  const reference=await local('/lesson/P01/reference');await editor.fill(reference.code);
  await page.getByRole('button',{name:'多样例验收',exact:true}).click();await page.getByText('当前版本已验收',{exact:true}).waitFor();
+ await page.waitForFunction(()=>document.querySelectorAll('.sample-tabs button').length===5);
  assert.equal(await page.locator('.sample-tabs button').count(),5);
  await page.screenshot({path:'validation/03-practice.png',fullPage:true});checked('typed implementation passes five fixtures and updates progress');
  await editor.fill(reference.code+'\n# changed during learning\n');
@@ -80,7 +81,7 @@ try{
  assert.ok(await page.locator('.course-card').count()>0);
  await page.getByLabel('搜索课程').fill('missing-topic-000');assert.equal(await page.locator('.course-card').count(),0);
  await page.getByText('没有匹配的课程，试试其他关键词或分类。').waitFor();
- checked('8 advanced chapters and topic search are accessible');
+ checked('12 advanced/project chapters and topic search are accessible');
  for(const key of ['V01','V02','V03','V04','V05','V06','V07','V08','V09','V10','V11','V12','V13','V14','Y04','Y05','L02','L03']){
   await nav('练习工作台');await page.locator('.lesson-scroll').getByRole('button',{name:new RegExp('^'+key)}).click();
   await page.locator('.task-description h2').filter({hasText:key}).waitFor();
@@ -143,6 +144,6 @@ try{
  }
  checked('all six pages fit a 390px viewport');
  assert.deepEqual(errors,[]);checked('no browser exceptions or HTTP 5xx responses');
- await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:24,lessons:44,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
+ await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:28,lessons:48,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
  console.log(`${count} browser workflows passed`);
 }finally{await browser.close();}

@@ -27,6 +27,9 @@ from learning.storage import Store, data_root, fingerprint, export_project
 from .courses import COURSES, COURSE_BY_ID, LESSON_COURSE
 from .lab import experiment
 from .workspace import Workspace, native_code, lesson_outline
+from learning.project_catalog import PROJECTS, PROJECT_BY_ID, PROJECT_IDS
+from learning.project_runner import parse_files, serialize, materialize
+from learning.project_data import prepare, asset_sources, ASSETS
 
 PROJECT = Path(__file__).resolve().parents[1]
 ROOT = data_root().resolve()
@@ -106,7 +109,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.4.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.5.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -127,16 +130,58 @@ def shutdown(request: Request):
     return {'stopping': True}
 
 
+def project_cards():
+    covers=ROOT/'previews'/'project-covers';covers.mkdir(parents=True,exist_ok=True)
+    cards=[]
+    for project in PROJECTS:
+        cover=covers/(project['id']+'-scenario.png')
+        if not cover.exists():
+            inputs=ROOT/'previews'/'project-covers'/project['id']
+            _,manifest=prepare(project['id'],17,inputs)
+            index=2 if project['id']=='E02' else 7 if project['id']=='E04' else 0
+            shutil.copyfile(inputs/manifest[index]['file'],cover)
+        cards.append({k:v for k,v in project.items() if k not in ('algorithm','config')} | {'cover':'/api/assets/previews/project-covers/'+cover.name})
+    return cards
+
+
 @app.get('/api/bootstrap')
 def bootstrap():
     with LOCK, database() as store:
         settings = dict(store.connection.execute('SELECT key,value FROM settings').fetchall())
         settings = {k: json.loads(v) for k, v in settings.items() if k.startswith('hub.')}
         total = store.connection.execute('SELECT COUNT(*) FROM attempts').fetchone()[0]
-        return {'courses': COURSES, 'lessons': [(lesson_outline(x) if WORKSPACE else {k: v for k, v in x.items() if k not in ('reference', 'starter')}) | {'course': LESSON_COURSE[x['id']]} for x in LESSONS],
+        return {'projects': project_cards(), 'courses': COURSES, 'lessons': [(lesson_outline(x) if WORKSPACE else {k: v for k, v in x.items() if k not in ('reference', 'starter')}) | {'course': LESSON_COURSE[x['id']]} for x in LESSONS],
                 'resources': json.loads((PROJECT / 'content/resource_catalog.json').read_text(encoding='utf-8'))['resources'],
                 'passed': progress(store), 'settings': settings, 'attempts': total,
                 'active_job': next(({k:v for k,v in j.items() if k != 'process'} for j in JOBS.values() if j['status'] in ('queued','running','stopping')), None)}
+
+
+@app.get('/api/projects/{key}')
+def engineering_project(key: str):
+    if key not in PROJECT_IDS:raise HTTPException(404,'工程项目不存在')
+    with LOCK, database() as store:
+        code,note=store.draft(key)
+        folder=ROOT/'previews'/key/'sample'
+        _,manifest=prepare(key,17,folder)
+        images=[dict(file=e['file'],condition=e['condition'],input=str(folder/e['file'])) for e in manifest if 'shape' in e]
+        return public(dict(project={k:v for k,v in PROJECT_BY_ID[key].items() if k not in ('algorithm','config')},files=parse_files(code),note=note,sources=asset_sources(),images=images,
+                           history=[{'stamp':r[0],'verified':bool(r[1]),'passed':bool(r[2]),'report':json.loads(r[3])} for r in store.history(key)]))
+
+
+@app.get('/api/projects/{key}/export')
+def export_engineering(key: str):
+    if key not in PROJECT_IDS:raise HTTPException(404,'工程项目不存在')
+    with LOCK, database() as store:
+        if active():raise HTTPException(409,'请先停止运行再导出')
+        destination=ROOT/'exports'/('project-'+uuid.uuid4().hex)
+        destination.mkdir(parents=True)
+        source=destination/key
+        materialize(key,source,parse_files(store.draft(key)[0]),include_holdout=True)
+        path=destination/(key+'.zip')
+        with zipfile.ZipFile(path,'w',zipfile.ZIP_DEFLATED) as archive:
+            for file in source.rglob('*'):
+                if file.is_file():archive.write(file,Path(key)/file.relative_to(source))
+        return FileResponse(path,filename=key+'.zip',media_type='application/zip')
 
 
 @app.get('/api/lesson/{key}')
@@ -163,6 +208,9 @@ class Draft(BaseModel):
 @app.put('/api/lesson/{key}')
 def save_draft(key: str, body: Draft):
     known(key)
+    if key in PROJECT_IDS and not WORKSPACE:
+        try:body.code=serialize(parse_files(body.code))
+        except (ValueError,TypeError) as error:raise HTTPException(400,str(error)) from error
     with LOCK, database() as store:
         store.save(key, store.draft(key)[0] if WORKSPACE else body.code, body.note)
         return {'saved': True, 'passed': progress(store)}
@@ -234,11 +282,21 @@ def run_job(job_id, request_data):
 class JobInput(Draft):
     lesson: str
     verify: bool = False
+    upload_id: str | None = None
 
 
 @app.post('/api/jobs')
 def start_job(body: JobInput):
     known(body.lesson)
+    custom=None
+    if body.upload_id is not None:
+        import re
+        if body.verify or body.lesson not in ('E01','E03') or not re.fullmatch('[a-f0-9]{32}',body.upload_id):raise HTTPException(400,'自有图片仅支持E01/E03探索，不能用于正式验收')
+        custom=ROOT/'uploads'/(body.upload_id+'.png')
+        if not custom.is_file() or not custom.resolve().is_relative_to(ROOT/'uploads'):raise HTTPException(404,'上传图片不存在')
+    if body.lesson in PROJECT_IDS and not WORKSPACE:
+        try:body.code=serialize(parse_files(body.code))
+        except (ValueError,TypeError) as error:raise HTTPException(400,str(error)) from error
     with LOCK, database() as store:
         if active():
             raise HTTPException(409, '已有练习在运行，请等待或停止')
@@ -247,6 +305,7 @@ def start_job(body: JobInput):
         key = uuid.uuid4().hex
         folder = ROOT / 'runs' / key; folder.mkdir(parents=True)
         data = dict(lesson=body.lesson, verify=body.verify, folder=str(folder), codes=codes)
+        if custom:data['project_custom']=str(custom)
         (folder / 'request.json').write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
         JOBS[key] = dict(id=key, lesson=body.lesson, status='queued', digest=fingerprint(body.lesson, codes))
         # Retain a bounded number of job handles; full reports remain in SQLite.
@@ -374,7 +433,7 @@ async def restore(file: UploadFile = File(...)):
                 imported = ROOT / 'restored-code' / uuid.uuid4().hex[:8]
                 imported.mkdir(parents=True)
                 for key, code in store.codes().items():
-                    (imported / (key + '.py')).write_text(code, encoding='utf-8')
+                    (imported / (key + ('.project.json' if key in PROJECT_IDS else '.py'))).write_text(code, encoding='utf-8')
                 WORKSPACE.sync(store)
             JOBS.clear()
         except Exception as error:
@@ -441,6 +500,7 @@ def clear_learning(body: ClearInput):
 @app.post('/api/workspace/reset/{key}')
 def reset_exercise(key: str, body: ClearInput):
     item = known(key)
+    if key in PROJECT_IDS:raise HTTPException(400,'工程项目请先导出备份，再编辑或替换需要重做的模块；不支持单题一键重置')
     if not WORKSPACE or body.confirmation != 'CLEAR' or body.scope != 'exercise':
         raise HTTPException(400, '仅在 IDE 工程中确认后重置')
     with LOCK, database() as store:

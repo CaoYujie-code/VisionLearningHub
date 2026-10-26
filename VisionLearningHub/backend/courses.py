@@ -77,5 +77,13 @@ from .advanced_courses import advanced_courses
 COURSES.extend(advanced_courses(chapter))
 _order = ['S00','S01','S02','S12','S13','S14','S15','S16','S17','S03','S18','S19','S20','S04','S05','S06','S07','S21','S08','S09','S22','S10','S23','S11']
 COURSES.sort(key=lambda course: _order.index(course['id']))
+from learning.project_catalog import PROJECTS
+for i,p in enumerate(PROJECTS,24):
+    COURSES.append(chapter(f'S{i:02}',p['title'],p['scenario'],'工程项目',[p['id']],['R03','R19'],[
+        ('工程输入与交付',[p['scenario'],p['output']]),
+        ('分阶段实施',p['stages']),
+        ('适用边界与复盘',[p['limits'],'完成平台验收后，再收集独立现场数据。记录相机、光照、参数和失败例；真实输入探索不自动计入通关。'])],
+        ['读真实图片文件并组合多模块处理','输出可检查的工程结果'],[p['limits']],
+        ['能画出自己的函数与数据流','能解释失败样例并定位到处理阶段','能在平台外用命令行运行项目'],'多文件工程验收'))
 COURSE_BY_ID={c['id']:c for c in COURSES}
 LESSON_COURSE={key:c['id'] for c in COURSES for key in c['lessons']}

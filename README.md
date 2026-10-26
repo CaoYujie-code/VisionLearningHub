@@ -2,14 +2,14 @@
 
 从像素和 NumPy 开始，学习 OpenCV、经典视觉算法、YOLO 数据处理与 Linux / 嵌入式基础。通过课程阅读、手敲代码、图像对照和多样例验收积累自己的视觉工程。
 
-**0.4.0：保留网页版，新增可选安装的 VS Code 扩展。** 插件提供学习面板，代码使用 VS Code 原生编辑器；课程与基础实验可离线使用，官方资料链接需要联网。
+**0.5.0：新增多文件工程实训，支持网页版与可选安装的 VS Code 扩展。** 插件提供学习面板，代码使用 VS Code 原生编辑器；课程与基础实验可离线使用，官方资料链接需要联网。
 
 ## 能做什么
 
 | 模块 | 当前能力 |
 | --- | --- |
-| 学习路线 | 24 章，包含原理、适用情况、易错点、自查与笔记 |
-| 编程练习 | 44 道练习，每道 5 组正式验收样例；修改代码和依赖后重新判断进度 |
+| 学习路线 | 28 章，包含原理、适用情况、易错点、自查与笔记 |
+| 编程实践 | 44 道基础练习 + 4 个多文件工程（20个实施阶段）；每项5组正式验收，源码变化后重新判断进度 |
 | 图像实验室 | 12 种 OpenCV 方法、4 类内置场景、自定义图片与参数对照 |
 | 学习资料 | 35 份官方资料索引，支持搜索、阶段筛选和收藏 |
 | VS Code | 侧栏路线、原生 Python 文件、终端运行、Python 断点调试、测试资源管理器 |
@@ -54,7 +54,7 @@ npm run build
 
 ### 安装与卸载
 
-从 [GitHub Releases](https://github.com/CaoYujie-code/VisionLearningHub/releases) 或维护者提供的安装包取得 `vision-learning-hub-0.4.0.vsix`，或按下文自行构建。VS Code → 扩展 → 右上角 `…` → **从 VSIX 安装**，由你决定是否安装。当前版本未发布到 Visual Studio Marketplace，不能承诺在商店中搜索得到。
+从 [GitHub Releases](https://github.com/CaoYujie-code/VisionLearningHub/releases) 或维护者提供的安装包取得 `vision-learning-hub-0.5.0.vsix`，或按下文自行构建。VS Code → 扩展 → 右上角 `…` → **从 VSIX 安装**，由你决定是否安装。当前版本未发布到 Visual Studio Marketplace，不能承诺在商店中搜索得到。
 
 禁用和卸载使用 VS Code 扩展面板的标准操作，按编辑器提示重载窗口。扩展停用时结束自身的 Python 服务；异常退出时通过父进程管道关闭服务。代码和学习记录保留，卸载前可主动备份或清除。
 
@@ -81,7 +81,8 @@ npm run build
 
 | 路径 | 用途 |
 | --- | --- |
-| `exercises/` | 学生代码，清除学习记录不会删除 |
+| `exercises/` | 基础题代码，清除学习记录不会删除 |
+| `projects/E01/` 等 | 工程源码、配置与开发素材，清除学习记录不会删除 |
 | `data/learning.sqlite3` | 笔记、收藏、验收历史与代码快照 |
 | `data/runs/` | 验收样例和结果图 |
 | `data/restored-code/` | 恢复旧备份时暂存的代码，供手动比较 |
@@ -117,6 +118,7 @@ npm --prefix extensions/vscode run package
 .\.venv\Scripts\python.exe tests\test_acceptance_v020.py
 .\.venv\Scripts\python.exe tests\test_workspace.py
 .\.venv\Scripts\python.exe tests\test_content_v040.py
+.\.venv\Scripts\python.exe tests\test_projects.py
 npm run check
 npm run build
 npm --prefix extensions/vscode test
@@ -128,10 +130,27 @@ npm --prefix extensions/vscode test
 
 学生代码按当前用户权限运行，进程隔离和超时不是权限沙箱。请运行自己理解的代码。本版本未完成 Marketplace 发布、独立 EXE 或实物设备验收。
 
-资料：[完整学习路线](VisionLearningHub/docs/学习路线-0.4.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [版本验收](VisionLearningHub/docs/验收记录-0.4.0.md)
+资料：[完整学习路线](VisionLearningHub/docs/学习路线-0.4.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [版本验收](VisionLearningHub/docs/验收记录-0.5.0.md)
 
 ## 0.4.0 内容扩展
 
 新增图像缩放与增强、连通域与距离图、模板与特征匹配、相机标定、视频运动、检测数据审计、Linux 缓冲与性能、模型量化对照。学习路线支持按题号、标题和知识点搜索。
 
 参见 [分阶段学习路线与新增题目](VisionLearningHub/docs/学习路线-0.4.0.md)。新题继续使用 OpenCV、NumPy 和 Python 标准库，不增加运行依赖；实机扩展与自动验收边界在各章单独说明。更新保留原有代码、笔记和验收记录。
+
+## 0.5.0 工程项目实训
+
+新增 **工程项目** 入口，将文件读取、独立函数与模块、参数配置、异常处理和结果交付连接起来。
+
+| 工程 | 场景与交付 |
+| --- | --- |
+| E01 | 批量硬币计数：数量、中心坐标与标注图 |
+| E02 | 纹理表面缺陷：曝光补偿、缺陷框与放行判断 |
+| E03 | 单据透视校正：四角、统一尺寸校正图、空场景拒绝 |
+| E04 | 传送带跟踪：连续ID、双向过线事件、短时缺失处理 |
+
+每个工程包含5个实施阶段、真实PNG文件、多个可编辑Python文件与5批正式验收输入。VS Code使用 `.vision-learning/projects/E01/` 等实际目录；网页版支持多文件编辑和添加模块。导出后可在VS Code/PyCharm独立运行，E01/E03还支持平台内上传自己的图片探索。
+
+素材来自公开硬币照片与CC0纹理，已记录来源、许可说明和SHA-256；缺陷、单据和运动是明确标注的教学变体。扩展不增加运行依赖，也不会把自有图片探索计入正式通关。
+
+详见 [工程项目实训指南](VisionLearningHub/docs/工程项目实训指南.md)。先更新插件并重载窗口，再进入左侧“工程项目”。

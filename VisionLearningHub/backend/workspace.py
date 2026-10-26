@@ -4,6 +4,8 @@ from pathlib import Path
 import re
 
 from learning.curriculum import LESSONS, BY_ID
+from learning.project_catalog import PROJECT_IDS
+from learning.project_runner import materialize, load_sources, serialize, parse_files, write_sources
 
 
 def native_code(code):
@@ -26,7 +28,7 @@ class Workspace:
     def file(self, key):
         if key not in BY_ID:
             raise ValueError('未知练习')
-        path = self.exercises / (key + '.py')
+        path = self.root / 'projects' / key / 'main.py' if key in PROJECT_IDS else self.exercises / (key + '.py')
         if not path.resolve().is_relative_to(self.root) or path.is_symlink():
             raise ValueError('练习文件不能链接到学习工程外部')
         return path
@@ -37,6 +39,12 @@ class Workspace:
             raise ValueError('练习目录超出学习工程')
         (self.exercises / '__init__.py').touch(exist_ok=True)
         for lesson in LESSONS:
+            if lesson['id'] in PROJECT_IDS:
+                project=self.root/'projects'/lesson['id']
+                if not project.resolve().is_relative_to(self.root):raise ValueError('项目目录超出学习空间')
+                code,_=store.draft(lesson['id'])
+                materialize(lesson['id'],project,parse_files(code))
+                continue
             file = self.file(lesson['id'])
             if not file.exists():
                 code, _ = store.draft(lesson['id'])
@@ -47,7 +55,9 @@ class Workspace:
     def sync(self, store):
         for lesson in LESSONS:
             key = lesson['id']; file = self.file(key)
-            if file.exists():
+            if key in PROJECT_IDS:
+                code=serialize(load_sources(file.parent))
+            elif file.exists():
                 if file.stat().st_size > 400000:
                     raise ValueError(f'{key} 代码文件过大')
                 code = file.read_text(encoding='utf-8-sig')
@@ -58,6 +68,9 @@ class Workspace:
                 store.save(key, code, note)
 
     def replace(self, key, code):
+        if key in PROJECT_IDS:
+            write_sources(self.file(key).parent,parse_files(code),overwrite=True)
+            return
         file = self.file(key)
         temporary = file.with_suffix('.py.tmp')
         temporary.write_text(code, encoding='utf-8')

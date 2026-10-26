@@ -4,12 +4,13 @@ import {createRoot} from 'react-dom/client';
 import {api,saveSettingValue,courseState,Boot,Course,Resource,Job} from './api';
 import {Icon,Tag,Modal} from './ui';
 import {Practice} from './practice';
+import {Projects,ProjectWorkbench} from './projects';
 import {Lab} from './lab';
 import {Records} from './records';
 import './style.css';
 
-type Page='home'|'route'|'lab'|'practice'|'resources'|'records';
-const navigation:{key:Page;name:string;icon:string}[]=[{key:'home',name:'学习总览',icon:'home'},{key:'route',name:'学习路线',icon:'route'},{key:'lab',name:'图像实验室',icon:'lab'},{key:'practice',name:'练习工作台',icon:'code'},{key:'resources',name:'学习资料库',icon:'book'},{key:'records',name:'记录与设置',icon:'history'}];
+type Page='projects'|'home'|'route'|'lab'|'practice'|'resources'|'records';
+const navigation:{key:Page;name:string;icon:string}[]=[{key:'home',name:'学习总览',icon:'home'},{key:'route',name:'学习路线',icon:'route'},{key:'projects',name:'工程项目',icon:'code'},{key:'lab',name:'图像实验室',icon:'lab'},{key:'practice',name:'练习工作台',icon:'code'},{key:'resources',name:'学习资料库',icon:'book'},{key:'records',name:'记录与设置',icon:'history'}];
 
 function App() {
  const [boot,setBoot]=useState<Boot|null>(null),[page,setPage]=useState<Page>(readViewState().page||'home'),[course,setCourse]=useState<string|null>(readViewState().course||null),[lesson,setLesson]=useState(readViewState().lesson||'P01');
@@ -47,11 +48,13 @@ function App() {
     <div className="home-bottom"><section className="panel project-feature"><Tag tone="blue">贯穿项目 · 视觉拼图</Tag><h2>把处理步骤连成自己的流水线</h2><p>从背景分离到几何定位，用每一张中间图解释最终结果。完成基础后，进入 T14 综合检测。</p><button className="text-button" onClick={()=>openCourse('S11')}>了解项目路径 <Icon name="arrow" size={16}/></button></section><section className="panel"><h3>当前可以学到哪里？</h3><div className="capability"><span>OpenCV 与经典算法</span><Tag tone="green">可运行验收</Tag></div><div className="capability"><span>YOLO 数据与后处理</span><Tag tone="blue">3 项代码练习</Tag></div><div className="capability"><span>Linux / 嵌入式</span><Tag>课程与离线准备</Tag></div><p className="small muted">模型训练、实机终端与板端部署尚未接入。</p></section></div>
    </>}
    {page==='route'&&(course?<CourseReader key={course} course={boot.courses.find(c=>c.id===course)!} boot={boot} save={saveSetting} openLesson={openLesson} back={()=>setCourse(null)} notify={notify}/>:<Route boot={boot} open={openCourse}/>)}
-   {page==='practice'&&<Practice key={lesson} boot={boot} lessonId={lesson} open={openLesson} job={job?.lesson===lesson?job:null} anyBusy={!!job&&['queued','running','stopping'].includes(job.status)} setJob={setJob} notify={notify} updatePassed={updatePassed} onZoom={setZoom}/>}
+   {page==='projects'&&<Projects boot={boot} open={openLesson}/>}
+   {page==='practice'&&lesson.startsWith('E')&&<ProjectWorkbench key={lesson} boot={boot} lessonId={lesson} open={openLesson} back={()=>go('projects')} job={job?.lesson===lesson?job:null} anyBusy={!!job&&['queued','running','stopping'].includes(job.status)} setJob={setJob} notify={notify} updatePassed={updatePassed} onZoom={setZoom}/>}
+   {page==='practice'&&!lesson.startsWith('E')&&<Practice key={lesson} boot={boot} lessonId={lesson} open={openLesson} job={job?.lesson===lesson?job:null} anyBusy={!!job&&['queued','running','stopping'].includes(job.status)} setJob={setJob} notify={notify} updatePassed={updatePassed} onZoom={setZoom}/>}
    {page==='lab'&&<Lab notify={notify} onZoom={setZoom} openLesson={openLesson}/>}
    {page==='resources'&&<Resources boot={boot} save={saveSetting} notify={notify}/>}
    {page==='records'&&<Records boot={boot} refresh={refresh} notify={notify} openLesson={openLesson} onZoom={setZoom}/>}
-  </div><footer className="page-footer">VISION LEARNING HUB<span>从理解到实现，每一步都看得见。</span><span>{isIDE?'VS CODE EDITION · 0.4.0':'LOCAL EDITION · 0.4.0'}</span></footer></main>
+  </div><footer className="page-footer">VISION LEARNING HUB<span>从理解到实现，每一步都看得见。</span><span>{isIDE?'VS CODE EDITION · 0.5.0':'LOCAL EDITION · 0.5.0'}</span></footer></main>
   {toast&&<div role="status" className="toast"><Icon name="check" size={18}/>{toast}<button aria-label="关闭提示" onClick={()=>setToast('')}><Icon name="close" size={15}/></button></div>}
   {zoom&&<Modal title="图像查看" wide onClose={()=>setZoom('')}><img className="zoom-image" src={zoom} alt="实验图像原图"/></Modal>}
  </div>;
