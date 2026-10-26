@@ -28,7 +28,9 @@ from .courses import COURSES, COURSE_BY_ID, LESSON_COURSE
 from .lab import experiment
 from .workspace import Workspace, native_code, lesson_outline
 from learning.project_catalog import PROJECTS, PROJECT_BY_ID, PROJECT_IDS
-from learning.project_runner import parse_files, serialize, materialize
+from learning.project_runner import parse_files, serialize, materialize, write_sources
+from learning.project_guides import guide, STARTER
+from learning.project_checkpoints import validate_request
 from learning.project_data import prepare, asset_sources, ASSETS
 
 PROJECT = Path(__file__).resolve().parents[1]
@@ -109,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.5.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.6.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -164,8 +166,25 @@ def engineering_project(key: str):
         folder=ROOT/'previews'/key/'sample'
         _,manifest=prepare(key,17,folder)
         images=[dict(file=e['file'],condition=e['condition'],input=str(folder/e['file'])) for e in manifest if 'shape' in e]
-        return public(dict(project={k:v for k,v in PROJECT_BY_ID[key].items() if k not in ('algorithm','config')},files=parse_files(code),note=note,sources=asset_sources(),images=images,
+        return public(dict(project={k:v for k,v in PROJECT_BY_ID[key].items() if k not in ('algorithm','config')},files=parse_files(code),note=note,sources=asset_sources(),images=images,guide=guide(key),block_progress=store.project_progress(key),
                            history=[{'stamp':r[0],'verified':bool(r[1]),'passed':bool(r[2]),'report':json.loads(r[3])} for r in store.history(key)]))
+
+
+@app.post('/api/projects/{key}/guide')
+def initialize_project_guide(key: str):
+    if key not in PROJECT_IDS:raise HTTPException(404,'工程项目不存在')
+    with LOCK,database() as store:
+        if active():raise HTTPException(409,'请等待运行结束')
+        code,note=store.draft(key);files=parse_files(code)
+        if 'checkpoint.py' not in files:
+            files['checkpoint.py']=STARTER
+            try:code=serialize(files)
+            except ValueError as error:raise HTTPException(400,str(error)) from error
+            if WORKSPACE:
+                write_sources(WORKSPACE.file(key).parent,files,overwrite=False)
+                WORKSPACE.sync(store)
+            else:store.save(key,code,note)
+    return engineering_project(key)
 
 
 @app.get('/api/projects/{key}/export')
@@ -283,12 +302,18 @@ class JobInput(Draft):
     lesson: str
     verify: bool = False
     upload_id: str | None = None
+    project_block: str | None = None
+    block_source: str = "own"
 
 
 @app.post('/api/jobs')
 def start_job(body: JobInput):
     known(body.lesson)
     custom=None
+    if body.project_block is not None:
+        try:validate_request(body.lesson,body.project_block,body.block_source,body.verify,body.upload_id is not None)
+        except ValueError as error:raise HTTPException(400,str(error)) from error
+    elif body.block_source!='own':raise HTTPException(400,'标准输入只能用于可视化任务块')
     if body.upload_id is not None:
         import re
         if body.verify or body.lesson not in ('E01','E03') or not re.fullmatch('[a-f0-9]{32}',body.upload_id):raise HTTPException(400,'自有图片仅支持E01/E03探索，不能用于正式验收')
@@ -306,6 +331,7 @@ def start_job(body: JobInput):
         folder = ROOT / 'runs' / key; folder.mkdir(parents=True)
         data = dict(lesson=body.lesson, verify=body.verify, folder=str(folder), codes=codes)
         if custom:data['project_custom']=str(custom)
+        if body.project_block:data.update(project_block=body.project_block,block_source=body.block_source)
         (folder / 'request.json').write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
         JOBS[key] = dict(id=key, lesson=body.lesson, status='queued', digest=fingerprint(body.lesson, codes))
         # Retain a bounded number of job handles; full reports remain in SQLite.

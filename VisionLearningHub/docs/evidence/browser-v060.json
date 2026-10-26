@@ -1,0 +1,16 @@
+{
+  "version": "0.6.0",
+  "chapters": 32,
+  "lessons": 52,
+  "labMethods": 12,
+  "passed": 39,
+  "errors": [],
+  "viewport": [
+    1440,
+    1000
+  ],
+  "mobile": [
+    390,
+    844
+  ]
+}

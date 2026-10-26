@@ -37,6 +37,7 @@ jobs:
       - run: python tests/test_workspace.py
       - run: python tests/test_content_v040.py
       - run: python tests/test_projects.py
+      - run: python tests/test_guides.py
       - run: npm ci --prefix extensions/vscode
       - run: npm --prefix extensions/vscode run check
       - run: npm --prefix extensions/vscode test

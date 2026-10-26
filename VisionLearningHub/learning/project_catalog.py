@@ -216,6 +216,10 @@ PROJECTS = [
          prerequisites=['T12','V14','L03'],assets=['coins.png'],config=dict(threshold=45,min_area=600,max_distance=85,max_gap=3),algorithm=None),
 ]
 
+from .project_extensions import EXTRA_PROJECTS
+from .project_guides import checkpoint_source
+PROJECTS.extend(EXTRA_PROJECTS)
+
 PROJECT_BY_ID={p['id']:p for p in PROJECTS}
 PROJECT_IDS=set(PROJECT_BY_ID)
 
@@ -248,7 +252,7 @@ def run_batch(input_dir, output_dir, config):
     # TODO: 根据任务说明处理坏文件/空目标/时序状态
     raise NotImplementedError('请实现工程流水线')
 '''
-    return {'main.py':MAIN,'imaging.py':imaging,'pipeline.py':pipeline,'config.json':json.dumps(project['config'],ensure_ascii=False,indent=2)+'\n'}
+    return {'checkpoint.py':checkpoint_source(key,reference),'main.py':MAIN,'imaging.py':imaging,'pipeline.py':pipeline,'config.json':json.dumps(project['config'],ensure_ascii=False,indent=2)+'\n'}
 
 PROJECT_LESSONS=[]
 for p in PROJECTS:

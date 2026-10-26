@@ -8,19 +8,33 @@ exports.run=async()=>{
  try{
   const extension=vscode.extensions.all.find(e=>e.id.toLowerCase()==='caoyujie-code.vision-learning-hub');assert.ok(extension);
   hub=await extension.activate();await hub.ensure();passed.push('isolated VS Code extension starts packaged Python runtime');
-  const boot=await hub.request('/bootstrap');assert.equal(boot.lessons.length,48);assert.equal(boot.courses.length,28);assert.equal(hub.test.items.size,48);passed.push('44 exercises + 4 native projects, 28 courses and Test Explorer items');
+  const boot=await hub.request('/bootstrap');assert.equal(boot.lessons.length,52);assert.equal(boot.courses.length,32);assert.equal(hub.test.items.size,52);passed.push('44 exercises + 8 native projects, 32 courses and Test Explorer items');
   for(const key of ['V13','Y05','L02']){
    const source=(await hub.request('/lesson/'+key+'/reference')).code;
    await fs.writeFile(hub.file(key),source,'utf8');
    const checked=await hub.run(key,true);assert.ok(checked.result?.passed,JSON.stringify(checked));
    assert.equal(checked.result.reports.length,5);passed.push(key+' new exercise verifies from packaged native source');
   }
-  for(const key of ['E01','E02','E03','E04']){
+  for(const key of ['E01','E02','E03','E04','E05','E06','E07','E08']){
    const files=JSON.parse((await hub.request('/lesson/'+key+'/reference')).code);
    for(const [name,content]of Object.entries(files))await fs.writeFile(path.join(path.dirname(hub.file(key)),name),content,'utf8');
    const result=await hub.run(key,true);assert.ok(result.result?.passed,JSON.stringify(result));assert.equal(result.result.reports.length,5);
    passed.push(key+' multi-file project produces verified artifacts from packaged runtime');
   }
+  await hub.message('openProjectFile',{key:'E05',name:'checkpoint.py'});
+  const checkpointEditor=vscode.window.activeTextEditor;
+  await checkpointEditor.edit(edit=>edit.insert(new vscode.Position(0,0),'# native checkpoint edit\n'));
+  const checkpointStarted=await hub.message('api',{path:'/jobs',method:'POST',body:{lesson:'E05',code:'ignored IDE draft',note:'native guide',verify:false,project_block:'io',block_source:'own'}});
+  let checkpointJob;
+  for(let i=0;i<100;i++){checkpointJob=await hub.request('/jobs/'+checkpointStarted.json.id);if(!['queued','running'].includes(checkpointJob.status))break;await new Promise(r=>setTimeout(r,100));}
+  assert.equal(checkpointJob.status,'done');assert.ok(checkpointJob.result.passed);assert.ok(!checkpointEditor.document.isDirty);
+  assert.equal((await hub.request('/projects/E05')).block_progress['io:own'].state,'passed');
+  assert.equal((await hub.request('/bootstrap')).passed.E05,false);
+  passed.push('native checkpoint saves dirty source and never grants whole-project completion');
+  const beforeGuide=await fs.readFile(hub.file('E01'),'utf8');
+  await hub.message('api',{path:'/projects/E01/guide',method:'POST',body:{}});
+  assert.equal(await fs.readFile(hub.file('E01'),'utf8'),beforeGuide);
+  passed.push('guided initialization preserves existing native source');
   const projectEnded=new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('project terminal timeout')),20000);const disposable=vscode.tasks.onDidEndTaskProcess(e=>{if(e.execution.task.name==='Vision E01'){clearTimeout(timer);disposable.dispose();resolve(e.exitCode);}});});
   await hub.native('E01',false);assert.equal(await projectEnded,0);await fs.access(path.join(hub.data,'debug','E01','results.json'));passed.push('engineering CLI runs through native VS Code terminal and writes results.json');
   await hub.message('openProjectFile',{key:'E01',name:'imaging.py'});const projectEditor=vscode.window.activeTextEditor;
@@ -56,9 +70,9 @@ exports.run=async()=>{
   await hub.request('/settings/bookmarks','PUT',{value:['R01']});
   await hub.show('practice','V01');assert.ok(hub.panel.webview.html.includes('Content-Security-Policy'));assert.ok(!hub.panel.webview.html.includes('<iframe'));
   for(let i=0;i<100&&!hub.viewState;i++)await new Promise(r=>setTimeout(r,100));
-  assert.equal(hub.viewState?.lessons,48,'Webview must execute React and communicate through the bridge');passed.push('native learning webview created with local assets');
+  assert.equal(hub.viewState?.lessons,52,'Webview must execute React and communicate through the bridge');passed.push('native learning webview created with local assets');
   const report=await require('../src/environment.cjs').probePython(hub.pythonExe);assert.ok(report.ok);assert.ok(report.checks.some(c=>c.module==='cv2'&&c.ok));passed.push('structured environment diagnosis identifies Python and required packages');
-  await hub.message('viewReady',{page:'practice',course:null,lesson:'V01',lessons:48});
+  await hub.message('viewReady',{page:'practice',course:null,lesson:'V01',lessons:52});
   assert.equal(hub.context.workspaceState.get(hub.stateKey()).lesson,'V01');
   hub.panel.dispose();await hub.show();
   for(let i=0;i<100&&(hub.viewState?.page!=='practice'||hub.viewState?.lesson!=='V01');i++)await new Promise(r=>setTimeout(r,100));

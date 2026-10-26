@@ -17,8 +17,8 @@ async function noOverflow(label){assert.equal(await page.evaluate(()=>document.d
 async function nav(name){await page.locator('.sidebar nav').getByRole('button',{name,exact:true}).click();}
 try{
  await page.goto(url);await page.getByRole('heading',{name:'沿着路线，一步步实践'}).waitFor();
- const boot=await local('/bootstrap');assert.equal(boot.courses.length,28);assert.equal(boot.lessons.length,48);
- await page.screenshot({path:'validation/01-home.png',fullPage:true});await noOverflow('desktop home');checked('home loads with 28 chapters and 48 learning tasks');
+ const boot=await local('/bootstrap');assert.equal(boot.courses.length,32);assert.equal(boot.lessons.length,52);
+ await page.screenshot({path:'validation/01-home.png',fullPage:true});await noOverflow('desktop home');checked('home loads with 32 chapters and 52 learning tasks');
  await nav('学习路线');await page.getByRole('button',{name:'YOLO',exact:true}).click();assert.equal(await page.locator('.course-card').count(),4);
  await page.locator('.course-card').first().click();await page.getByText('理解训练的闭环',{exact:false}).count();
  assert.ok(await page.locator('.reading').innerText());checked('route filter and lesson reader');
@@ -144,6 +144,6 @@ try{
  }
  checked('all six pages fit a 390px viewport');
  assert.deepEqual(errors,[]);checked('no browser exceptions or HTTP 5xx responses');
- await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:28,lessons:48,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
+ await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:32,lessons:52,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
  console.log(`${count} browser workflows passed`);
 }finally{await browser.close();}

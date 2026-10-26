@@ -22,3 +22,11 @@
 .project-actions{margin-top:18px;flex-wrap:wrap}.project-transfer{margin:20px 0}.project-transfer>.secondary{margin-right:12px}.upload-control{display:inline-flex;cursor:pointer}.upload-control input{display:none}
 .project-tabs{margin-bottom:24px}.project-code-layout .actions{flex-wrap:wrap}.project-code-layout pre{white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:900px){.engineering-grid{grid-template-columns:1fr}.project-code-layout{grid-template-columns:1fr}.project-files{flex-direction:row;flex-wrap:wrap}.project-files h3,.project-files p,.project-files .field{width:100%}.project-images{grid-template-columns:1fr}.project-tabs{flex-wrap:wrap}}
+
+/* Engineering guidance shares the learner's native source files. */
+.project-mode{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:22px 0}
+.guided-panel{margin-bottom:24px}.guided-layout{display:grid;grid-template-columns:235px minmax(0,1fr);gap:24px}
+.guided-blocks{display:flex;flex-direction:column;gap:8px}.guided-blocks button{text-align:left;padding:14px;border:1px solid var(--line,#e1e7ef);border-radius:8px;background:#f8fafc;color:inherit}
+.guided-blocks button.selected{background:#eaf1ff;border-color:#3675d1}.guided-blocks span{display:block;font-size:12px;margin-top:6px;color:#6b7890}
+.guided-detail{min-width:0}.guided-detail h4{margin-bottom:6px}.guide-source{padding:14px;background:#f3f6fb;border-radius:8px;margin:14px 0}.guide-source select{max-width:100%;margin:8px 0;padding:8px}.guide-hints{margin-top:12px}
+@media(max-width:760px){.guided-layout{grid-template-columns:1fr}.guided-blocks{display:grid;grid-template-columns:1fr 1fr}.guided-blocks button{min-width:0}.guided-detail .light-code{white-space:pre-wrap;overflow-wrap:anywhere}.guided-panel>.title-row{align-items:flex-start;flex-direction:column}}

@@ -58,10 +58,16 @@ def materialize(key,folder,files,include_holdout=False):
     sample=data/'sample'
     if sample.is_symlink() or not sample.resolve().is_relative_to(folder.resolve()):raise ValueError('项目样例目录越界')
     if not (sample/'_manifest.json').exists():prepare(key,17,sample)
+    from .project_guides import guide_readme
+    guide_file=folder/'GUIDED_LEARNING.md'
+    if guide_file.is_symlink():raise ValueError('引导说明不能是链接')
+    if not guide_file.exists():guide_file.write_text(guide_readme(key),encoding='utf-8')
     if include_holdout:
+        from .project_checkpoints import export_standard
+        export_standard(key,folder)
         for seed in [101,207,333,440,995]:prepare(key,seed,data/'holdout'/str(seed))
 
-def run_main(source,input_dir,output_dir):
+def run_main(source,input_dir,output_dir,block=None):
     source=Path(source).resolve();input_dir=Path(input_dir).resolve();output_dir=Path(output_dir).resolve()
     output_dir.mkdir(parents=True,exist_ok=True)
     names={p.stem for p in source.glob('*.py')}
@@ -70,8 +76,10 @@ def run_main(source,input_dir,output_dir):
     cwd=Path.cwd();argv=sys.argv[:];old_path=sys.path[:]
     try:
         sys.path.insert(0,str(source));os.chdir(source)
-        sys.argv=[str(source/'main.py'),'--input',str(input_dir),'--output',str(output_dir),'--config',str(source/'config.json')]
-        try:runpy.run_path(str(source/'main.py'),run_name='__main__')
+        entry=source/('checkpoint.py' if block else 'main.py')
+        sys.argv=[str(entry),'--input',str(input_dir),'--output',str(output_dir),'--config',str(source/'config.json')]
+        if block:sys.argv.extend(['--block',block])
+        try:runpy.run_path(str(entry),run_name='__main__')
         except SystemExit as error:
             if error.code not in (None,0):raise RuntimeError(f'工程退出码：{error.code}') from error
     finally:
@@ -110,7 +118,7 @@ def iou(a,b):
     intersection=max(0,min(x+w,u+r)-max(x,u))*max(0,min(y+h,v+s)-max(y,v))
     return intersection/(w*h+r*s-intersection)
 
-def assess(key,input_dir,output_dir,truth,manifest):
+def assess(key,input_dir,output_dir,truth,manifest,scope="full"):
     checks=[]
     def add(name,ok,detail):checks.append(dict(name=name,ok=bool(ok),detail=str(detail)))
     path=output_path(output_dir,'results.json')
@@ -130,7 +138,7 @@ def assess(key,input_dir,output_dir,truth,manifest):
         if 'error' in target:
             add(name+' 解码失败记录',record.get('error')=='decode_failed','坏文件不能中断整个批次');continue
         overlay=image_output(output_dir,'overlays/'+Path(name).stem+'.png')
-        add(name+' 可视化输出',overlay is not None and list(overlay.shape)==item['shape'],'必须保存同尺寸PNG叠加图')
+        if scope=='full':add(name+' 可视化输出',overlay is not None and list(overlay.shape)==item['shape'],'必须保存同尺寸PNG叠加图')
         if key=='E01':
             mapping=match_points(record.get('centers'),target['centers'],8)
             add(name+' 数量与定位',type(record.get('count')) is int and record['count']==len(target['centers']) and mapping is not None,f"真值 {len(target['centers'])} 个；中心误差≤8px")
@@ -151,6 +159,7 @@ def assess(key,input_dir,output_dir,truth,manifest):
             valid=corners.shape==(4,2) and np.isfinite(corners).all()
             error=float(np.max(np.linalg.norm(corners-np.asarray(target['corners']),axis=1))) if valid else float('inf')
             add(name+' 四角位置与顺序',error<=7,f'最大误差 {error:.2f}px；要求≤7px')
+            if scope!='full':continue
             rectified=image_output(output_dir,'rectified/'+Path(name).stem+'.png')
             valid=rectified is not None and rectified.shape==target['rectified'].shape
             error=float(np.mean(np.abs(rectified.astype(float)-target['rectified']))) if valid else float('inf')
@@ -167,8 +176,11 @@ def assess(key,input_dir,output_dir,truth,manifest):
                     if identity in tracking and tracking[identity]!=actual:consistent=False
                     if actual in reverse and reverse[actual]!=identity:consistent=False
                     tracking[identity]=actual;reverse[actual]=identity
-            add(name+' 身份连续',consistent,'同物体跨帧保持ID；不同物体不得共享ID')
-    if key=='E04':
+            if scope=='full':add(name+' 身份连续',consistent,'同物体跨帧保持ID；不同物体不得共享ID')
+        elif key in ('E05','E06','E07','E08'):
+            from .project_extensions import assess_extra
+            add(name+' 工程算法结果',assess_extra(key,record,target),'按场景的类别、尺寸、四角或拼图身份契约比较真值')
+    if key=='E04' and scope=='full':
         events=payload.get('events');expected_events=truth['_events'];used=set()
         valid=isinstance(events,list) and len(events)==len(expected_events)
         frame_names=[entry['file'] for entry in manifest]
@@ -190,6 +202,9 @@ def preview_fixture(key,seed,folder):
     return image,dict(image_path=str(path),input_dir=str(input_dir),files=len(manifest)),{}
 
 def execute(request):
+    if request.get('project_block'):
+        from .project_checkpoints import execute as execute_checkpoint
+        return execute_checkpoint(request)
     from .engine import LimitedLog
     key=request['lesson'];folder=Path(request['folder']);folder.mkdir(parents=True,exist_ok=True)
     if request.get('project_custom') and (request['verify'] or key not in ('E01','E03')):raise ValueError('自有图片只能探索')

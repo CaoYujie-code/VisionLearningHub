@@ -107,6 +107,9 @@ def prepare(key,seed,folder):
             manifest.append(dict(file=name,condition='硬币裁片生成的双向运动/单帧缺失/静止目标',shape=list(image.shape)))
         (folder/'_sequence.json').write_text(json.dumps(dict(frames=frames,line_x=line_x),indent=2),encoding='utf-8')
         truth['_events']=events
+    elif key in ('E05','E06','E07','E08'):
+        from .project_extensions import prepare_extra
+        prepare_extra(key,seed,folder,add,read,write)
     else:raise KeyError(key)
     if key!='E04':
         (folder/'损坏图片.png').write_bytes(b'not a PNG: intentional decoder failure')

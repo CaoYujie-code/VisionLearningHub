@@ -13,11 +13,11 @@ async function nav(name){await page.locator('.sidebar nav').getByRole('button',{
 async function selectProject(key){await nav('工程项目');await page.locator('.engineering-card').filter({hasText:key+' ·'}).getByRole('button',{name:'进入工程任务',exact:false}).click();await page.getByRole('heading',{name:'工程交付约定',exact:true}).waitFor();}
 try{
  await mkdir('validation',{recursive:true});await page.goto(url);await page.getByRole('heading',{name:'沿着路线，一步步实践'}).waitFor();
- await nav('工程项目');assert.equal(await page.locator('.engineering-card').count(),4);
+ await nav('工程项目');assert.equal(await page.locator('.engineering-card').count(),8);
  await page.waitForFunction(()=>[...document.querySelectorAll('.engineering-card>img')].every(img=>img.complete&&img.naturalWidth>0));
- await page.screenshot({path:'validation/09-engineering-projects.png',fullPage:true});ok('four engineering briefs display attributed photographic assets');
+ await page.screenshot({path:'validation/09-engineering-projects.png',fullPage:true});ok('eight engineering briefs display attributed photographic assets');
  await page.getByLabel('搜索工程').fill('缺陷');assert.equal(await page.locator('.engineering-card').count(),1);await page.getByLabel('搜索工程').fill('');ok('engineering search filters scenario descriptions');
- for(const key of ['E01','E02','E03','E04']){
+ for(const key of ['E01','E02','E03','E04','E05','E06','E07','E08']){
   await selectProject(key);assert.equal(await page.locator('.check-line').count(),5);
   assert.ok(await page.getByRole('link',{name:'查看上游来源说明'}).count());
   await page.locator('.check-line input').first().check();
@@ -63,5 +63,5 @@ try{
  }
  await page.screenshot({path:'validation/11-engineering-mobile.png',fullPage:true});ok('engineering brief and modular editor fit a mobile viewport');
  assert.deepEqual(errors,[]);ok('engineering workflows have no JS exceptions or HTTP 5xx');
- await writeFile('validation/projects-browser-results.json',JSON.stringify({version:(await local('/health')).version,passed,errors,projects:4,stages:20},null,2));
+ await writeFile('validation/projects-browser-results.json',JSON.stringify({version:(await local('/health')).version,passed,errors,projects:8,stages:40},null,2));
 }finally{await browser.close();}

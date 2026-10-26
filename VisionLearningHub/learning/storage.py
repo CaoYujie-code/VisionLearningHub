@@ -71,6 +71,19 @@ class Store:
                                     (key,fingerprint(key,codes))).fetchone()
         return bool(row and row[0])
 
+    def project_progress(self,key):
+        from .project_guides import GUIDE_VERSION
+        current=fingerprint(key,self.codes());result={}
+        for digest,verified,passed,raw,stamp in self.connection.execute('SELECT digest,verified,passed,report,stamp FROM attempts WHERE lesson=? ORDER BY id DESC',(key,)):
+            report=json.loads(raw)
+            block='accept' if verified else report.get('project_block')
+            if not block:continue
+            source=report.get('block_source','own');identity=block+':'+source
+            if identity in result:continue
+            fresh=digest==current and (verified or report.get('guide_version')==GUIDE_VERSION)
+            result[identity]=dict(state=('passed' if passed else 'failed') if fresh else 'stale',stamp=stamp)
+        return result
+
     def history(self,key):
         return self.connection.execute("SELECT stamp,verified,passed,report FROM attempts WHERE lesson=? ORDER BY id DESC LIMIT 20",(key,)).fetchall()
 
