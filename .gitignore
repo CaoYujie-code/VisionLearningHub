@@ -1,0 +1,25 @@
+# Local environments, learning records and generated files
+**/.venv/
+**/node_modules/
+**/__pycache__/
+*.py[cod]
+**/dist/
+**/build/
+**/.test-data/
+**/.test-temp/
+**/.vision-learning/
+**/.vision-backups/
+**/.sites-runtime/
+**/.test-data-location.txt
+**/validation/
+**/extensions/vscode/runtime/
+releases/
+*.vsix
+*.log
+*.sqlite3*
+*.db
+.env
+.env.*
+!.env.example
+.idea/
+**/.DS_Store

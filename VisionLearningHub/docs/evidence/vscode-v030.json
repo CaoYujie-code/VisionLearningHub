@@ -1,0 +1,15 @@
+{
+  "passed": [
+    "isolated VS Code extension starts packaged Python runtime",
+    "32 native files, 16 courses and Test Explorer items",
+    "native dirty editor is saved and verified against five fixtures",
+    "native Python terminal task executes real source",
+    "Python Debugger hits real V01 breakpoint and exposes image variable",
+    "stale panel draft cannot overwrite IDE code",
+    "native learning webview created with local assets",
+    "service restart preserves grades and notes",
+    "three clear scopes preserve source and obey their boundaries",
+    "owned service stops"
+  ],
+  "errors": []
+}

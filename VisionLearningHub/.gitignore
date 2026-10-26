@@ -1,0 +1,10 @@
+.venv/
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.test-data/
+.test-temp/
+.sites-runtime/
+validation/
+.test-data-location.txt

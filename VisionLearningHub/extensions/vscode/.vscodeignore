@@ -1,0 +1,9 @@
+node_modules/**
+scripts/**
+test/**
+runtime/**/__pycache__/**
+runtime/**/*.pyc
+runtime/dist/*.map
+package-lock.json
+*.vsix
+**/.DS_Store

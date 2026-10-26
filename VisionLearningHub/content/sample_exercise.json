@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "status": "authoring_example_not_executable",
+  "id": "V-SEG-01",
+  "stage": "S02",
+  "title": "绿色背景下的纸片前景提取",
+  "goal": "亲手实现颜色分割，并解释颜色假设的适用与失效情况。",
+  "prerequisites": [
+    "S00",
+    "S01"
+  ],
+  "runtime_profile": "opencv-cpu",
+  "requirements": {
+    "gpu": false,
+    "linux": false,
+    "board": false
+  },
+  "input_contract": {
+    "image": "H×W×3、uint8、BGR 图像",
+    "params": {
+      "lower": "HSV 背景阈值下界，[H,S,V]",
+      "upper": "HSV 背景阈值上界，[H,S,V]"
+    }
+  },
+  "output_contract": {
+    "type": "numpy.ndarray",
+    "shape": "H×W",
+    "dtype": "uint8",
+    "values": [
+      0,
+      255
+    ],
+    "semantics": "前景=255，背景=0"
+  },
+  "concepts": [
+    "先确定白色掩膜表示背景还是前景。",
+    "HSV 分割依赖颜色范围与成像条件。",
+    "分割出背景再取反，可以保留非绿色纸片内的黑字与红色印刷。"
+  ],
+  "when_to_use": [
+    "背景颜色稳定且与纸片颜色有明显差异。",
+    "希望用简单可解释的规则得到完整区域。"
+  ],
+  "failure_conditions": [
+    "纸片本身与背景同色。",
+    "反光或阴影使背景超出预设范围。",
+    "阈值从一张图片写死后未在新环境检查。"
+  ],
+  "steps": [
+    "观察输入图，预测背景掩膜应该怎样显示。",
+    "手敲 BGR 到 HSV 的转换。",
+    "使用 params 的范围生成背景掩膜。",
+    "取反并返回前景掩膜。",
+    "对比原图、HSV 范围内区域与最终前景。"
+  ],
+  "starter_code": "import cv2\nimport numpy as np\n\n\ndef solve(image, params):\n    # TODO: 转换颜色空间\n    # TODO: 根据传入阈值提取背景\n    # TODO: 返回前景 255、背景 0 的掩膜\n    raise NotImplementedError('请完成核心步骤')\n",
+  "hints": [
+    "检查是否使用了 COLOR_BGR2HSV。",
+    "inRange 选中的是阈值区间内的像素。",
+    "想清楚最终哪一部分应该是白色。"
+  ],
+  "graded_fixture_design": [
+    {
+      "id": "normal",
+      "purpose": "非绿色纸片与明确绿色背景"
+    },
+    {
+      "id": "printed",
+      "purpose": "纸片内包含黑字和红色纹理"
+    },
+    {
+      "id": "rotated",
+      "purpose": "改变位置、尺寸与角度"
+    },
+    {
+      "id": "different_hsv",
+      "purpose": "改变传入阈值与相应背景颜色，防止写死阈值"
+    },
+    {
+      "id": "empty",
+      "purpose": "场景中没有纸片，应返回全零掩膜"
+    }
+  ],
+  "assessment_design": {
+    "interface_checks": [
+      "shape",
+      "dtype",
+      "binary_values"
+    ],
+    "metric": "foreground_mask_iou",
+    "teaching_threshold": 0.96,
+    "empty_union": "预测与真值都为空时 IoU 记为 1",
+    "grading_input": "保留独立的原始输入和参数，学生原地改动不改变验收依据",
+    "requires_implementation": "需在后续实现素材生成器与验收器；当前 JSON 本身不能判题"
+  },
+  "observation_only_cases": [
+    {
+      "name": "绿色纸片",
+      "expected_learning": "颜色相同无法单靠该颜色规则区分；分析替代信息。"
+    },
+    {
+      "name": "明显阴影与反光",
+      "expected_learning": "观察固定阈值失效的位置；讨论照明、阈值估计或其他方法。"
+    }
+  ],
+  "reflection_questions": [
+    "为什么直接灰度阈值可能让纸内黑字形成孔洞？",
+    "哪类场景适合先用 HSV？什么证据会让你换方法？",
+    "识别出目标的大致位置后，如果要测量真实尺寸，还缺少什么步骤？"
+  ],
+  "resource_ids": [
+    "R03",
+    "R04"
+  ],
+  "artifacts": [
+    "original.png",
+    "background_mask.png",
+    "foreground_mask.png",
+    "params.json",
+    "report.json"
+  ],
+  "completion_policy": "代码验收、理解自查与真实照片实验分别记录。"
+}

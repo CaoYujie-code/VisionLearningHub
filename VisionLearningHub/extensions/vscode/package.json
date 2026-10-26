@@ -1,0 +1,152 @@
+{
+  "name": "vision-learning-hub",
+  "displayName": "Vision Learning Hub · 视觉学习",
+  "description": "OpenCV / YOLO / Linux 学习路线、原生 Python 编写调试、图像实验与本地进度。",
+  "version": "0.3.0",
+  "publisher": "CaoYujie-code",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Education",
+    "Programming Languages"
+  ],
+  "keywords": [
+    "OpenCV",
+    "Python",
+    "YOLO",
+    "学习"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CaoYujie-code/VisionLearningHub.git"
+  },
+  "main": "./src/extension.cjs",
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onView:visionLearning.courses"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "信任学习工程后才能启动 Python 和执行练习。"
+    },
+    "virtualWorkspaces": false
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "visionLearning.open",
+        "title": "Vision: 打开视觉学习平台",
+        "icon": "$(book)"
+      },
+      {
+        "command": "visionLearning.exercise",
+        "title": "Vision: 打开练习代码"
+      },
+      {
+        "command": "visionLearning.run",
+        "title": "Vision: 运行当前练习样例",
+        "icon": "$(play)"
+      },
+      {
+        "command": "visionLearning.verify",
+        "title": "Vision: 验收当前练习",
+        "icon": "$(testing-passed-icon)"
+      },
+      {
+        "command": "visionLearning.debug",
+        "title": "Vision: 调试当前练习",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "visionLearning.environment",
+        "title": "Vision: Python 环境设置与检查",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "visionLearning.clear",
+        "title": "Vision: 清除学习记录或缓存",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "visionLearning.reset",
+        "title": "Vision: 重置当前练习（备份原代码）"
+      },
+      {
+        "command": "visionLearning.stop",
+        "title": "Vision: 停止学习服务"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "visionLearning",
+          "title": "视觉学习",
+          "icon": "media/vision.svg"
+        }
+      ]
+    },
+    "views": {
+      "visionLearning": [
+        {
+          "id": "visionLearning.courses",
+          "name": "学习路线"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "visionLearning.open",
+          "when": "view == visionLearning.courses",
+          "group": "navigation"
+        },
+        {
+          "command": "visionLearning.environment",
+          "when": "view == visionLearning.courses",
+          "group": "navigation"
+        },
+        {
+          "command": "visionLearning.clear",
+          "when": "view == visionLearning.courses",
+          "group": "actions"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "visionLearning.run",
+          "when": "resourceExtname == .py && resourcePath =~ /exercises/",
+          "group": "navigation"
+        },
+        {
+          "command": "visionLearning.debug",
+          "when": "resourceExtname == .py && resourcePath =~ /exercises/",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Vision Learning Hub",
+      "properties": {
+        "visionLearning.pythonPath": {
+          "type": "string",
+          "default": "",
+          "description": "学习与验收共用的 Python 可执行文件。为空时发现工程虚拟环境或 Python 扩展选定环境。",
+          "scope": "resource"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "check": "node --check src/extension.cjs && node --check src/core.cjs",
+    "package": "node scripts/package.cjs",
+    "test": "node --test test/core.test.cjs"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "3.7.1"
+  },
+  "license": "UNLICENSED"
+}

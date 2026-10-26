@@ -1,0 +1,37 @@
+name: Check learning platform
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  regression:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: "1"
+    defaults:
+      run:
+        working-directory: VisionLearningHub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: VisionLearningHub/package-lock.json
+      - run: python -m pip install -r requirements.lock.txt
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: python tests/test_platform.py
+      - run: python tests/test_acceptance_v020.py
+      - run: python tests/test_workspace.py
+      - run: npm ci --prefix extensions/vscode
+      - run: npm --prefix extensions/vscode run check
+      - run: npm --prefix extensions/vscode test
+      - run: npm --prefix extensions/vscode run package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vision-learning-hub-vsix
+          path: releases/*.vsix
