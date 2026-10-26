@@ -2,16 +2,16 @@
 
 从像素和 NumPy 开始，学习 OpenCV、经典视觉算法、YOLO 数据处理与 Linux / 嵌入式基础。通过课程阅读、手敲代码、图像对照和多样例验收积累自己的视觉工程。
 
-**0.3.1：保留网页版，新增可选安装的 VS Code 扩展。** 插件提供学习面板，代码使用 VS Code 原生编辑器；课程与基础实验可离线使用，官方资料链接需要联网。
+**0.4.0：保留网页版，新增可选安装的 VS Code 扩展。** 插件提供学习面板，代码使用 VS Code 原生编辑器；课程与基础实验可离线使用，官方资料链接需要联网。
 
 ## 能做什么
 
 | 模块 | 当前能力 |
 | --- | --- |
-| 学习路线 | 16 章，包含原理、适用情况、易错点、自查与笔记 |
-| 编程练习 | 32 道练习，每道 5 组正式验收样例；修改代码和依赖后重新判断进度 |
+| 学习路线 | 24 章，包含原理、适用情况、易错点、自查与笔记 |
+| 编程练习 | 44 道练习，每道 5 组正式验收样例；修改代码和依赖后重新判断进度 |
 | 图像实验室 | 12 种 OpenCV 方法、4 类内置场景、自定义图片与参数对照 |
-| 学习资料 | 24 份官方资料索引，支持搜索、阶段筛选和收藏 |
+| 学习资料 | 35 份官方资料索引，支持搜索、阶段筛选和收藏 |
 | VS Code | 侧栏路线、原生 Python 文件、终端运行、Python 断点调试、测试资源管理器 |
 | 本地记录 | SQLite 笔记、历史、收藏、代码快照，ZIP 备份恢复 |
 | 清除功能 | 分别清除实验缓存、验收历史、全部学习记录；保留源码；单题重置先备份代码 |
@@ -54,7 +54,7 @@ npm run build
 
 ### 安装与卸载
 
-从 [GitHub Releases](https://github.com/CaoYujie-code/VisionLearningHub/releases) 或维护者提供的安装包取得 `vision-learning-hub-0.3.1.vsix`，或按下文自行构建。VS Code → 扩展 → 右上角 `…` → **从 VSIX 安装**，由你决定是否安装。当前版本未发布到 Visual Studio Marketplace，不能承诺在商店中搜索得到。
+从 [GitHub Releases](https://github.com/CaoYujie-code/VisionLearningHub/releases) 或维护者提供的安装包取得 `vision-learning-hub-0.4.0.vsix`，或按下文自行构建。VS Code → 扩展 → 右上角 `…` → **从 VSIX 安装**，由你决定是否安装。当前版本未发布到 Visual Studio Marketplace，不能承诺在商店中搜索得到。
 
 禁用和卸载使用 VS Code 扩展面板的标准操作，按编辑器提示重载窗口。扩展停用时结束自身的 Python 服务；异常退出时通过父进程管道关闭服务。代码和学习记录保留，卸载前可主动备份或清除。
 
@@ -116,6 +116,7 @@ npm --prefix extensions/vscode run package
 .\.venv\Scripts\python.exe tests\test_platform.py
 .\.venv\Scripts\python.exe tests\test_acceptance_v020.py
 .\.venv\Scripts\python.exe tests\test_workspace.py
+.\.venv\Scripts\python.exe tests\test_content_v040.py
 npm run check
 npm run build
 npm --prefix extensions/vscode test
@@ -127,4 +128,10 @@ npm --prefix extensions/vscode test
 
 学生代码按当前用户权限运行，进程隔离和超时不是权限沙箱。请运行自己理解的代码。本版本未完成 Marketplace 发布、独立 EXE 或实物设备验收。
 
-资料：[首次学习指南](VisionLearningHub/docs/第一次使用与学习指南.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [版本验收](VisionLearningHub/docs/验收记录-0.3.1.md)
+资料：[完整学习路线](VisionLearningHub/docs/学习路线-0.4.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [版本验收](VisionLearningHub/docs/验收记录-0.4.0.md)
+
+## 0.4.0 内容扩展
+
+新增图像缩放与增强、连通域与距离图、模板与特征匹配、相机标定、视频运动、检测数据审计、Linux 缓冲与性能、模型量化对照。学习路线支持按题号、标题和知识点搜索。
+
+参见 [分阶段学习路线与新增题目](VisionLearningHub/docs/学习路线-0.4.0.md)。新题继续使用 OpenCV、NumPy 和 Python 标准库，不增加运行依赖；实机扩展与自动验收边界在各章单独说明。更新保留原有代码、笔记和验收记录。

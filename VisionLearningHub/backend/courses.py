@@ -73,5 +73,9 @@ chapter('S11','组合你的视觉系统','把模块连接起来，再回到真�
 ('应用与系统的边界',['先会运行应用，再理解 Bootloader、内核、设备树与根文件系统。Buildroot 可帮助理解组件构建，Yocto 留作更深入的工程化学习。','本平台综合关验收离线视觉检测。完整实物拼图、摄像头驱动和机械执行需要各自的现场测试。'])],
 ['形成可解释的检测流水线','为实物项目建立模块边界'],['一次更改多个阈值无法归因','把离线合成图通过当成现场成功'],['能画出完整数据流','能定位一个失败样例','能区分算法与设备验收'])
 ]
+from .advanced_courses import advanced_courses
+COURSES.extend(advanced_courses(chapter))
+_order = ['S00','S01','S02','S12','S13','S14','S15','S16','S17','S03','S18','S19','S20','S04','S05','S06','S07','S21','S08','S09','S22','S10','S23','S11']
+COURSES.sort(key=lambda course: _order.index(course['id']))
 COURSE_BY_ID={c['id']:c for c in COURSES}
 LESSON_COURSE={key:c['id'] for c in COURSES for key in c['lessons']}

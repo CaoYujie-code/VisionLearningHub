@@ -1,6 +1,6 @@
 # Vision Learning Hub · 视觉学习
 
-可选安装的本地学习扩展：16 章课程、32 道 Python 练习、12 种 OpenCV 图像实验、资料收藏与 SQLite 学习记录。
+可选安装的本地学习扩展：24 章课程、44 道 Python 练习、12 种 OpenCV 图像实验、35 份官方资料、资料收藏与 SQLite 学习记录。
 
 安装 VSIX 后，在 VS Code 打开学习文件夹，点击“视觉学习”。用 **Vision: Python 环境设置与检查** 配置 Python 3.12 和项目依赖。Python / Pylance / Python Debugger 由用户自行选择安装，不会自动强制安装。
 
@@ -13,3 +13,5 @@
 当前未上架扩展市场。完整安装、依赖、数据路径及功能边界见 [项目 README](https://github.com/CaoYujie-code/VisionLearningHub#readme)。YOLO 训练推理与板端联调尚未接入；Python 代码按当前用户权限执行。
 
 0.3.1 支持 GitHub Releases 更新：执行 **Vision: 检查插件更新**；也可开启每 24 小时检查，新版本由用户点击后安装，无需手动导入。设置 `visionLearning.checkUpdates` 可关闭自动检查。私有仓库需通过 VS Code 登录有权限的 GitHub 账号。
+
+0.4.0 新增缩放与增强、连通域、距离图、模板定位、HSV 环绕、帧差、数据划分审计、检测匹配、行步幅与延迟统计练习。学习路线可搜索知识点与题号；保留旧代码、笔记和通关记录。相机标定、特征匹配、光流与量化部署提供分步骤扩展任务，实机能力另行验收。

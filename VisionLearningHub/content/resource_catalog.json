@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "status": "curated_learning_resources",
-  "checked_at": "2026-10-25",
+  "checked_at": "2026-10-26",
   "resources": [
     {
       "id": "R01",
@@ -314,6 +314,149 @@
       "language": "英语",
       "checked_at": "2026-10-25",
       "version_note": "官网链接可能随版本更新；实现时需固定课程环境和对应接口，不能仅按链接中的 latest 安装。"
+    },
+    {
+      "id": "R25",
+      "title": "OpenCV 缩放与插值",
+      "stage": "S16",
+      "url": "https://docs.opencv.org/4.13.0/da/d54/group__imgproc__transform.html",
+      "topics": "resize、插值、采样网格",
+      "reading_task": "比较照片缩小与类别掩膜缩放，记录插值前后的类别值。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R26",
+      "title": "OpenCV 直方图均衡与 CLAHE",
+      "stage": "S16",
+      "url": "https://docs.opencv.org/4.13.0/d5/daf/tutorial_py_histogram_equalization.html",
+      "topics": "CLAHE、对比度、clipLimit",
+      "reading_task": "固定输入图，仅改变 clipLimit 和网格数，观察噪声与细节。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R27",
+      "title": "OpenCV 连通域与形状统计",
+      "stage": "S17",
+      "url": "https://docs.opencv.org/4.13.0/d3/dc0/group__imgproc__shape.html",
+      "topics": "connectedComponentsWithStats、4/8连通、面积",
+      "reading_task": "绘制对角相接的两块区域，解释4连通和8连通的数量差异。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R28",
+      "title": "OpenCV 距离变换与分水岭",
+      "stage": "S17",
+      "url": "https://docs.opencv.org/4.13.0/d2/dbd/tutorial_distance_transform.html",
+      "topics": "距离图、种子、watershed",
+      "reading_task": "保存二值掩膜、距离图和种子图，解释错误种子如何影响拆分。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R29",
+      "title": "OpenCV 模板匹配",
+      "stage": "S18",
+      "url": "https://docs.opencv.org/4.13.0/d4/dc6/tutorial_py_template_matching.html",
+      "topics": "matchTemplate、SQDIFF、minMaxLoc",
+      "reading_task": "比较旋转前后的匹配位置和最低分，再加入无目标输入。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R30",
+      "title": "OpenCV 局部特征匹配",
+      "stage": "S18",
+      "url": "https://docs.opencv.org/4.13.0/dc/dc3/tutorial_py_matcher.html",
+      "topics": "ORB、BFMatcher、Hamming、对应关系",
+      "reading_task": "保存纹理平面的关键点与匹配图，并对照几何位置检查错配。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R31",
+      "title": "OpenCV 双目视差与深度",
+      "stage": "S19",
+      "url": "https://docs.opencv.org/4.13.0/dd/d53/tutorial_py_depthmap.html",
+      "topics": "视差、基线、深度、StereoBM",
+      "reading_task": "手算两组视差对应的深度；解释小视差对误差更敏感。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R32",
+      "title": "OpenCV 光流与角点跟踪",
+      "stage": "S20",
+      "url": "https://docs.opencv.org/4.13.0/d4/dee/tutorial_optical_flow.html",
+      "topics": "Lucas-Kanade、光流、status、运动假设",
+      "reading_task": "跟踪一段自录视频，记录遮挡时失效点数量，保留有效点可视化。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R33",
+      "title": "scikit-learn 按组划分数据",
+      "stage": "S21",
+      "url": "https://scikit-learn.org/stable/modules/generated/sklearn.model_selection.GroupShuffleSplit.html",
+      "topics": "group、训练验证划分、数据泄漏",
+      "reading_task": "为采集视频定义 group，并检查各数据集合之间是否出现同组。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R34",
+      "title": "Linux V4L2 单平面格式与行步幅",
+      "stage": "S22",
+      "url": "https://www.kernel.org/doc/html/latest/userspace-api/media/v4l/pixfmt-v4l2.html",
+      "topics": "bytesperline、sizeimage、像素格式、padding",
+      "reading_task": "用 L02 理解行填充，再记录真实设备返回的格式与步幅。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
+    },
+    {
+      "id": "R35",
+      "title": "ONNX Runtime 模型量化",
+      "stage": "S23",
+      "url": "https://onnxruntime.ai/docs/performance/model-optimizations/quantization.html",
+      "topics": "INT8、静态动态量化、校准、精度调试",
+      "reading_task": "为同一模型制定浮点与量化的输出误差、任务指标、延迟对照表。",
+      "priority": "core",
+      "source_type": "official",
+      "language": "英语",
+      "checked_at": "2026-10-26",
+      "version_note": "OpenCV 链接固定为4.13.0；其他官方页面可能更新。扩展阅读不自动安装第三方依赖，请核对所用版本。"
     }
   ]
 }

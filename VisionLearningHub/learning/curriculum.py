@@ -207,5 +207,7 @@ from .domain_lessons import DOMAIN_LESSONS
 LESSONS.extend(DOMAIN_LESSONS)
 from .vision_lessons import VISION_LESSONS
 LESSONS.extend(VISION_LESSONS)
+from .advanced_lessons import ADVANCED_LESSONS
+LESSONS.extend(ADVANCED_LESSONS)
 BY_ID = {item["id"]: item for item in LESSONS}
 COURSE_VERSION = 2

@@ -17,6 +17,8 @@ from .domain_lessons import DOMAIN_IDS
 from . import domain_engine
 from .vision_lessons import VISION_IDS
 from . import vision_engine
+from .advanced_lessons import ADVANCED_IDS
+from . import advanced_engine
 
 
 def read_image(path):
@@ -77,6 +79,7 @@ def layout_metrics(image, layout, target):
 
 
 def fixture(key, seed, folder, custom=None):
+    if key in ADVANCED_IDS:return advanced_engine.fixture(key,seed,folder)
     if key in VISION_IDS:return vision_engine.fixture(key,seed,folder)
     if key in DOMAIN_IDS:return domain_engine.fixture(key,seed,folder)
     if key in EXTRA_IDS:return extra_engine.fixture(key,seed,folder)
@@ -173,6 +176,7 @@ def fixture(key, seed, folder, custom=None):
 
 
 def check_result(key, image, params, truth, result):
+    if key in ADVANCED_IDS:return advanced_engine.check_result(key,image,params,truth,result)
     if key in VISION_IDS:return vision_engine.check_result(key,image,params,truth,result)
     if key in DOMAIN_IDS:return domain_engine.check_result(key,image,params,truth,result)
     if key in EXTRA_IDS:return extra_engine.check_result(key,image,params,truth,result)
@@ -274,6 +278,7 @@ def check_result(key, image, params, truth, result):
 
 
 def preview(key,image,params,result):
+    if key in ADVANCED_IDS:return advanced_engine.preview(key,image,params,result)
     if key in VISION_IDS:return vision_engine.preview(key,image,params,result)
     if key in DOMAIN_IDS:return domain_engine.preview(key,image,params,result)
     if key in EXTRA_IDS:return extra_engine.preview(key,image,params,result)

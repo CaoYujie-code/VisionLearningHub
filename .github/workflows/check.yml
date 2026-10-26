@@ -27,6 +27,7 @@ jobs:
       - run: python tests/test_platform.py
       - run: python tests/test_acceptance_v020.py
       - run: python tests/test_workspace.py
+      - run: python tests/test_content_v040.py
       - run: npm ci --prefix extensions/vscode
       - run: npm --prefix extensions/vscode run check
       - run: npm --prefix extensions/vscode test

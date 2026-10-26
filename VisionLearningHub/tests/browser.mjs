@@ -17,9 +17,9 @@ async function noOverflow(label){assert.equal(await page.evaluate(()=>document.d
 async function nav(name){await page.locator('.sidebar nav').getByRole('button',{name,exact:true}).click();}
 try{
  await page.goto(url);await page.getByRole('heading',{name:'沿着路线，一步步实践'}).waitFor();
- const boot=await local('/bootstrap');assert.equal(boot.courses.length,16);assert.equal(boot.lessons.length,32);
- await page.screenshot({path:'validation/01-home.png',fullPage:true});await noOverflow('desktop home');checked('home loads with 16 chapters and 32 exercises');
- await nav('学习路线');await page.getByRole('button',{name:'YOLO',exact:true}).click();assert.equal(await page.locator('.course-card').count(),3);
+ const boot=await local('/bootstrap');assert.equal(boot.courses.length,24);assert.equal(boot.lessons.length,44);
+ await page.screenshot({path:'validation/01-home.png',fullPage:true});await noOverflow('desktop home');checked('home loads with 24 chapters and 44 exercises');
+ await nav('学习路线');await page.getByRole('button',{name:'YOLO',exact:true}).click();assert.equal(await page.locator('.course-card').count(),4);
  await page.locator('.course-card').first().click();await page.getByText('理解训练的闭环',{exact:false}).count();
  assert.ok(await page.locator('.reading').innerText());checked('route filter and lesson reader');
  await nav('学习路线');await page.locator('.course-card').first().click();
@@ -67,13 +67,27 @@ try{
   assert.ok((await page.locator('.reading').innerText()).length>100);
   assert.ok(await page.locator('.task-link').count());
  }
- checked('all four new chapters expose their lesson links and reading content');
- for(const key of ['V01','V02','V03','V04','V05','V06']){
+ checked('all four original visual chapters expose their lesson links and reading content');
+ for(const chapter of boot.courses.filter(c=>Number(c.id.slice(1))>=16)){
+  await nav('学习路线');await page.getByLabel('搜索课程').fill(chapter.id);
+  assert.equal(await page.locator('.course-card').count(),1);
+  await page.locator('.course-card').click();await page.getByRole('heading',{name:chapter.title,exact:true}).waitFor();
+  assert.ok((await page.locator('.reading').innerText()).length>350);
+  assert.equal(await page.locator('.task-link').count(),chapter.lessons.length);
+ }
+ await page.screenshot({path:'validation/08-v040-course.png',fullPage:true});
+ await nav('学习路线');await page.getByLabel('搜索课程').fill('CLAHE');
+ assert.ok(await page.locator('.course-card').count()>0);
+ await page.getByLabel('搜索课程').fill('missing-topic-000');assert.equal(await page.locator('.course-card').count(),0);
+ await page.getByText('没有匹配的课程，试试其他关键词或分类。').waitFor();
+ checked('8 advanced chapters and topic search are accessible');
+ for(const key of ['V01','V02','V03','V04','V05','V06','V07','V08','V09','V10','V11','V12','V13','V14','Y04','Y05','L02','L03']){
   await nav('练习工作台');await page.locator('.lesson-scroll').getByRole('button',{name:new RegExp('^'+key)}).click();
   await page.locator('.task-description h2').filter({hasText:key}).waitFor();
   const reference=await local('/lesson/'+key+'/reference');await editor.fill(reference.code);
   await page.getByRole('button',{name:'多样例验收',exact:true}).click();
   await page.getByText('当前版本已验收',{exact:true}).waitFor();
+  await page.waitForFunction(()=>document.querySelectorAll('.sample-tabs button').length===5);
   assert.equal(await page.locator('.sample-tabs button').count(),5);
   await page.waitForFunction(()=>[...document.querySelectorAll('.image-pair img')].length===2&&[...document.querySelectorAll('.image-pair img')].every(img=>img.complete&&img.naturalWidth>0));
   checked(key+' verified in the browser with output images');
@@ -129,6 +143,6 @@ try{
  }
  checked('all six pages fit a 390px viewport');
  assert.deepEqual(errors,[]);checked('no browser exceptions or HTTP 5xx responses');
- await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:16,lessons:32,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
+ await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:24,lessons:44,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
  console.log(`${count} browser workflows passed`);
 }finally{await browser.close();}

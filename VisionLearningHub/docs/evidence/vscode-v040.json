@@ -1,0 +1,21 @@
+{
+  "passed": [
+    "isolated VS Code extension starts packaged Python runtime",
+    "44 native files, 24 courses and Test Explorer items",
+    "V13 new exercise verifies from packaged native source",
+    "Y05 new exercise verifies from packaged native source",
+    "L02 new exercise verifies from packaged native source",
+    "native dirty editor is saved and verified against five fixtures",
+    "native Python terminal task executes real source",
+    "stale panel draft cannot overwrite IDE code",
+    "native learning webview created with local assets",
+    "structured environment diagnosis identifies Python and required packages",
+    "closed learning panel restores persistent page and exercise",
+    "unexpected Python exit is reported and explicit restart preserves progress",
+    "service restart preserves grades and notes",
+    "three clear scopes preserve source and obey their boundaries",
+    "verified update installs via official VS Code command in isolated extensions directory",
+    "owned service stops"
+  ],
+  "errors": []
+}

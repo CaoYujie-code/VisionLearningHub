@@ -9,6 +9,7 @@ import tempfile
 import time
 import unittest
 
+os.environ['PYTHONUTF8'] = '1'
 PROJECT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT))
 TEMP = tempfile.TemporaryDirectory(prefix='vlh-workspace-')
