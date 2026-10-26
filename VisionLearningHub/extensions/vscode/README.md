@@ -11,3 +11,5 @@
 禁用或卸载使用扩展面板标准操作，按提示重载窗口。学习记录和源码保留，需要时在卸载前主动导出或清除。后台服务随扩展停用关闭。
 
 当前未上架扩展市场。完整安装、依赖、数据路径及功能边界见 [项目 README](https://github.com/CaoYujie-code/VisionLearningHub#readme)。YOLO 训练推理与板端联调尚未接入；Python 代码按当前用户权限执行。
+
+0.3.1 支持 GitHub Releases 更新：执行 **Vision: 检查插件更新**；也可开启每 24 小时检查，新版本由用户点击后安装，无需手动导入。设置 `visionLearning.checkUpdates` 可关闭自动检查。私有仓库需通过 VS Code 登录有权限的 GitHub 账号。

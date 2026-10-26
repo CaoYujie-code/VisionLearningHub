@@ -2,7 +2,7 @@
   "name": "vision-learning-hub",
   "displayName": "Vision Learning Hub · 视觉学习",
   "description": "OpenCV / YOLO / Linux 学习路线、原生 Python 编写调试、图像实验与本地进度。",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "CaoYujie-code",
   "engines": {
     "vscode": "^1.95.0"
@@ -21,7 +21,7 @@
     "type": "git",
     "url": "https://github.com/CaoYujie-code/VisionLearningHub.git"
   },
-  "main": "./src/extension.cjs",
+  "main": "./dist/extension.cjs",
   "extensionKind": [
     "workspace"
   ],
@@ -78,6 +78,21 @@
       {
         "command": "visionLearning.stop",
         "title": "Vision: 停止学习服务"
+      },
+      {
+        "command": "visionLearning.continue",
+        "title": "Vision: 继续上次练习",
+        "icon": "$(history)"
+      },
+      {
+        "command": "visionLearning.restart",
+        "title": "Vision: 重启学习服务",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "visionLearning.checkUpdate",
+        "title": "Vision: 检查插件更新",
+        "icon": "$(cloud-download)"
       }
     ],
     "viewsContainers": {
@@ -113,6 +128,11 @@
           "command": "visionLearning.clear",
           "when": "view == visionLearning.courses",
           "group": "actions"
+        },
+        {
+          "command": "visionLearning.checkUpdate",
+          "when": "view == visionLearning.courses",
+          "group": "actions"
         }
       ],
       "editor/title": [
@@ -136,17 +156,26 @@
           "default": "",
           "description": "学习与验收共用的 Python 可执行文件。为空时发现工程虚拟环境或 Python 扩展选定环境。",
           "scope": "resource"
+        },
+        "visionLearning.checkUpdates": {
+          "type": "boolean",
+          "default": true,
+          "description": "每 24 小时检查 GitHub Releases。发现更新后提示，由你决定是否安装。",
+          "scope": "window"
         }
       }
     }
   },
   "scripts": {
-    "check": "node --check src/extension.cjs && node --check src/core.cjs",
+    "check": "node --check src/extension.cjs && node --check src/core.cjs && node --check src/environment.cjs && node --check src/updates.cjs && node --check src/updater.cjs",
     "package": "node scripts/package.cjs",
-    "test": "node --test test/core.test.cjs"
+    "test": "node --test test/*.test.cjs"
   },
   "devDependencies": {
     "@vscode/vsce": "3.7.1"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "fflate": "0.8.2"
+  }
 }

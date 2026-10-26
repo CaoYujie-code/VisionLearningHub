@@ -2,7 +2,7 @@
 
 从像素和 NumPy 开始，学习 OpenCV、经典视觉算法、YOLO 数据处理与 Linux / 嵌入式基础。通过课程阅读、手敲代码、图像对照和多样例验收积累自己的视觉工程。
 
-**0.3.0：保留网页版，新增可选安装的 VS Code 扩展。** 插件提供学习面板，代码使用 VS Code 原生编辑器；课程与基础实验可离线使用，官方资料链接需要联网。
+**0.3.1：保留网页版，新增可选安装的 VS Code 扩展。** 插件提供学习面板，代码使用 VS Code 原生编辑器；课程与基础实验可离线使用，官方资料链接需要联网。
 
 ## 能做什么
 
@@ -54,9 +54,15 @@ npm run build
 
 ### 安装与卸载
 
-从维护者提供的安装包取得 `vision-learning-hub-0.3.0.vsix`，或按下文自行构建。VS Code → 扩展 → 右上角 `…` → **从 VSIX 安装**，由你决定是否安装。当前版本未发布到 Visual Studio Marketplace，不能承诺在商店中搜索得到。
+从 [GitHub Releases](https://github.com/CaoYujie-code/VisionLearningHub/releases) 或维护者提供的安装包取得 `vision-learning-hub-0.3.1.vsix`，或按下文自行构建。VS Code → 扩展 → 右上角 `…` → **从 VSIX 安装**，由你决定是否安装。当前版本未发布到 Visual Studio Marketplace，不能承诺在商店中搜索得到。
 
 禁用和卸载使用 VS Code 扩展面板的标准操作，按编辑器提示重载窗口。扩展停用时结束自身的 Python 服务；异常退出时通过父进程管道关闭服务。代码和学习记录保留，卸载前可主动备份或清除。
+
+### 后续更新
+
+首次安装 0.3.1 后，可通过 **Vision: 检查插件更新** 更新，无需再次手动导入。插件每 24 小时自动检查 GitHub Releases，发现新版本后由你点击“更新”，校验并安装后重载窗口。可通过 `visionLearning.checkUpdates` 关闭自动检查。
+
+私有仓库需要通过 VS Code 登录有权限的 GitHub 账号。0.3.0 仍需先安装一次新版。维护者推送版本标签后，由 GitHub Actions 构建并发布安装包。详见 [插件更新与发布](VisionLearningHub/docs/插件更新与发布.md)。
 
 ### 首次使用
 
@@ -121,4 +127,4 @@ npm --prefix extensions/vscode test
 
 学生代码按当前用户权限运行，进程隔离和超时不是权限沙箱。请运行自己理解的代码。本版本未完成 Marketplace 发布、独立 EXE 或实物设备验收。
 
-资料：[首次学习指南](VisionLearningHub/docs/第一次使用与学习指南.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [版本验收](VisionLearningHub/docs/验收记录-0.3.0.md)
+资料：[首次学习指南](VisionLearningHub/docs/第一次使用与学习指南.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [版本验收](VisionLearningHub/docs/验收记录-0.3.1.md)

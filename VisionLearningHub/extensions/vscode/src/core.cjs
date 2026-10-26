@@ -12,4 +12,8 @@ function apiPath(value) {
   if (typeof value !== 'string' || !/^\/(bootstrap|lesson\/[A-Z]\d{2}(\/reference)?|jobs(\/[a-f0-9]+(\/stop)?)?|settings\/(bookmarks|course\.[A-Z]\d{2})|lab|upload|records(\/\d+)?|environment|backup|restore|export-code|clear|workspace\/reset\/[A-Z]\d{2})$/.test(value)) throw new Error('不支持的接口');
   return value;
 }
-module.exports = { lessonKey, inside, apiPath };
+function navigationState(value, lessons, courses) {
+  const page=['home','route','lab','practice','resources','records'].includes(value?.page)?value.page:'home';
+  return {page,lesson:lessons.includes(value?.lesson)?value.lesson:(lessons[0]||'P01'),course:courses.includes(value?.course)?value.course:null};
+}
+module.exports = { lessonKey, inside, apiPath, navigationState };

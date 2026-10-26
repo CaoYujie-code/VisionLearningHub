@@ -4,10 +4,10 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const net = require('node:net');
-const {spawn, execFile} = require('node:child_process');
-const {promisify} = require('node:util');
-const exec = promisify(execFile);
-const {lessonKey, inside, apiPath} = require('./core.cjs');
+const {spawn} = require('node:child_process');
+const {probePython,describeReport}=require('./environment.cjs');
+const {Updater}=require('./updater.cjs');
+const {lessonKey, inside, apiPath, navigationState} = require('./core.cjs');
 let instance;
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 async function exists(file) {try {await fs.access(file);return true;} catch {return false;}}
@@ -22,7 +22,11 @@ class Hub {
     this.runtime=path.join(context.extensionPath,'runtime');
     this.known=[];this.stopping=false;this.tasks=new Set();this.debugSessions=new Set();
     context.subscriptions.push(vscode.debug.onDidStartDebugSession(session=>{if(session.configuration.visionLearning)this.debugSessions.add(session);}),vscode.debug.onDidTerminateDebugSession(session=>this.debugSessions.delete(session)));
-    context.subscriptions.push(this.output,this.events,this.test);
+    this.status=vscode.window.createStatusBarItem('visionLearning.progress',vscode.StatusBarAlignment.Left,30);
+    this.status.name='视觉学习进度';this.status.command='visionLearning.continue';this.status.text='$(book) 视觉学习';this.status.show();
+    this.updater=new Updater(context,this.output);
+    context.subscriptions.push(this.output,this.events,this.test,this.status,this.updater);
+    context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e=>{if(e.affectsConfiguration('visionLearning.pythonPath')&&this.service)this.output.appendLine('解释器设置已改变，请执行 Vision: 重启学习服务 使其生效。');}));
   }
   async runtimePath() {
     if(!await exists(path.join(this.runtime,'app_server.py')))this.runtime=path.resolve(this.context.extensionPath,'../..');
@@ -58,11 +62,16 @@ class Hub {
   }
   async start() {
     await this.folder();await this.runtimePath();this.pythonExe=await this.python();
-    try {const {stdout}=await exec(this.pythonExe,['-c','import sys,cv2,numpy,fastapi,uvicorn,multipart; print(sys.executable); print(cv2.__version__)'],{windowsHide:true,timeout:20000});this.output.appendLine(stdout.trim());}
-    catch(error){throw new Error('Python 环境缺少依赖或不可运行。请执行“Vision: Python 环境设置与检查”。\n'+(error.stderr||error.message));}
+    const report=await probePython(this.pythonExe);this.output.appendLine(describeReport(report));
+    if(!report.ok)throw new Error('学习环境尚未就绪。请执行“Vision: Python 环境设置与检查”，查看缺失依赖与解释器。');
+    this.failure=null;
     await fs.mkdir(this.data,{recursive:true});
     if(!inside(await fs.realpath(this.project),await fs.realpath(this.root)))throw new Error('学习目录不能链接到工程之外。');
     this.lock=path.join(this.data,'extension.lock');
+    if(this.child&&(this.child.exitCode!==null||this.child.signalCode)){
+      try{if((await fs.readFile(this.lock,'utf8')).trim()===String(process.pid))await fs.unlink(this.lock);}catch{}
+      this.child=null;
+    }
     try {const lock=await fs.open(this.lock,'wx');await lock.writeFile(String(process.pid));await lock.close();}
     catch(error){
       if(error.code!=='EEXIST')throw error;
@@ -78,6 +87,13 @@ class Hub {
     });
     let spawnError;child.on('error',e=>{spawnError=e;});
     child.stdout.on('data',s=>this.output.append(s.toString()));child.stderr.on('data',s=>this.output.append(s.toString()));
+    child.once('exit',(code,signal)=>{
+      if(this.child===child&&!this.stopping){
+        this.service=null;this.failure='学习服务已退出（'+(signal||code)+'），请点击重启后重新运行练习。';
+        this.output.appendLine(this.failure);this.status.text='$(warning) 视觉学习服务已停止';this.status.command='visionLearning.restart';
+        this.panel?.webview.postMessage({type:'vlh-offline',message:this.failure});
+      }
+    });
     this.child=child;const url='http://127.0.0.1:'+port;
     try {
       for(let i=0;i<100;i++){
@@ -96,7 +112,7 @@ class Hub {
         this.watcher.onDidChange(changed);this.watcher.onDidCreate(changed);this.watcher.onDidDelete(changed);this.context.subscriptions.push(this.watcher);
       }
       const readme=path.join(this.root,'README.md');if(!await exists(readme))await fs.writeFile(readme,'# 我的视觉练习\n\nexercises/ 是你的真实 Python 代码；使用 cv2、numpy 和普通模块导入。\n通过 Vision 命令运行、调试和验收。data/ 是私有学习记录，请勿提交。\n清除记录不会删除代码；重置单题的旧代码存于 .vision-backups/。\n');
-      this.events.fire();return this.service;
+      this.updateStatus();this.events.fire();return this.service;
     }catch(error){await this.stop();throw error;}
   }
   file(key) {return path.join(this.root,'exercises',lessonKey(key,this.known)+'.py');}
@@ -104,7 +120,7 @@ class Hub {
     for(const doc of vscode.workspace.textDocuments){if(doc.isDirty&&doc.uri.scheme==='file'&&inside(path.join(this.root,'exercises'),doc.uri.fsPath)){if(!await doc.save())throw new Error('代码未保存，已取消运行。');}}
   }
   async request(route,method='GET',body) {
-    apiPath(route);if(!this.service)await this.ensure();
+    apiPath(route);if(!this.service){if(this.failure)throw new Error(this.failure);await this.ensure();}
     const headers={'X-VLH-Token':this.service.token};
     if(body!==undefined&&!(body instanceof FormData))headers['Content-Type']='application/json';
     const response=await fetch(this.service.url+'/api'+route,{method,headers,body:body===undefined?undefined:body instanceof FormData?body:typeof body==='string'?body:JSON.stringify(body),signal:AbortSignal.timeout(60000)});
@@ -112,19 +128,23 @@ class Hub {
     if(response.headers.get('content-type')?.includes('application/json'))return response.json();
     return Buffer.from(await response.arrayBuffer());
   }
-  async refresh(){if(!this.service)return;this.boot=await this.request('/bootstrap');this.events.fire();this.panel?.webview.postMessage({type:'vlh-refresh'});}
+  async refresh(){if(!this.service)return;this.boot=await this.request('/bootstrap');this.updateStatus();this.events.fire();this.panel?.webview.postMessage({type:'vlh-refresh'});}
   async getChildren(item) {
-    try {await this.ensure();if(item?.course)return this.boot.lessons.filter(l=>l.course===item.course).map(l=>({lesson:l.id,label:l.id+' '+l.title}));if(item)return [];return [{page:'home',label:'学习总览 / 继续学习'},...this.boot.courses.map(c=>({course:c.id,label:c.id+' '+c.title})),{page:'lab',label:'图像实验室'},{page:'resources',label:'学习资料库'},{page:'records',label:'记录、备份与清除'}];}
+    try {await this.ensure();if(item?.course)return this.boot.lessons.filter(l=>l.course===item.course).map(l=>({lesson:l.id,label:l.id+' '+l.title}));if(item)return [];return [{page:'continue',label:'继续上次练习'},{page:'home',label:'学习总览'},...this.boot.courses.map(c=>({course:c.id,label:c.id+' '+c.title})),{page:'lab',label:'图像实验室'},{page:'resources',label:'学习资料库'},{page:'records',label:'记录、备份与清除'}];}
     catch(error){this.output.appendLine(error.message);return [{page:'setup',label:'配置环境 / 打开学习工程'}];}
   }
   getTreeItem(item) {
     const tree=new vscode.TreeItem(item.label,item.course?vscode.TreeItemCollapsibleState.Collapsed:vscode.TreeItemCollapsibleState.None);
     if(item.lesson){tree.description=this.boot?.passed[item.lesson]?'已验收':'待练习';tree.command={command:'visionLearning.exercise',title:'练习',arguments:[item.lesson]};}
-    else if(item.page)tree.command={command:item.page==='setup'?'visionLearning.environment':'visionLearning.open',title:'打开',arguments:[item.page]};
+    else if(item.course){const keys=this.boot.courses.find(c=>c.id===item.course)?.lessons||[];tree.description=keys.filter(k=>this.boot.passed[k]).length+' / '+keys.length;tree.tooltip='本章正式验收进度';}
+    else if(item.page)tree.command={command:item.page==='setup'?'visionLearning.environment':item.page==='continue'?'visionLearning.continue':'visionLearning.open',title:'打开',arguments:[item.page]};
     return tree;
   }
   async show(page,lesson) {
     await this.ensure();
+    const saved=this.context.workspaceState.get(this.stateKey(),{});
+    const state=navigationState(lesson?{page:'practice',lesson}:page?{...saved,page}:saved,this.known,this.boot.courses.map(c=>c.id));
+    this.navigation={type:'vlh-navigate',...state};this.restoreTarget=state;
     if(!this.panel){
       this.panel=vscode.window.createWebviewPanel('visionLearning.hub','Vision · 视觉学习',vscode.ViewColumn.Beside,{enableScripts:true,retainContextWhenHidden:true,localResourceRoots:[vscode.Uri.file(path.join(this.runtime,'dist')),vscode.Uri.file(this.data)]});
       const web=this.panel.webview;const resource=name=>web.asWebviewUri(vscode.Uri.file(path.join(this.runtime,'dist',name))).toString();
@@ -132,7 +152,7 @@ class Hub {
       web.onDidReceiveMessage(async m=>{if(m?.type!=='vlh-request')return;try{const value=await this.message(m.action,m.args||{});await web.postMessage({type:'vlh-response',id:m.id,value});}catch(e){await web.postMessage({type:'vlh-response',id:m.id,error:e.message});}});
       this.panel.onDidDispose(()=>{this.panel=null;});
     }else this.panel.reveal(vscode.ViewColumn.Beside,true);
-    if(page||lesson){this.navigation={type:'vlh-navigate',page,lesson};await this.panel.webview.postMessage(this.navigation);}
+    await this.panel.webview.postMessage(this.navigation);
   }
   async images(value) {
     if(Array.isArray(value))return Promise.all(value.map(v=>this.images(v)));
@@ -145,12 +165,20 @@ class Hub {
     }return value;
   }
   async message(action,args) {
-    if(action==='viewReady'){this.viewState=args;return true;}
+    if(action==='viewReady'){
+      this.viewState=args;
+      if(this.restoreTarget&&(args.page!==this.restoreTarget.page||(args.page==='practice'&&args.lesson!==this.restoreTarget.lesson)||(args.page==='route'&&args.course!==this.restoreTarget.course)))return true;
+      this.restoreTarget=null;
+      const value=navigationState(args,this.known,this.boot.courses.map(c=>c.id));
+      await this.context.workspaceState.update(this.stateKey(),value);return true;
+    }
     if(action==='api'){
       apiPath(args.path);let body=args.body;
+      if(args.path==='/clear')this.ensureIdle();
       if(args.method==='POST'&&args.path==='/jobs')await this.saveFiles();
       if(body?.file){if(!['/upload','/restore'].includes(args.path))throw new Error('不支持的上传');const bytes=Buffer.from(body.file.data,'base64');if(bytes.length>(args.path==='/restore'?128:12)*1024*1024)throw new Error('上传文件过大');const form=new FormData();form.append('file',new Blob([bytes],{type:body.file.type}),path.basename(body.file.name));body=form;}
       const result=await this.request(args.path,args.method,body);
+      if(args.path==='/clear'&&(typeof body==='string'?JSON.parse(body):body)?.scope==='all')await this.context.workspaceState.update(this.stateKey(),undefined);
       if(args.path==='/bootstrap'&&this.navigation){const nav=this.navigation;this.navigation=null;setTimeout(()=>this.panel?.webview.postMessage(nav),150);}
       if(args.path==='/clear'||args.path==='/restore'||(/^\/jobs\/[a-f0-9]+$/.test(args.path)&&['done','error','timeout','cancelled'].includes(result.status)))await this.refresh();
       return Buffer.isBuffer(result)?{status:200,base64:result.toString('base64')}:{status:200,json:await this.images(result)};
@@ -167,6 +195,8 @@ class Hub {
     if(action==='debug')return this.native(args.key,true);
     if(action==='resetExercise')return this.reset(args.key);
     if(action==='environment')return this.environment();
+    if(action==='restart')return this.restart();
+    if(action==='checkUpdate')return this.updater.check(true);
     throw new Error('未知扩展操作');
   }
   async openExercise(key,line=1) {
@@ -198,10 +228,10 @@ class Hub {
     if(!scope){const pick=await vscode.window.showQuickPick([{label:'清除实验缓存',scope:'cache',description:'保留代码、笔记、历史与通关'},{label:'清除验收历史',scope:'history',description:'通关归零，保留代码、笔记和收藏'},{label:'清除全部学习记录',scope:'all',description:'删除笔记、收藏、历史、图片和空间内备份；保留代码'}]);scope=pick?.scope;}
     if(!scope)return false;
     const value=await vscode.window.showInputBox({title:'确认清除当前学习空间',prompt:'范围：'+scope+'。位置：'+this.data+'。保留源码。输入 CLEAR，取消则不修改。',validateInput:v=>v==='CLEAR'?null:'请输入 CLEAR'});
-    if(value!=='CLEAR')return false;await this.request('/clear','POST',{scope,confirmation:value});await this.refresh();return true;
+    if(value!=='CLEAR')return false;this.ensureIdle();await this.request('/clear','POST',{scope,confirmation:value});if(scope==='all')await this.context.workspaceState.update(this.stateKey(),undefined);await this.refresh();return true;
   }
   async reset(key) {
-    await this.ensure();key=this.currentKey(key);
+    await this.ensure();key=this.currentKey(key);this.ensureIdle();
     if(await vscode.window.showWarningMessage('重置 '+key+' 到空白练习？当前代码会先备份到 .vision-backups。',{modal:true},'备份并重置')!=='备份并重置')return false;
     await this.saveFiles();const result=await this.request('/workspace/reset/'+key,'POST',{scope:'exercise',confirmation:'CLEAR'});await this.refresh();await vscode.window.showInformationMessage('原代码备份：'+result.backup);return true;
   }
@@ -213,13 +243,30 @@ class Hub {
       const task=new vscode.Task({type:'visionLearning.install'},vscode.TaskScope.Workspace,'Vision 安装依赖','Vision',new vscode.ProcessExecution(python,['-m','pip','install','-r',path.join(this.runtime,'requirements.lock.txt')],{cwd:this.runtime}),[]);await vscode.tasks.executeTask(task);return;
     }
     if(choice==='查看扩展依赖说明'){return vscode.env.openExternal(vscode.Uri.parse('https://code.visualstudio.com/docs/python/environments'));}
-    await this.ensure();const environment=await this.request('/environment');this.output.appendLine(JSON.stringify(environment,null,2));this.output.show();return environment;
+    const report=await probePython(await this.python());this.output.appendLine(describeReport(report));this.output.show();if(report.ok)await vscode.window.showInformationMessage('环境检查通过：Python '+report.python+'。');return report;
+  }
+  stateKey(){return 'view.'+crypto.createHash('sha256').update(this.project||'').digest('hex').slice(0,16);}
+  updateStatus(){
+    if(!this.boot)return;
+    const passed=Object.values(this.boot.passed).filter(Boolean).length;
+    this.status.text='$(book) 视觉学习 '+passed+'/'+this.known.length;this.status.command='visionLearning.continue';
+    this.status.tooltip='点击继续上次练习。解释器：'+this.pythonExe;
+    this.status.accessibilityInformation={label:'视觉学习，已通过 '+passed+' 道，共 '+this.known.length+' 道'};
+  }
+  ensureIdle(){if(this.tasks.size||this.debugSessions.size)throw new Error('请先结束终端运行或调试，再清除数据或重置练习。');}
+  async resume(){
+    await this.ensure();const state=this.context.workspaceState.get(this.stateKey());
+    const key=this.known.includes(state?.lesson)?state.lesson:this.boot.courses.flatMap(c=>c.lessons).find(k=>!this.boot.passed[k])||this.known[0];
+    await this.show('practice',key);await this.openExercise(key);
+  }
+  async restart(){
+    await this.stop();this.failure=null;await this.ensure();await this.refresh();return true;
   }
   async stop() {
     if(this.stopping)return;this.stopping=true;clearTimeout(this.refreshTimer);
     try {for(const task of this.tasks)task.terminate();this.tasks.clear();for(const session of this.debugSessions)await vscode.debug.stopDebugging(session);this.debugSessions.clear();if(this.service){try{await fetch(this.service.url+'/api/shutdown',{method:'POST',headers:{'X-VLH-Control':this.service.control},signal:AbortSignal.timeout(2000)});}catch{}}
       this.child?.stdin.end();if(this.child&&this.child.exitCode===null){await Promise.race([new Promise(r=>this.child.once('exit',r)),delay(3500)]);if(this.child.exitCode===null)this.child.kill();}
-      this.service=null;this.child=null;if(this.lock){try{if((await fs.readFile(this.lock,'utf8')).trim()===String(process.pid))await fs.unlink(this.lock);}catch{}}
+      this.service=null;this.child=null;this.status.text='$(book) 视觉学习已暂停';this.status.command='visionLearning.open';if(this.lock){try{if((await fs.readFile(this.lock,'utf8')).trim()===String(process.pid))await fs.unlink(this.lock);}catch{}}
     }finally{this.stopping=false;}
   }
 }
@@ -228,6 +275,8 @@ function activate(context) {
   const hub=instance=new Hub(context);context.subscriptions.push(vscode.window.registerTreeDataProvider('visionLearning.courses',hub));
   const register=(id,fn)=>context.subscriptions.push(vscode.commands.registerCommand('visionLearning.'+id,async(...args)=>{try{return await fn(...args);}catch(e){hub.output.appendLine(e.stack||e.message);await vscode.window.showErrorMessage(e.message);}}));
   register('open',page=>hub.show(page));
+  register('continue',()=>hub.resume());register('restart',()=>hub.restart());register('checkUpdate',()=>hub.updater.check(true));
+  hub.updater.schedule();
   register('exercise',async key=>{await hub.ensure();if(!key){const pick=await vscode.window.showQuickPick(hub.boot.lessons.map(l=>({label:l.id+' '+l.title,key:l.id})));key=pick?.key;}if(key){await hub.show('practice',key);return hub.openExercise(key);}});
   for(const [command,verify]of [['run',false],['verify',true]])register(command,async key=>{await hub.ensure();key=hub.currentKey(key);const result=await vscode.window.withProgress({location:vscode.ProgressLocation.Notification,title:'Vision '+key,cancellable:true},(_,token)=>hub.run(key,verify,token));await hub.show('practice',key);await vscode.window.showInformationMessage(result.result?.passed?'检查通过；结果已保存，可在历史中查看。':result.error||'检查未通过，请查看练习历史。');return result;});
   register('debug',key=>hub.native(key,true));register('environment',()=>hub.environment());register('clear',()=>hub.clear());register('reset',key=>hub.reset(key));register('stop',()=>{hub.panel?.dispose();return hub.stop();});

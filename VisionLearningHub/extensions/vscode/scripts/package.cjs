@@ -7,6 +7,8 @@ const runtime=path.join(extension,'runtime');
 fs.mkdirSync(runtime,{recursive:true});
 for(const name of ['backend','learning','content','dist'])fs.cpSync(path.join(project,name),path.join(runtime,name),{recursive:true,filter:source=>!source.includes('__pycache__')&&!source.endsWith('.pyc')&&!source.endsWith('.map')});
 for(const name of ['app_server.py','requirements.lock.txt'])fs.copyFileSync(path.join(project,name),path.join(runtime,name));
+const {buildSync}=require(path.join(project,'node_modules/esbuild'));
+buildSync({entryPoints:[path.join(extension,'src/extension.cjs')],bundle:true,platform:'node',format:'cjs',target:'node20',external:['vscode'],outfile:path.join(extension,'dist/extension.cjs')});
 const output=path.resolve(project,'../releases');fs.mkdirSync(output,{recursive:true});
 const version=require('../package.json').version;
 execFileSync(process.execPath,[path.join(extension,'node_modules/@vscode/vsce/vsce'),'package','--no-dependencies','--skip-license','--out',path.join(output,`vision-learning-hub-${version}.vsix`)],{cwd:extension,stdio:'inherit'});

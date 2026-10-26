@@ -129,6 +129,6 @@ try{
  }
  checked('all six pages fit a 390px viewport');
  assert.deepEqual(errors,[]);checked('no browser exceptions or HTTP 5xx responses');
- await writeFile('validation/browser-results.json',JSON.stringify({version:'0.3.0',chapters:16,lessons:32,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
+ await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:16,lessons:32,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
  console.log(`${count} browser workflows passed`);
 }finally{await browser.close();}

@@ -1,6 +1,6 @@
 # Vision Learning Hub · 视觉学习实验室
 
-**当前版本：0.3.0，支持网页版与可选 VS Code 扩展。** 独立于 `VisionLearningStudio`，使用浏览器界面、Python 练习进程和 SQLite 学习记录。建设日期：2026-10-25。
+**当前版本：0.3.1，支持网页版与可选 VS Code 扩展。** 独立于 `VisionLearningStudio`，使用浏览器界面、Python 练习进程和 SQLite 学习记录。建设日期：2026-10-25。
 
 VS Code 插件安装、使用与清除说明见 [仓库首页](../README.md)。
 

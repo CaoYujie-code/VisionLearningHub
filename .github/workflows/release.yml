@@ -1,0 +1,53 @@
+name: Publish VSIX to GitHub Releases
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: windows-latest
+    env:
+      PYTHONUTF8: '1'
+    defaults:
+      run:
+        working-directory: VisionLearningHub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: VisionLearningHub/package-lock.json
+      - name: Verify version tag
+        shell: pwsh
+        run: |
+          $version = (Get-Content extensions/vscode/package.json | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -ne "v$version") { throw 'Run this workflow on a matching version tag.' }
+      - run: python -m pip install -r requirements.lock.txt
+      - run: npm ci
+      - run: npm run check
+      - run: npm run build
+      - run: python tests/test_platform.py
+      - run: python tests/test_acceptance_v020.py
+      - run: python tests/test_workspace.py
+      - run: npm ci --prefix extensions/vscode
+      - run: npm --prefix extensions/vscode run check
+      - run: npm --prefix extensions/vscode test
+      - run: npm --prefix extensions/vscode run package
+      - name: Write package checksum
+        shell: pwsh
+        run: |
+          $package = Get-ChildItem ../releases/*.vsix | Select-Object -First 1
+          $hash = (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $($package.Name)" | Set-Content -Encoding ascii ../releases/SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            releases/*.vsix
+            releases/SHA256SUMS.txt

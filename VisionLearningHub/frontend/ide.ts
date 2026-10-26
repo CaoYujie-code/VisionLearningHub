@@ -9,6 +9,7 @@ window.addEventListener('message',event=>{
   const p=waiting.get(m.id);if(!p)return;waiting.delete(m.id);clearTimeout(p.timer);
   if(m.error)p.reject(new Error(m.error));else p.resolve(m.value);
  }
+ if(m?.type==='vlh-offline')window.dispatchEvent(new CustomEvent('vlh-offline',{detail:m.message}));
  if(m?.type==='vlh-refresh')window.dispatchEvent(new Event('vlh-refresh'));
  if(m?.type==='vlh-navigate')window.dispatchEvent(new CustomEvent('vlh-navigate',{detail:m}));
 });

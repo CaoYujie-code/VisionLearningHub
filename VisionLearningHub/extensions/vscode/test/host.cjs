@@ -37,12 +37,34 @@ exports.run=async()=>{
   await hub.show('practice','V01');assert.ok(hub.panel.webview.html.includes('Content-Security-Policy'));assert.ok(!hub.panel.webview.html.includes('<iframe'));
   for(let i=0;i<100&&!hub.viewState;i++)await new Promise(r=>setTimeout(r,100));
   assert.equal(hub.viewState?.lessons,32,'Webview must execute React and communicate through the bridge');passed.push('native learning webview created with local assets');
+  const report=await require('../src/environment.cjs').probePython(hub.pythonExe);assert.ok(report.ok);assert.ok(report.checks.some(c=>c.module==='cv2'&&c.ok));passed.push('structured environment diagnosis identifies Python and required packages');
+  await hub.message('viewReady',{page:'practice',course:null,lesson:'V01',lessons:32});
+  assert.equal(hub.context.workspaceState.get(hub.stateKey()).lesson,'V01');
+  hub.panel.dispose();await hub.show();
+  for(let i=0;i<100&&(hub.viewState?.page!=='practice'||hub.viewState?.lesson!=='V01');i++)await new Promise(r=>setTimeout(r,100));
+  assert.equal(hub.viewState.lesson,'V01');assert.equal(hub.viewState.page,'practice');passed.push('closed learning panel restores persistent page and exercise');
+  const crashed=hub.child;crashed.kill();
+  for(let i=0;i<100&&hub.service;i++)await new Promise(r=>setTimeout(r,50));
+  assert.ok(hub.failure);assert.equal(hub.service,null);await assert.rejects(hub.request('/bootstrap'),/服务已退出/);
+  await hub.restart();assert.equal((await hub.request('/bootstrap')).passed.V01,true);passed.push('unexpected Python exit is reported and explicit restart preserves progress');
   const old=hub.service.url;await hub.stop();await hub.ensure();assert.equal((await hub.request('/bootstrap')).passed.V01,true);assert.equal((await hub.request('/lesson/V01')).note,'host note');passed.push('service restart preserves grades and notes');
   await hub.request('/clear','POST',{scope:'cache',confirmation:'CLEAR'});assert.equal((await hub.request('/bootstrap')).passed.V01,true);
   await hub.request('/clear','POST',{scope:'history',confirmation:'CLEAR'});assert.equal((await hub.request('/bootstrap')).passed.V01,false);assert.equal((await hub.request('/lesson/V01')).note,'host note');
   await hub.request('/clear','POST',{scope:'all',confirmation:'CLEAR'});assert.deepEqual((await hub.request('/bootstrap')).settings,{});assert.equal((await hub.request('/lesson/V01')).note,'');assert.equal(await fs.readFile(hub.file('V01'),'utf8'),savedCode);passed.push('three clear scopes preserve source and obey their boundaries');
+  const {zipSync,unzipSync,strToU8,strFromU8}=require('fflate');
+  const crypto=require('node:crypto');
+  const content=unzipSync(await fs.readFile(process.env.VLH_TEST_PACKAGE));
+  const manifest=JSON.parse(strFromU8(content['extension/package.json']));const parts=manifest.version.split('.').map(Number);parts[2]++;const nextVersion=parts.join('.');manifest.version=nextVersion;content['extension/package.json']=strToU8(JSON.stringify(manifest));
+  content['extension.vsixmanifest']=strToU8(strFromU8(content['extension.vsixmanifest']).replace(/(<Identity\b[^>]*\bVersion=")[^"]+(" )/,(_all,prefix,suffix)=>prefix+nextVersion+suffix).replace(/(<Identity\b[^>]*\bVersion=")[^"]+(")/,(_all,prefix,suffix)=>prefix+nextVersion+suffix));
+  const updateBytes=Buffer.from(zipSync(content));
+  const update={version:nextVersion,name:'vision-learning-hub-'+nextVersion+'.vsix',url:'https://api.github.com/repos/CaoYujie-code/VisionLearningHub/releases/assets/123',size:updateBytes.length,digest:crypto.createHash('sha256').update(updateBytes).digest('hex')};
+  hub.updater.fetcher=async()=>new Response(updateBytes);
+  hub.updater.notify=async()=> '稍后';
+  assert.ok(await hub.updater.install(update,undefined));
+  const installed=await fs.readdir(process.env.VLH_ISOLATED_EXTENSIONS);assert.ok(installed.some(name=>name.toLowerCase().startsWith('caoyujie-code.vision-learning-hub-'+nextVersion)));
+  passed.push('verified update installs via official VS Code command in isolated extensions directory');
   const finalUrl=hub.service.url;await hub.stop();let closed=false;try{await fetch(finalUrl,{signal:AbortSignal.timeout(500)});}catch{closed=true;}assert.ok(closed);passed.push('owned service stops');
   await fs.writeFile(process.env.VLH_TEST_REPORT,JSON.stringify({passed,errors:[]},null,2));
- }catch(error){await fs.writeFile(process.env.VLH_TEST_REPORT,JSON.stringify({passed,error:error.stack},null,2));throw error;}
+ }catch(error){await fs.writeFile(process.env.VLH_TEST_REPORT,JSON.stringify({passed,error:error?.stack||error?.message||String(error)},null,2));throw error;}
  finally{await hub?.stop();hub?.panel?.dispose();}
 };

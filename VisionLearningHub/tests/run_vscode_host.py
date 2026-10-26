@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+import shutil
 
 PROJECT=Path(__file__).resolve().parents[1]
 parser=argparse.ArgumentParser()
@@ -18,15 +19,19 @@ root=Path(tempfile.mkdtemp(prefix='vscode-',dir=base))
 workspace=root/'workspace';(workspace/'.vscode').mkdir(parents=True)
 (workspace/'.vscode/settings.json').write_text(json.dumps({'visionLearning.pythonPath':sys.executable}),encoding='utf-8')
 profile=root/'profile';(profile/'User').mkdir(parents=True)
-(profile/'User/settings.json').write_text(json.dumps({'telemetry.telemetryLevel':'off','update.mode':'none','extensions.autoUpdate':False,'extensions.autoCheckUpdates':False,'workbench.startupEditor':'none','security.workspace.trust.enabled':False}),encoding='utf-8')
-with zipfile.ZipFile(PROJECT.parent/'releases/vision-learning-hub-0.3.0.vsix') as archive:
+(profile/'User/settings.json').write_text(json.dumps({'telemetry.telemetryLevel':'off','update.mode':'none','extensions.autoUpdate':False,'extensions.autoCheckUpdates':False,'workbench.startupEditor':'none','security.workspace.trust.enabled':False,'visionLearning.checkUpdates':False}),encoding='utf-8')
+version=json.loads((PROJECT/'extensions/vscode/package.json').read_text(encoding='utf-8'))['version']
+package=PROJECT.parent/'releases'/f'vision-learning-hub-{version}.vsix'
+with zipfile.ZipFile(package) as archive:
     archive.extractall(root/'package')
 report=PROJECT/'validation/vscode-results.json';report.parent.mkdir(exist_ok=True)
 env=os.environ.copy();env.pop('ELECTRON_RUN_AS_NODE',None);env['VLH_TEST_REPORT']=str(report)
+env['VLH_ISOLATED_EXTENSIONS']=str(root/'extensions')
+env['VLH_TEST_PACKAGE']=str(package)
 startup=None
 if os.name=='nt':
     startup=subprocess.STARTUPINFO();startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW;startup.wShowWindow=0
-command=[args.code,str(workspace),'--new-window','--disable-extensions','--disable-workspace-trust','--skip-welcome','--skip-release-notes','--user-data-dir',str(profile),'--extensionDevelopmentPath',str(root/'package/extension'),'--extensionTestsPath',str(PROJECT/'extensions/vscode/test/host.cjs')]
+command=[args.code,str(workspace),'--new-window','--disable-extensions','--disable-workspace-trust','--skip-welcome','--skip-release-notes','--user-data-dir',str(profile),'--extensions-dir',str(root/'extensions'),'--extensionDevelopmentPath',str(root/'package/extension'),'--extensionTestsPath',str(PROJECT/'extensions/vscode/test/host.cjs')]
 if args.with_debugger:
     command.remove('--disable-extensions');env['VLH_TEST_DEBUG']='1'
     installed=Path.home()/'.vscode/extensions'
@@ -34,8 +39,8 @@ if args.with_debugger:
         try:
             item=json.loads(manifest.read_text(encoding='utf-8'))
             identifier=item['publisher']+'.'+item['name']
-            if identifier not in ('ms-python.python','ms-python.debugpy','ms-python.vscode-python-envs','ms-python.vscode-pylance'):
-                command += ['--disable-extension',identifier]
+            if identifier in ('ms-python.python','ms-python.debugpy','ms-python.vscode-python-envs','ms-python.vscode-pylance'):
+                shutil.copytree(manifest.parent,root/'extensions'/manifest.parent.name,dirs_exist_ok=True)
         except (ValueError,KeyError):pass
 with (root/'host.log').open('wb') as log:
     result=subprocess.run(command,env=env,stdout=log,stderr=subprocess.STDOUT,startupinfo=startup,timeout=180)

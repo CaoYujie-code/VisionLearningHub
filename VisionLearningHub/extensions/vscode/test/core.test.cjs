@@ -14,3 +14,9 @@ test('bridge accepts application operations only',()=>{
  for(const route of ['/bootstrap','/lesson/V01/reference','/jobs/abcdef/stop','/settings/course.S12','/workspace/reset/P01','/clear'])assert.equal(apiPath(route),route);
  for(const route of ['http://other/','/shutdown','/assets/../../x','/lesson/../x','//bootstrap','/settings/private'])assert.throws(()=>apiPath(route));
 });
+
+test('saved view state is restricted to existing lessons and courses',()=>{
+ const {navigationState}=require('../src/core.cjs');
+ assert.deepEqual(navigationState({page:'practice',lesson:'V01',course:'S12'},['P01','V01'],['S12']),{page:'practice',lesson:'V01',course:'S12'});
+ assert.deepEqual(navigationState({page:'unknown',lesson:'../file',course:'X'},['P01'],['S00']),{page:'home',lesson:'P01',course:null});
+});
