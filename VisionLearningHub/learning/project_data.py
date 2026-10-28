@@ -110,12 +110,15 @@ def prepare(key,seed,folder):
     elif key in ('E05','E06','E07','E08'):
         from .project_extensions import prepare_extra
         prepare_extra(key,seed,folder,add,read,write)
+    elif key=='E09':
+        from .project_calibration import prepare_calibration
+        truth['_calibration']=prepare_calibration(seed,folder,add)
     else:raise KeyError(key)
     if key!='E04':
         (folder/'损坏图片.png').write_bytes(b'not a PNG: intentional decoder failure')
         truth['损坏图片.png']=dict(error='decode_failed')
         manifest.append(dict(file='损坏图片.png',condition='故意损坏的文件，要求记录错误并继续'))
-    (folder/'_manifest.json').write_text(json.dumps(dict(project=key,seed=seed,files=manifest,source_note='少量公开实拍图的教学变体，不是独立现场测试集'),ensure_ascii=False,indent=2),encoding='utf-8')
+    (folder/'_manifest.json').write_text(json.dumps(dict(project=key,seed=seed,files=manifest,source_note='程序渲染的针孔相机与畸变模型棋盘，不是实拍标定' if key=='E09' else '少量公开实拍图的教学变体，不是独立现场测试集'),ensure_ascii=False,indent=2),encoding='utf-8')
     return truth,manifest
 
 def contact_sheet(folder,manifest,target):

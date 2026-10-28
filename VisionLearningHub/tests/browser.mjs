@@ -17,12 +17,12 @@ async function noOverflow(label){assert.equal(await page.evaluate(()=>document.d
 async function nav(name){await page.locator('.sidebar nav').getByRole('button',{name,exact:true}).click();}
 try{
  await page.goto(url);await page.getByRole('heading',{name:'沿着路线，一步步实践'}).waitFor();
- const boot=await local('/bootstrap');assert.equal(boot.courses.length,32);assert.equal(boot.lessons.length,52);
- await page.screenshot({path:'validation/01-home.png',fullPage:true});await noOverflow('desktop home');checked('home loads with 32 chapters and 52 learning tasks');
+ const boot=await local('/bootstrap');assert.equal(boot.courses.length,33);assert.equal(boot.lessons.length,53);
+ await page.screenshot({path:'validation/01-home.png',fullPage:true});await noOverflow('desktop home');checked('home loads with 33 chapters and 53 learning tasks');
  await nav('学习路线');await page.getByRole('button',{name:'YOLO',exact:true}).click();assert.equal(await page.locator('.course-card').count(),4);
  await page.locator('.course-card').first().click();await page.getByText('理解训练的闭环',{exact:false}).count();
  assert.ok(await page.locator('.reading').innerText());checked('route filter and lesson reader');
- await nav('学习路线');await page.locator('.course-card').first().click();
+ await nav('学习路线');await page.getByRole('button',{name:'全部',exact:true}).click();await page.locator('.course-card').first().click();
  await page.getByLabel('我的理解与疑问').fill('浏览器验证：图像 shape 是高、宽、通道。');
  await page.getByLabel('能解释 return 与 print').check();
  await nav('学习资料库');
@@ -39,7 +39,7 @@ try{
  assert.ok((await page.locator('.lab-metrics').innerText()).includes('0%'));
  await page.getByLabel('实验输入').selectOption('dim');await page.getByLabel('亮度阈值').fill('90');await page.getByRole('button',{name:'运行实验',exact:true}).click();await page.waitForTimeout(450);
  await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:'validation/02-lab.png',fullPage:true});checked('real OpenCV threshold and changed input');
- await nav('练习工作台');const editor=page.getByRole('textbox',{name:'Python 代码编辑器'});await editor.waitFor();
+ await nav('基础练习');const editor=page.getByRole('textbox',{name:'Python 代码编辑器'});await editor.waitFor();
  const starter=await editor.inputValue();await editor.fill('def solve(image, params):');await editor.press('End');await editor.press('Enter');await editor.press('Tab');await editor.press('Shift+Tab');await editor.pressSequentially('return []');
  assert.equal(await editor.inputValue(),'def solve(image, params):\n    return []');await editor.press('Control+s');await page.getByText('已保存到本机',{exact:true}).waitFor();await editor.fill(starter);checked('keyboard indentation, newline, and explicit save');
  await page.getByRole('button',{name:'运行样例',exact:true}).click();await page.getByText('NotImplementedError',{exact:true}).waitFor();
@@ -57,7 +57,7 @@ try{
  await page.locator('tbody tr').first().getByRole('button',{name:'查看',exact:true}).click();await page.getByRole('dialog').waitFor();await page.getByRole('button',{name:'关闭',exact:true}).click();
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'下载备份',exact:true}).click();await (await download).saveAs('validation/browser-backup.zip');
  checked('draft note navigation, historical report, and backup download');
- await nav('练习工作台');await editor.waitFor();assert.ok((await editor.inputValue()).includes('# changed during learning'));
+ await nav('基础练习');await editor.waitFor();assert.ok((await editor.inputValue()).includes('# changed during learning'));
  await editor.fill('def solve(image, params):\n    while True: pass\n');await page.getByRole('button',{name:'运行样例',exact:true}).click();await page.locator('.job-pill').waitFor();
  await page.reload();await page.locator('.job-pill').waitFor();await page.locator('.job-pill').click();await page.getByRole('button',{name:'停止',exact:true}).click();await page.getByRole('button',{name:'运行样例',exact:true}).waitFor({state:'visible'});
  await page.waitForFunction(()=>!document.querySelector('.job-pill'));checked('running task survives a browser refresh and can be stopped');
@@ -83,7 +83,7 @@ try{
  await page.getByText('没有匹配的课程，试试其他关键词或分类。').waitFor();
  checked('12 advanced/project chapters and topic search are accessible');
  for(const key of ['V01','V02','V03','V04','V05','V06','V07','V08','V09','V10','V11','V12','V13','V14','Y04','Y05','L02','L03']){
-  await nav('练习工作台');await page.locator('.lesson-scroll').getByRole('button',{name:new RegExp('^'+key)}).click();
+  await nav('基础练习');await page.locator('.lesson-scroll').getByRole('button',{name:new RegExp('^'+key)}).click();
   await page.locator('.task-description h2').filter({hasText:key}).waitFor();
   const reference=await local('/lesson/'+key+'/reference');await editor.fill(reference.code);
   await page.getByRole('button',{name:'多样例验收',exact:true}).click();
@@ -137,13 +137,13 @@ try{
   checked('clear '+scope+' requires explicit confirmation and obeys scope');
  }
  await page.setViewportSize({width:390,height:844});
- for(const name of ['学习总览','学习路线','图像实验室','练习工作台','学习资料库','记录与设置']){
+ for(const name of ['学习总览','学习路线','图像实验室','基础练习','学习资料库','记录与设置']){
   await nav(name);await page.waitForTimeout(300);await noOverflow('mobile '+name);
   if(name==='学习总览')await page.screenshot({path:'validation/04-mobile-home.png',fullPage:true});
-  if(name==='练习工作台')await page.screenshot({path:'validation/05-mobile-practice.png',fullPage:true});
+  if(name==='基础练习')await page.screenshot({path:'validation/05-mobile-practice.png',fullPage:true});
  }
  checked('all six pages fit a 390px viewport');
  assert.deepEqual(errors,[]);checked('no browser exceptions or HTTP 5xx responses');
- await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:32,lessons:52,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
+ await writeFile('validation/browser-results.json',JSON.stringify({version:(await local('/health')).version,chapters:33,lessons:53,labMethods:12,passed:count,errors,viewport:[1440,1000],mobile:[390,844]},null,2));
  console.log(`${count} browser workflows passed`);
 }finally{await browser.close();}

@@ -56,6 +56,7 @@ class EngineeringChecks(unittest.TestCase):
                     if key=='E06':record.update(status='ok',sizes_mm=[])
                     if key=='E07':record.update(corners=[],decision='missing')
                     if key=='E08':record.update(assignments=[],valid=True)
+                    if key=='E09':record.update(status='not_found',corners=[])
                     if key=='E04':
                         for obj in record['objects']:obj['id']=record['file']+str(obj['id'])
                 mutants.append(wrong)

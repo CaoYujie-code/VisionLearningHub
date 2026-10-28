@@ -86,6 +86,7 @@ def checkpoint_source(key,reference=False):
     return ("PROJECT_ID = "+repr(key)+"\n"+REFERENCE) if reference else STARTER
 
 CONCEPTS={
+ 'E09':('多视图标定与重投影误差','内角点数不是方格数；统一世界点与像素点顺序，逐图检查重投影误差。','T13','https://docs.opencv.org/4.x/dc/dbb/tutorial_py_calibration.html'),
  'E01':('边缘、轮廓与图像矩','先观察边缘闭合程度；用面积过滤，再用矩计算中心。','T06','https://docs.opencv.org/4.x/dd/d49/tutorial_py_contour_features.html'),
  'E02':('有符号差值与局部异常','转float后做差；减去全图中位差，再提取强局部变化。','V14','https://docs.opencv.org/4.x/d9/d61/tutorial_py_morphological_ops.html'),
  'E03':('角点顺序与透视映射','筛选四边形并约定角点顺序；检测块只输出四角，完整工程再交付校正图。','A03','https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html'),
@@ -105,8 +106,10 @@ def guide(key):
       ('batch','完整批处理与异常','将自己的模块连成main.py，检查完整开发批次。','main.py','使用自己全部源码交付results.json与所有必需图片。',['先看最早失败的输入或输出检查项，再定位到模块。','E03还要写rectified；E04需按时间顺序保留ID并输出events。']),
       ('accept','多场景完整验收','运行五个不同条件的批次；通过后才计入工程通关。','main.py','完整工程正式验收，不使用标准中间数据。',['开发批次通过不代表所有变化条件都通过。','比较失败样例的光照、数量、角度或时间状态，修改后重新验收。']),
     ]
-    return dict(version=GUIDE_VERSION,starter=STARTER,blocks=[dict(id=i,title=t,purpose=p,command=c,contract=out,hints=h,lesson=lesson,resource=url) for i,t,p,c,out,h in rows])
+    from .project_studies import study
+    return dict(version=GUIDE_VERSION,starter=STARTER,study=study(key),blocks=[dict(id=i,title=t,purpose=p,command=c,contract=out,hints=h,lesson=lesson,resource=url) for i,t,p,c,out,h in rows])
 
 def guide_readme(key):
     data=guide(key)
-    return '# 分块学习（可选）\n\n独立模式直接运行main.py；切换模式不会改写源码。分块入口checkpoint.py由你实现，可以调用任何普通Python模块。\n\n'+ '\n\n'.join('## '+b['title']+'\n\n'+b['purpose']+'\n\n'+b['contract']+'\n\n`python '+b['command']+' --input data/sample --output step-output --config config.json`\n\n[官方资料]('+b['resource']+')' for b in data['blocks'])+'\n\nrender需要输入目录中的_detections.json。可从自己detect输出复制results.json，也可使用data/standard/_detections.json中的教学结果；标准数据不会计入算法或工程通关。平台中每次检查都保存源码快照；修改源码后旧检查显示需要重验。\n'
+    from .project_studies import study_readme
+    return '# 分块学习（可选）\n\n独立模式直接运行main.py；切换模式不会改写源码。分块入口checkpoint.py由你实现，可以调用任何普通Python模块。\n\n'+ '\n\n'.join('## '+b['title']+'\n\n'+b['purpose']+'\n\n'+b['contract']+'\n\n`python '+b['command']+' --input data/sample --output step-output --config config.json`\n\n[官方资料]('+b['resource']+')' for b in data['blocks'])+'\n\nrender需要输入目录中的_detections.json。可从自己detect输出复制results.json，也可使用data/standard/_detections.json中的教学结果；标准数据不会计入算法或工程通关。平台中每次检查都保存源码快照；修改源码后旧检查显示需要重验。\n'+study_readme(key)

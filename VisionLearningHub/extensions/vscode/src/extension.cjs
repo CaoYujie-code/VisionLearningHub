@@ -141,15 +141,15 @@ class Hub {
     return tree;
   }
   async show(page,lesson) {
-    await this.ensure();
+    await this.ensure();await this.viewSave;
     const saved=this.context.workspaceState.get(this.stateKey(),{});
-    const state=navigationState(lesson?{page:'practice',lesson}:page?{...saved,page}:saved,this.known,this.boot.courses.map(c=>c.id));
-    this.navigation={type:'vlh-navigate',...state};this.restoreTarget=state;
+    const state=navigationState(lesson?{...saved,page:'practice',lesson}:page?{...saved,page,lesson:page==='practice'?(saved.lastBasic||'P01'):saved.lesson}:saved,this.known,this.boot.courses.map(c=>c.id));
+    this.navigation={type:'vlh-navigate',...state};this.restoreTarget=state;this.viewState=null;this.navVersion=(this.navVersion||0)+1;
     if(!this.panel){
       this.panel=vscode.window.createWebviewPanel('visionLearning.hub','Vision · 视觉学习',vscode.ViewColumn.Beside,{enableScripts:true,retainContextWhenHidden:true,localResourceRoots:[vscode.Uri.file(path.join(this.runtime,'dist')),vscode.Uri.file(this.data)]});
-      const web=this.panel.webview;const resource=name=>web.asWebviewUri(vscode.Uri.file(path.join(this.runtime,'dist',name))).toString();
+      const panel=this.panel;const web=panel.webview;const resource=name=>web.asWebviewUri(vscode.Uri.file(path.join(this.runtime,'dist',name))).toString();
       web.html=`<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src ${web.cspSource} data: blob:; style-src ${web.cspSource} 'unsafe-inline'; script-src ${web.cspSource}; font-src ${web.cspSource};"><link rel="stylesheet" href="${resource('app.css')}"></head><body><div id="root"></div><script type="module" src="${resource('app.js')}"></script></body></html>`;
-      web.onDidReceiveMessage(async m=>{if(m?.type!=='vlh-request')return;try{const value=await this.message(m.action,m.args||{});await web.postMessage({type:'vlh-response',id:m.id,value});}catch(e){await web.postMessage({type:'vlh-response',id:m.id,error:e.message});}});
+      web.onDidReceiveMessage(async m=>{if(this.panel!==panel||m?.type!=='vlh-request')return;try{const value=await this.message(m.action,m.args||{});await web.postMessage({type:'vlh-response',id:m.id,value});}catch(e){await web.postMessage({type:'vlh-response',id:m.id,error:e.message});}});
       this.panel.onDidDispose(()=>{this.panel=null;});
     }else this.panel.reveal(vscode.ViewColumn.Beside,true);
     await this.panel.webview.postMessage(this.navigation);
@@ -164,13 +164,21 @@ class Hub {
       return this.panel?.webview.asWebviewUri(vscode.Uri.file(real)).toString()+'?v='+(await fs.stat(real)).mtimeMs;
     }return value;
   }
+  rememberState(patch) {
+    this.viewSave=(this.viewSave||Promise.resolve()).catch(()=>{}).then(async()=>{
+      const saved=this.context.workspaceState.get(this.stateKey(),{});
+      const value=navigationState({...saved,...patch},this.known,this.boot.courses.map(c=>c.id));
+      await this.context.workspaceState.update(this.stateKey(),value);
+    });return this.viewSave;
+  }
   async message(action,args) {
+    if(action==='rememberView'){
+      await this.rememberState({memory:args.memory});return true;
+    }
     if(action==='viewReady'){
-      this.viewState=args;
-      if(this.restoreTarget&&(args.page!==this.restoreTarget.page||(args.page==='practice'&&args.lesson!==this.restoreTarget.lesson)||(args.page==='route'&&args.course!==this.restoreTarget.course)))return true;
+      if(this.restoreTarget&&(args.page!==this.restoreTarget.page||(['practice','project'].includes(args.page)&&args.lesson!==this.restoreTarget.lesson)||(args.page==='route'&&args.course!==this.restoreTarget.course)))return true;
       this.restoreTarget=null;
-      const value=navigationState(args,this.known,this.boot.courses.map(c=>c.id));
-      await this.context.workspaceState.update(this.stateKey(),value);return true;
+      await this.rememberState(args);this.viewState=args;return true;
     }
     if(action==='api'){
       apiPath(args.path);let body=args.body;
@@ -179,7 +187,7 @@ class Hub {
       if(body?.file){if(!['/upload','/restore'].includes(args.path))throw new Error('不支持的上传');const bytes=Buffer.from(body.file.data,'base64');if(bytes.length>(args.path==='/restore'?128:12)*1024*1024)throw new Error('上传文件过大');const form=new FormData();form.append('file',new Blob([bytes],{type:body.file.type}),path.basename(body.file.name));body=form;}
       const result=await this.request(args.path,args.method,body);
       if(args.path==='/clear'&&(typeof body==='string'?JSON.parse(body):body)?.scope==='all')await this.context.workspaceState.update(this.stateKey(),undefined);
-      if(args.path==='/bootstrap'&&this.navigation){const nav=this.navigation;this.navigation=null;setTimeout(()=>this.panel?.webview.postMessage(nav),150);}
+      if(args.path==='/bootstrap'&&this.navigation){const nav=this.navigation,panel=this.panel,version=this.navVersion;this.navigation=null;setTimeout(()=>{if(this.panel===panel&&this.navVersion===version)void panel?.webview.postMessage(nav);},150);}
       if(args.path==='/clear'||args.path==='/restore'||(/^\/jobs\/[a-f0-9]+$/.test(args.path)&&['done','error','timeout','cancelled'].includes(result.status)))await this.refresh();
       return Buffer.isBuffer(result)?{status:200,base64:result.toString('base64')}:{status:200,json:await this.images(result)};
     }
@@ -264,7 +272,7 @@ class Hub {
   ensureIdle(){if(this.tasks.size||this.debugSessions.size)throw new Error('请先结束终端运行或调试，再清除数据或重置练习。');}
   async resume(){
     await this.ensure();const state=this.context.workspaceState.get(this.stateKey());
-    const key=this.known.includes(state?.lesson)?state.lesson:this.boot.courses.flatMap(c=>c.lessons).find(k=>!this.boot.passed[k])||this.known[0];
+    const key=this.known.includes(state?.lastLearning)?state.lastLearning:this.known.includes(state?.lesson)?state.lesson:this.boot.courses.flatMap(c=>c.lessons).find(k=>!this.boot.passed[k])||this.known[0];
     await this.show('practice',key);await this.openExercise(key);
   }
   async restart(){

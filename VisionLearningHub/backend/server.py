@@ -111,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.6.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.7.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -166,7 +166,7 @@ def engineering_project(key: str):
         folder=ROOT/'previews'/key/'sample'
         _,manifest=prepare(key,17,folder)
         images=[dict(file=e['file'],condition=e['condition'],input=str(folder/e['file'])) for e in manifest if 'shape' in e]
-        return public(dict(project={k:v for k,v in PROJECT_BY_ID[key].items() if k not in ('algorithm','config')},files=parse_files(code),note=note,sources=asset_sources(),images=images,guide=guide(key),block_progress=store.project_progress(key),
+        return dict(project={k:v for k,v in PROJECT_BY_ID[key].items() if k not in ('algorithm','config')},guide=guide(key)) | public(dict(files=parse_files(code),note=note,sources=asset_sources(),images=images,block_progress=store.project_progress(key),
                            history=[{'stamp':r[0],'verified':bool(r[1]),'passed':bool(r[2]),'report':json.loads(r[3])} for r in store.history(key)]))
 
 

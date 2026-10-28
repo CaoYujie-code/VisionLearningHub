@@ -30,3 +30,5 @@
 .guided-blocks button.selected{background:#eaf1ff;border-color:#3675d1}.guided-blocks span{display:block;font-size:12px;margin-top:6px;color:#6b7890}
 .guided-detail{min-width:0}.guided-detail h4{margin-bottom:6px}.guide-source{padding:14px;background:#f3f6fb;border-radius:8px;margin:14px 0}.guide-source select{max-width:100%;margin:8px 0;padding:8px}.guide-hints{margin-top:12px}
 @media(max-width:760px){.guided-layout{grid-template-columns:1fr}.guided-blocks{display:grid;grid-template-columns:1fr 1fr}.guided-blocks button{min-width:0}.guided-detail .light-code{white-space:pre-wrap;overflow-wrap:anywhere}.guided-panel>.title-row{align-items:flex-start;flex-direction:column}}
+
+.project-study details{border:1px solid var(--border,#dde3e8);border-radius:8px;padding:12px;margin:10px 0}.project-study summary{cursor:pointer;font-weight:600}.project-study p{line-height:1.8}.project-study input{margin-right:8px}

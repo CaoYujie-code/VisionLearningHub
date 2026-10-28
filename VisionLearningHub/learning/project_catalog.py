@@ -219,6 +219,8 @@ PROJECTS = [
 from .project_extensions import EXTRA_PROJECTS
 from .project_guides import checkpoint_source
 PROJECTS.extend(EXTRA_PROJECTS)
+from .project_calibration import PROJECT as CALIBRATION_PROJECT, PIPELINE as CALIBRATION_PIPELINE
+PROJECTS.append(CALIBRATION_PROJECT)
 
 PROJECT_BY_ID={p['id']:p for p in PROJECTS}
 PROJECT_IDS=set(PROJECT_BY_ID)
@@ -226,7 +228,7 @@ PROJECT_IDS=set(PROJECT_BY_ID)
 def source_bundle(key, reference=False):
     project=PROJECT_BY_ID[key]
     if reference:
-        pipeline=TRACKING if key=='E04' else BATCH.format(algorithm=project['algorithm'])
+        pipeline=CALIBRATION_PIPELINE if key=='E09' else TRACKING if key=='E04' else BATCH.format(algorithm=project['algorithm'])
         imaging=IMAGING
     else:
         imaging='''import cv2

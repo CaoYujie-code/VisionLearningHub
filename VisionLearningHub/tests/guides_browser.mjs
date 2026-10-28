@@ -38,11 +38,11 @@ try{
  await page.getByRole('button',{name:'分块引导',exact:true}).click();assert.deepEqual((await api('/projects/E05')).files,before);ok('mode switching preserves code');
  await page.getByRole('button',{name:'任务与素材',exact:true}).click();await page.screenshot({path:'validation/12-guided-engineering.png',fullPage:true});
  await until(async()=>{const note=JSON.parse((await api('/projects/E05')).note);return note.block==='render'&&note.mode==='guided'&&note.hints.render===1;});
- await page.reload();await page.getByRole('heading',{name:'沿着路线，一步步实践'}).waitFor();await page.locator('.sidebar nav').getByRole('button',{name:'工程项目',exact:true}).click();await page.locator('.engineering-card').filter({hasText:'E05 ·'}).getByRole('button',{name:'进入工程任务',exact:false}).click();await page.getByRole('heading',{name:'工程交付约定',exact:true}).waitFor();assert.equal(await page.getByLabel('任务块输入来源').inputValue(),'own');await page.getByText('提示 1：',{exact:true}).waitFor();ok('mode, task, source and hints survive reload');
+ await page.reload();await page.getByRole('heading',{name:'工程交付约定',exact:true}).waitFor();assert.equal(await page.getByLabel('任务块输入来源').inputValue(),'own');await page.getByText('提示 1：',{exact:true}).waitFor();ok('mode, task, source and hints survive reload');
  await page.getByRole('button',{name:'复盘与历史',exact:true}).click();assert.equal(await page.getByLabel('工程复盘笔记').inputValue(),'保留旧复盘');
  await page.getByRole('button',{name:'代码与运行',exact:true}).click();await page.locator('.project-files').getByRole('button',{name:'imaging.py',exact:true}).click();await page.getByLabel('工程代码编辑器').fill(reference['imaging.py']+'\n# changed\n');await page.getByRole('button',{name:'保存工程文件',exact:true}).click();
  await until(async()=>((await api('/projects/E05')).block_progress['io:own'].state==='stale'));ok('source edit invalidates checkpoint while preserving history');
  await page.setViewportSize({width:390,height:844});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);await page.screenshot({path:'validation/13-guided-mobile.png',fullPage:true});ok('mobile guided editor fits');
  assert.deepEqual(errors,[]);ok('no browser errors');
- await writeFile('validation/guides-browser-results.json',JSON.stringify({version:'0.6.0',passed,errors},null,2));
+ await writeFile('validation/guides-browser-results.json',JSON.stringify({version:(await api('/health')).version,passed,errors},null,2));
 }finally{await browser.close();}

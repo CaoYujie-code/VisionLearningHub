@@ -177,6 +177,9 @@ def assess(key,input_dir,output_dir,truth,manifest,scope="full"):
                     if actual in reverse and reverse[actual]!=identity:consistent=False
                     tracking[identity]=actual;reverse[actual]=identity
             if scope=='full':add(name+' 身份连续',consistent,'同物体跨帧保持ID；不同物体不得共享ID')
+        elif key=='E09':
+            from .project_calibration import assess_corners
+            add(name+' 棋盘内角点',assess_corners(record,target),'54个有序角点，允许整体反序；无棋盘应拒绝')
         elif key in ('E05','E06','E07','E08'):
             from .project_extensions import assess_extra
             add(name+' 工程算法结果',assess_extra(key,record,target),'按场景的类别、尺寸、四角或拼图身份契约比较真值')
@@ -192,6 +195,9 @@ def assess(key,input_dir,output_dir,truth,manifest,scope="full"):
                 if matched is None:valid=False;break
                 used.add(matched)
         add('双向过线事件',valid,f'期望{len(expected_events)}次真实跨线；不重复计数，事件帧允许±1')
+    if key=='E09' and scope=='full':
+        from .project_calibration import assess_calibration
+        assess_calibration(payload,truth,input_dir,output_dir,add,image_output)
     return checks,payload
 
 def preview_fixture(key,seed,folder):

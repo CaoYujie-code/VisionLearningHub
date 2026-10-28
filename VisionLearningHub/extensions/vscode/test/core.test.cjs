@@ -20,3 +20,9 @@ test('saved view state is restricted to existing lessons and courses',()=>{
  assert.deepEqual(navigationState({page:'practice',lesson:'V01',course:'S12'},['P01','V01'],['S12']),{page:'practice',lesson:'V01',course:'S12'});
  assert.deepEqual(navigationState({page:'unknown',lesson:'../file',course:'X'},['P01'],['S00']),{page:'home',lesson:'P01',course:null});
 });
+
+test('engineering view migration and separate last-learning memory',()=>{
+ const {navigationState}=require('../src/core.cjs');
+ const value=navigationState({page:'practice',lesson:'E05',lastBasic:'V13',lastProject:'E05',lastLearning:'E05',trail:[{page:'practice',lesson:'V13'}],memory:{'E05.file':'checkpoint.py'}},['P01','V13','E05'],['S28']);
+ assert.equal(value.page,'project');assert.equal(value.lastBasic,'V13');assert.equal(value.trail[0].page,'practice');assert.equal(value.memory['E05.file'],'checkpoint.py');
+});

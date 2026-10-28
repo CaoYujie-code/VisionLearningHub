@@ -6,21 +6,22 @@
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.6.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.7.0.md)
 
-> 当前源码版本为 **0.6.0**。安装包以 GitHub Releases 实际发布版本为准；如果尚无 0.6.0 安装包，可按下文运行源码或自行构建 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.7.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
 
 ## 平台概览
 
 | 模块 | 当前能力 |
 | --- | --- |
-| 学习路线 | **32 章**，从 Python / NumPy、OpenCV 到经典算法、YOLO 数据处理及 Linux / 嵌入式基础 |
+| 学习路线 | **33 章**，从 Python / NumPy、OpenCV 到经典算法、YOLO 数据处理及 Linux / 嵌入式基础 |
 | 基础练习 | **44 道**，包含题目契约、提示、参考实现与每题 5 组正式验收样例 |
-| 工程实训 | **8 个多文件工程、40 个任务块**，可独立挑战，也可跟随分块引导 |
+| 工程实训 | **9 个多文件工程、45 个任务块**，可独立挑战，也可跟随分块引导 |
+| 工程深入学习 | **37 个专属小任务、9 组方法对比、9 道故障维修**，按输入、实现、验证证据逐步学习 |
 | 图像实验室 | **12 种方法、4 类内置场景**，支持调参、中间图对照和自有图片探索 |
 | 学习资料 | **35 份官方资料索引**，支持搜索、筛选与收藏；工程另附相关官方教程 |
 | 开发环境 | VS Code 原生编辑器、终端、调试入口和测试资源管理器；工程可导出到 PyCharm / 命令行运行 |
-| 学习记忆 | SQLite 保存代码快照、笔记、当前任务、提示状态与验收历史，支持 ZIP 备份恢复 |
+| 学习记忆 | SQLite 保存代码快照、笔记、当前任务、提示状态与验收历史，支持 ZIP 备份恢复；页面位置另存于浏览器本地存储 / VS Code 工作区 |
 
 ## 界面预览
 
@@ -34,7 +35,7 @@
 
 截图来自 0.6.0 本地运行界面，使用独立演示数据。
 
-## 八个工程案例
+## 九个工程案例
 
 | 编号 | 工程 | 需要交付的结果 | 主要训练内容 |
 | --- | --- | --- | --- |
@@ -46,10 +47,23 @@
 | E06 | 平面零件尺寸测量 | 毫米尺寸、标尺缺失状态、标注图 | 像素比例、旋转矩形、测量条件 |
 | E07 | 纹理标签定位与漏贴检查 | 标签四角、存在/缺失判断 | ORB、匹配筛选、RANSAC、几何映射 |
 | E08 | 九宫格拼图身份与方向恢复 | 图块身份、恢复角度、排列有效性 | 网格切分、旋转比较、缺块与重复块 |
+| E09 | 相机标定与畸变校正 | 内参、畸变、逐图误差、校正图 | 棋盘角点、多姿态拟合、重投影误差 |
 
 工程使用真正的 PNG 文件、配置文件和多份 Python 源码。你可以自行定义函数、增加根目录模块，通过普通 `import` 组合流程。最终验收读取程序生成的 JSON、标注图、校正图或事件记录。
 
 素材包含公开硬币照片、CC0 纹理及明确标注的教学合成变化。来源、许可和 SHA-256 见 [素材说明](VisionLearningHub/content/engineering/NOTICE.md)。这些教学数据的通过结果不能代替现场设备验收。
+
+## 0.7.0：返回基础，继续工程
+
+左侧 **基础练习** 始终打开基础题，**工程项目** 打开工程列表。从工程跳去复习前置题后，点击 **返回工程 E##** 即可回到原任务块、代码文件和标签。首页分别提供“从基础开始”“继续上次学习”“浏览工程项目”，推荐的未完成题单独显示。
+
+离开页面前先保存草稿；保存失败会留在当前页。列表搜索、学习位置支持刷新恢复，网页版支持前进后退；VS Code 关闭面板后重开也会恢复。基础题和工程各自记住最后位置。
+
+在工程的 **分块引导 → 算法结果与位置** 中，可展开专属小任务、对比实验和故障维修。每项说明输入、需要实现的逻辑、应留下的验证证据。自查勾选不会授予工程通关。
+
+![相机标定的专属小任务](VisionLearningHub/docs/images/calibration-learning.png)
+
+上图为 0.7.0 实际运行界面。操作与 E09 输入输出见 [导航与工程深入学习指南](VisionLearningHub/docs/导航与工程深入学习-0.7.0.md)。
 
 ## 独立完成，或跟着任务块学习
 
@@ -153,9 +167,10 @@ npm --prefix extensions/vscode run package
 .\.venv\Scripts\python.exe tests\test_content_v040.py
 .\.venv\Scripts\python.exe tests\test_projects.py
 .\.venv\Scripts\python.exe tests\test_guides.py
+.\.venv\Scripts\python.exe tests\test_calibration.py
 ```
 
-0.6.0 本机验收通过 **39 组 Python/API 检查、64 项浏览器流程、29 项隔离 VS Code 检查**。52 项基础题与工程参考实现覆盖 260 组完整验收输入；另有分块专项测试。具体环境、证据和验证边界见 [0.6.0 验收记录](VisionLearningHub/docs/验收记录-0.6.0.md)。
+0.7.0 本机验收覆盖 **42 组 Python/API 检查、75 项浏览器流程、32 项隔离 VS Code 检查、10 项 Node 检查**。53 项基础题与工程参考实现覆盖 265 组完整验收输入；另有分块专项测试。具体环境、证据和验证边界见 [0.7.0 验收记录](VisionLearningHub/docs/验收记录-0.7.0.md)。
 
 ## 仓库结构
 
@@ -177,10 +192,11 @@ VisionLearningHub/                 # 外层仓库，唯一的 .git 位于这里
 
 OpenCV 与经典视觉工程可在本地运行。YOLO 目前提供标签、坐标处理和评价练习，尚未接入真实模型训练、推理或完整 mAP 评价；Linux / 嵌入式目前为课程及离线日志练习，尚未连接 SSH、摄像头或开发板。
 
-E06 的自动验收限定正视同平面测量；E08 限定固定九宫格，不包含自由散落拼图检测或机械执行。当前未交付独立 EXE。练习进程具有当前用户的本机权限，超时与独立进程不构成权限沙箱。
+E06 的自动验收限定正视同平面测量；E08 限定固定九宫格，不包含自由散落拼图检测或机械执行。E09 使用已知相机模型渲染的棋盘图，不代表实拍标定或现场精度。当前未交付独立 EXE。练习进程具有当前用户的本机权限，超时与独立进程不构成权限沙箱。
 
 ## 文档入口
 
+- [导航与工程深入学习（0.7.0）](VisionLearningHub/docs/导航与工程深入学习-0.7.0.md)
 - [第一次使用与学习指南](VisionLearningHub/docs/第一次使用与学习指南.md)
 - [双模式工程学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md)
 - [工程输入输出与素材说明](VisionLearningHub/docs/工程项目实训指南.md)

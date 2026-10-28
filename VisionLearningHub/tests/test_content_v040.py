@@ -23,15 +23,15 @@ class ContentAcceptance(unittest.TestCase):
         return scope['solve'](image,copy.deepcopy(params))
 
     def test_01_content_graph_and_resources(self):
-        self.assertEqual(len(COURSES),32)
-        self.assertEqual(len(LESSONS),52)
-        self.assertEqual(len({l['id'] for l in LESSONS}),52)
+        self.assertEqual(len(COURSES),33)
+        self.assertEqual(len(LESSONS),53)
+        self.assertEqual(len({l['id'] for l in LESSONS}),53)
         catalog=json.loads((baseline.PROJECT/'content/resource_catalog.json').read_text(encoding='utf-8'))['resources']
         resources={r['id']:r for r in catalog}
         self.assertEqual(len(resources),35)
         self.assertEqual(len({r['url'] for r in catalog}),35)
         ordered=[key for course in COURSES for key in course['lessons']]
-        self.assertEqual(len(ordered),52)
+        self.assertEqual(len(ordered),53)
         self.assertEqual(set(ordered),set(BY_ID))
         for i,key in enumerate(ordered):
             for dep in BY_ID[key]['prerequisites']:

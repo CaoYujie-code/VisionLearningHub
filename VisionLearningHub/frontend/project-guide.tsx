@@ -1,13 +1,16 @@
 import {Tag} from './ui';
+import {useState} from 'react';
 
 export type GuideBlock={id:string;title:string;purpose:string;command:string;contract:string;hints:string[];lesson:string;resource:string};
-export type Guide={version:number;starter:string;blocks:GuideBlock[]};
+export type Study={steps:{id:string;title:string;input:string;implementation:string;evidence:string}[];comparison:{title:string;method:string;evidence:string};repair:{title:string;broken:string;task:string}};
+export type Guide={version:number;starter:string;blocks:GuideBlock[];study:Study};
 export type BlockProgress=Record<string,{state:'passed'|'failed'|'stale';stamp:number}>;
-export type GuideNotes={mode:'guided'|'independent';block:string;source:'own'|'standard';hints:Record<string,number>};
+export type GuideNotes={mode:'guided'|'independent';block:string;source:'own'|'standard';hints:Record<string,number>;studied:string[]};
 type Props={guide:Guide;notes:GuideNotes;progress:BlockProgress;hasCheckpoint:boolean;busy:boolean;
  change:(patch:Partial<GuideNotes>)=>void;run:(block:string,source:string)=>void;initialize:()=>void;code:()=>void;open:(lesson:string)=>void};
 
 export function ProjectGuide({guide,notes,progress,hasCheckpoint,busy,change,run,initialize,code,open}:Props){
+ const [repairOpen,setRepairOpen]=useState(false);
  const block=guide.blocks.find(b=>b.id===notes.block)||guide.blocks[0];
  const source=block.id==='render'?notes.source:'own';
  const level=notes.hints[block.id]||0;
@@ -24,6 +27,7 @@ export function ProjectGuide({guide,notes,progress,hasCheckpoint,busy,change,run
   </nav><article className="guided-detail">
    <div className="title-row"><h3>{block.title}</h3><Tag tone={progress[block.id+':'+source]?.state==='passed'?'green':''}>{status(block.id,source)}</Tag></div>
    <p>{block.purpose}</p><h4>这一块交付什么</h4><p>{block.contract}</p>
+   {block.id==='detect'&&<section className="project-study" aria-label="工程专属小任务"><h4>把核心算法拆开手敲</h4><p className="small muted">下面记录你的自查；不会代替自动验收。可自己设计函数、保存中间图，并把证据记到“复盘与历史”。</p>{guide.study.steps.map(step=><details key={step.id}><summary>{step.id} · {step.title}{notes.studied.includes(step.id)?' · 已自查':''}</summary><p><b>输入：</b>{step.input}</p><p><b>动手实现：</b>{step.implementation}</p><p><b>验证证据：</b>{step.evidence}</p><label><input type="checkbox" checked={notes.studied.includes(step.id)} onChange={e=>change({studied:e.target.checked?[...notes.studied,step.id]:notes.studied.filter(v=>v!==step.id)})}/> 已实现并检查证据（自查）</label></details>)}<details><summary>方法对比 · {guide.study.comparison.title}</summary><p>{guide.study.comparison.method}</p><p><b>记录与解释：</b>{guide.study.comparison.evidence}</p></details><details><summary>故障维修 · {guide.study.repair.title}</summary><p>先构造失败输入，再在自己的模块里修复：</p><pre className="light-code">{guide.study.repair.broken}</pre><button className="text-button" onClick={()=>setRepairOpen(!repairOpen)}>{repairOpen?'收起排查线索':'查看排查线索与验证条件'}</button>{repairOpen&&<p>{guide.study.repair.task}</p>}</details></section>}
    <div className="actions"><button className="text-button" onClick={()=>open(block.lesson)}>复习前置题 {block.lesson}</button><a href={block.resource} target="_blank" rel="noreferrer">查阅官方资料 ↗</a></div>
    {block.id==='render'&&<div className="guide-source"><label>绘图输入 <select aria-label="任务块输入来源" value={notes.source} onChange={e=>change({source:e.target.value as 'own'|'standard'})}><option value="standard">标准检测结果：单独学习绘图</option><option value="own">自己的检测结果：检查模块衔接</option></select></label><p className="small muted">标准结果由教学基线生成，明确记录为辅助练习；自己的输入会先检查检测块。两者均不代表完整工程通过。</p></div>}
    {!hasCheckpoint&&<div className="note-box">此工程还没有分块入口。添加只会创建 checkpoint.py，保留已有模块。也可切换独立挑战直接运行 main.py。<button className="secondary" disabled={busy} onClick={initialize}>添加分块入口</button></div>}

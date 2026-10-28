@@ -21,8 +21,9 @@ export function ide<T=any>(action:string,args:unknown={}):Promise<T>{
   waiting.set(id,{resolve,reject,timer});host.postMessage({type:'vlh-request',id,action,args});
  });
 }
-export const readViewState=()=>host?.getState()||{};
-export const saveViewState=(state:unknown)=>host?.setState(state);
+export const readViewState=():any=>{try{return host?host.getState()||{}:JSON.parse(localStorage.getItem('vlh.view.v2')||'{}');}catch{return {};}};
+export const saveViewState=(state:Record<string,unknown>)=>{const next={...readViewState(),...state};try{if(host)host.setState(next);else localStorage.setItem('vlh.view.v2',JSON.stringify(next));}catch{}};
+export function clearViewMemory(){try{if(host)host.setState({});else localStorage.removeItem('vlh.view.v2');}catch{}window.dispatchEvent(new Event('vlh-reset-navigation'));}
 export async function confirmAction(message:string){return isIDE?ide<boolean>('confirm',{message}):window.confirm(message);}
 export async function bridgeRequest(path:string,init:RequestInit={}){
  let body:unknown=init.body;

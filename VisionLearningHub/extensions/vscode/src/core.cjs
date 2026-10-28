@@ -13,7 +13,11 @@ function apiPath(value) {
   return value;
 }
 function navigationState(value, lessons, courses) {
-  const page=['home','route','projects','lab','practice','resources','records'].includes(value?.page)?value.page:'home';
-  return {page,lesson:lessons.includes(value?.lesson)?value.lesson:(lessons[0]||'P01'),course:courses.includes(value?.course)?value.course:null};
+  const page=['home','route','projects','project','lab','practice','resources','records'].includes(value?.page)?value.page:'home';
+  const result={page:page==='practice'&&value?.lesson?.startsWith('E')?'project':page,lesson:lessons.includes(value?.lesson)?value.lesson:(lessons[0]||'P01'),course:courses.includes(value?.course)?value.course:null};
+  for(const field of ['lastBasic','lastProject','lastLearning'])if(lessons.includes(value?.[field]))result[field]=value[field];
+  if(Array.isArray(value?.trail))result.trail=value.trail.slice(-30).map(v=>navigationState({page:v.page,lesson:v.lesson,course:v.course},lessons,courses));
+  if(value?.memory&&typeof value.memory==='object'&&JSON.stringify(value.memory).length<30000)result.memory=value.memory;
+  return result;
 }
 module.exports = { lessonKey, inside, apiPath, navigationState };

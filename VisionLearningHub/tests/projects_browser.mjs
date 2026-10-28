@@ -10,16 +10,16 @@ page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.statu
 function ok(name){passed++;console.log('PASS '+name);}
 async function local(path,method='GET',body){return page.evaluate(async({path,method,body})=>{const token=document.querySelector('meta[name="vlh-token"]').content;const r=await fetch('/api'+path,{method,headers:{'X-VLH-Token':token,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});if(!r.ok)throw new Error(await r.text());return r.json();},{path,method,body});}
 async function nav(name){await page.locator('.sidebar nav').getByRole('button',{name,exact:true}).click();}
-async function selectProject(key){await nav('工程项目');await page.locator('.engineering-card').filter({hasText:key+' ·'}).getByRole('button',{name:'进入工程任务',exact:false}).click();await page.getByRole('heading',{name:'工程交付约定',exact:true}).waitFor();}
+async function selectProject(key){await nav('工程项目');await page.locator('.engineering-card').filter({hasText:key+' ·'}).getByRole('button',{name:'进入工程任务',exact:false}).click();await page.getByRole('button',{name:'任务与素材',exact:true}).click();await page.getByRole('heading',{name:'工程交付约定',exact:true}).waitFor();}
 try{
  await mkdir('validation',{recursive:true});await page.goto(url);await page.getByRole('heading',{name:'沿着路线，一步步实践'}).waitFor();
- await nav('工程项目');assert.equal(await page.locator('.engineering-card').count(),8);
+ await nav('工程项目');assert.equal(await page.locator('.engineering-card').count(),9);
  await page.waitForFunction(()=>[...document.querySelectorAll('.engineering-card>img')].every(img=>img.complete&&img.naturalWidth>0));
- await page.screenshot({path:'validation/09-engineering-projects.png',fullPage:true});ok('eight engineering briefs display attributed photographic assets');
+ await page.screenshot({path:'validation/09-engineering-projects.png',fullPage:true});ok('nine engineering briefs display attributed photographic assets');
  await page.getByLabel('搜索工程').fill('缺陷');assert.equal(await page.locator('.engineering-card').count(),1);await page.getByLabel('搜索工程').fill('');ok('engineering search filters scenario descriptions');
- for(const key of ['E01','E02','E03','E04','E05','E06','E07','E08']){
+ for(const key of ['E01','E02','E03','E04','E05','E06','E07','E08','E09']){
   await selectProject(key);assert.equal(await page.locator('.check-line').count(),5);
-  assert.ok(await page.getByRole('link',{name:'查看上游来源说明'}).count());
+  if(key==='E09')await page.getByText('本工程图片由相机投影模型程序渲染，无外部照片；生成条件见每张素材说明。',{exact:true}).waitFor();else assert.ok(await page.getByRole('link',{name:'查看上游来源说明'}).count());
   await page.locator('.check-line input').first().check();
   await page.getByRole('button',{name:'代码与运行',exact:true}).click();
   const editor=page.getByLabel('工程代码编辑器');await editor.waitFor();
@@ -63,5 +63,5 @@ try{
  }
  await page.screenshot({path:'validation/11-engineering-mobile.png',fullPage:true});ok('engineering brief and modular editor fit a mobile viewport');
  assert.deepEqual(errors,[]);ok('engineering workflows have no JS exceptions or HTTP 5xx');
- await writeFile('validation/projects-browser-results.json',JSON.stringify({version:(await local('/health')).version,passed,errors,projects:8,stages:40},null,2));
+ await writeFile('validation/projects-browser-results.json',JSON.stringify({version:(await local('/health')).version,passed,errors,projects:9,stages:45},null,2));
 }finally{await browser.close();}

@@ -8,14 +8,14 @@ exports.run=async()=>{
  try{
   const extension=vscode.extensions.all.find(e=>e.id.toLowerCase()==='caoyujie-code.vision-learning-hub');assert.ok(extension);
   hub=await extension.activate();await hub.ensure();passed.push('isolated VS Code extension starts packaged Python runtime');
-  const boot=await hub.request('/bootstrap');assert.equal(boot.lessons.length,52);assert.equal(boot.courses.length,32);assert.equal(hub.test.items.size,52);passed.push('44 exercises + 8 native projects, 32 courses and Test Explorer items');
+  const boot=await hub.request('/bootstrap');assert.equal(boot.lessons.length,53);assert.equal(boot.courses.length,33);assert.equal(hub.test.items.size,53);passed.push('44 exercises + 9 native projects, 33 courses and Test Explorer items');
   for(const key of ['V13','Y05','L02']){
    const source=(await hub.request('/lesson/'+key+'/reference')).code;
    await fs.writeFile(hub.file(key),source,'utf8');
    const checked=await hub.run(key,true);assert.ok(checked.result?.passed,JSON.stringify(checked));
    assert.equal(checked.result.reports.length,5);passed.push(key+' new exercise verifies from packaged native source');
   }
-  for(const key of ['E01','E02','E03','E04','E05','E06','E07','E08']){
+  for(const key of ['E01','E02','E03','E04','E05','E06','E07','E08','E09']){
    const files=JSON.parse((await hub.request('/lesson/'+key+'/reference')).code);
    for(const [name,content]of Object.entries(files))await fs.writeFile(path.join(path.dirname(hub.file(key)),name),content,'utf8');
    const result=await hub.run(key,true);assert.ok(result.result?.passed,JSON.stringify(result));assert.equal(result.result.reports.length,5);
@@ -70,13 +70,21 @@ exports.run=async()=>{
   await hub.request('/settings/bookmarks','PUT',{value:['R01']});
   await hub.show('practice','V01');assert.ok(hub.panel.webview.html.includes('Content-Security-Policy'));assert.ok(!hub.panel.webview.html.includes('<iframe'));
   for(let i=0;i<100&&!hub.viewState;i++)await new Promise(r=>setTimeout(r,100));
-  assert.equal(hub.viewState?.lessons,52,'Webview must execute React and communicate through the bridge');passed.push('native learning webview created with local assets');
+  assert.equal(hub.viewState?.lessons,53,'Webview must execute React and communicate through the bridge');passed.push('native learning webview created with local assets');
   const report=await require('../src/environment.cjs').probePython(hub.pythonExe);assert.ok(report.ok);assert.ok(report.checks.some(c=>c.module==='cv2'&&c.ok));passed.push('structured environment diagnosis identifies Python and required packages');
-  await hub.message('viewReady',{page:'practice',course:null,lesson:'V01',lessons:52});
+  await hub.message('viewReady',{page:'practice',course:null,lesson:'V01',lessons:53});
   assert.equal(hub.context.workspaceState.get(hub.stateKey()).lesson,'V01');
   hub.panel.dispose();await hub.show();
   for(let i=0;i<100&&(hub.viewState?.page!=='practice'||hub.viewState?.lesson!=='V01');i++)await new Promise(r=>setTimeout(r,100));
   assert.equal(hub.viewState.lesson,'V01');assert.equal(hub.viewState.page,'practice');passed.push('closed learning panel restores persistent page and exercise');
+  await hub.message('viewReady',{page:'project',course:null,lesson:'E09',lastBasic:'V13',lastProject:'E09',lastLearning:'E09',memory:{'E09.tab':'代码与运行','E09.file':'imaging.py'},trail:[{page:'practice',lesson:'T13',course:null}],lessons:53});
+  hub.panel.dispose();await hub.show();
+  for(let i=0;i<100&&(hub.viewState?.page!=='project'||hub.viewState?.lesson!=='E09');i++)await new Promise(r=>setTimeout(r,100));
+  assert.equal(hub.viewState.page,'project');assert.equal(hub.viewState.lesson,'E09');assert.equal(hub.viewState.memory['E09.file'],'imaging.py');assert.equal(hub.viewState.lastBasic,'V13',JSON.stringify(hub.viewState));passed.push('engineering page and source tab restore in packaged Webview');
+  await hub.show('practice');
+  for(let i=0;i<100&&(hub.viewState?.page!=='practice'||hub.viewState?.lesson!=='V13');i++)await new Promise(r=>setTimeout(r,100));
+  assert.equal(hub.viewState.page,'practice');assert.equal(hub.viewState.lesson,'V13');passed.push('native basic entry leaves project and restores last basic lesson');
+
   const crashed=hub.child;crashed.kill();
   for(let i=0;i<100&&hub.service;i++)await new Promise(r=>setTimeout(r,50));
   assert.ok(hub.failure);assert.equal(hub.service,null);await assert.rejects(hub.request('/bootstrap'),/服务已退出/);
