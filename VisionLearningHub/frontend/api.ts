@@ -1,11 +1,13 @@
 import {isIDE,bridgeRequest,ide} from './ide';
 import type {Project} from './projects';
-export type Lesson = {id:string; title:string; goal:string; contract:string; knowledge:string; hints:string[]; prerequisites:string[]; course:string};
+export type FunctionCard = {id:string;name:string;signature:string;parameters:{name:string;meaning:string;choice:string}[];returns:string;use:string;avoid:string;pitfall:string;example:string;expect:string;experiment:string;docs:string};
+export type FunctionGuide = {decision:string;question:string;cards:FunctionCard[]};
+export type Lesson = {id:string; title:string; goal:string; contract:string; knowledge:string; hints:string[]; prerequisites:string[]; course:string; function_guide?:FunctionGuide};
 export type Course = {id:string; title:string; subtitle:string; track:string; lessons:string[]; resources:string[]; sections:{title:string; paragraphs:string[]}[]; use:string[]; avoid:string[]; checks:string[]; readiness:string};
 export type Resource = {id:string; title:string; stage:string; url:string; topics:string; reading_task:string; priority:string; checked_at:string; version_note:string};
 export type CourseState = {checks:number[]; note:string};
 export type Boot = {projects:Project[]; courses:Course[]; lessons:Lesson[]; resources:Resource[]; passed:Record<string,boolean>; settings:Record<string,unknown>; attempts:number; active_job:Job|null};
-export type Sample = {seed:number; input:string; output:string|null; passed:boolean; params:unknown; checks:{name:string; ok:boolean; detail:string}[]; summary:string; error?:{type:string; message:string; line?:number; lesson?:string}; preview_note?:string};
+export type Sample = {seed:number; input:string; output:string|null; passed:boolean; params:unknown; checks:{name:string; ok:boolean; detail:string; hint?:string}[]; summary:string; error?:{type:string; message:string; line?:number; lesson?:string}; preview_note?:string; facts?:{name:string;value:unknown}[]; artifacts?:{label:string;output:string|null}[]};
 export type Report = {lesson:string; verify:boolean; passed:boolean; reports:Sample[]; log:string};
 export type Job = {id:string; lesson:string; status:string; result?:Report; error?:string; stale?:boolean; passed?:Record<string,boolean>};
 export type DraftData = {code:string; note:string; input:string; params:unknown; history:{stamp:number; passed:boolean; verified:boolean; report:Report}[]};

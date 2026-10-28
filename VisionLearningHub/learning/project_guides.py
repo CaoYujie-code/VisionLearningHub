@@ -107,7 +107,11 @@ def guide(key):
       ('accept','多场景完整验收','运行五个不同条件的批次；通过后才计入工程通关。','main.py','完整工程正式验收，不使用标准中间数据。',['开发批次通过不代表所有变化条件都通过。','比较失败样例的光照、数量、角度或时间状态，修改后重新验收。']),
     ]
     from .project_studies import study
-    return dict(version=GUIDE_VERSION,starter=STARTER,study=study(key),blocks=[dict(id=i,title=t,purpose=p,command=c,contract=out,hints=h,lesson=lesson,resource=url) for i,t,p,c,out,h in rows])
+    result=[dict(id=i,title=t,purpose=p,command=c,contract=out,hints=h,lesson=lesson,resource=url,entry='main.py' if i in ('batch','accept') else 'checkpoint.py',standard=i=='render') for i,t,p,c,out,h in rows]
+    if key=='E07':
+        from .feature_steps import blocks
+        steps=blocks();result=result[:1]+steps[:3]+result[1:3]+steps[3:]+result[3:]
+    return dict(version=GUIDE_VERSION,starter=STARTER,study=study(key),blocks=result)
 
 def guide_readme(key):
     data=guide(key)

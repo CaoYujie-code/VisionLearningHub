@@ -1,0 +1,1528 @@
+{
+  "version": 1,
+  "checked_at": "2026-10-28",
+  "cards": [
+    {
+      "id": "read",
+      "name": "cv2.imdecode / np.fromfile：文件到图像",
+      "signature": "image = cv2.imdecode(encoded, cv2.IMREAD_COLOR)",
+      "parameters": [
+        {
+          "name": "encoded",
+          "meaning": "压缩文件字节，不是像素",
+          "choice": "中文路径可先 np.fromfile(path,dtype=np.uint8)；下例内存编码无需外部文件"
+        },
+        {
+          "name": "flags",
+          "meaning": "解码模式",
+          "choice": "IMREAD_COLOR 得 BGR；IMREAD_GRAYSCALE 得二维灰度"
+        }
+      ],
+      "returns": "成功返回 H×W×3 uint8 BGR；坏文件可能返回 None 或抛出 cv2.error。shape 是属性，tolist() 将数组转为列表。",
+      "use": "读取本地照片、相机保存帧。",
+      "avoid": "压缩字节不能直接 reshape 成图像。",
+      "pitfall": "检查 None 后再访问 shape；BGR 的 [0,0,255] 是红色。",
+      "example": "import cv2\nimport numpy as np\n\npixel = np.array([[[0,0,255]]],np.uint8)\nok, encoded = cv2.imencode('.png',pixel)\nassert ok\nimage = cv2.imdecode(encoded,cv2.IMREAD_COLOR)\nassert image is not None and image.shape==(1,1,3)\nassert image[0,0].tolist()==[0,0,255]\nprint(image.shape,image[0,0].tolist())\n",
+      "expect": "(1,1,3) [0,0,255]。",
+      "experiment": "改成灰度解码，预测 shape 少哪一维，再修改相应断言。",
+      "docs": "https://docs.opencv.org/4.x/d4/da8/group__imgcodecs.html"
+    },
+    {
+      "id": "array",
+      "name": "NumPy：shape、切片、copy、dtype",
+      "signature": "roi = image[y:y+h, x:x+w].copy()",
+      "parameters": [
+        {
+          "name": "y/x",
+          "meaning": "行/列，先y后x",
+          "choice": "终点不包含；先检查ROI非空和边界"
+        },
+        {
+          "name": "copy()",
+          "meaning": "独立存储",
+          "choice": "普通切片常为视图；保留原图时复制"
+        },
+        {
+          "name": "astype(dtype)",
+          "meaning": "改变类型",
+          "choice": "相减先转浮点避免uint8回绕；reshape只改形状，不缩放"
+        }
+      ],
+      "returns": "ROI shape=(h,w[,channels])；mean求均值；count_nonzero计非零元素，多通道时不是像素数量。",
+      "use": "截取工作区、检查输入、区域统计。",
+      "avoid": "裁剪不自动将局部坐标转回原图，也不能替代缩放。",
+      "pitfall": "局部点(u,v)回原图要加ROI起点(x,y)。",
+      "example": "import cv2\nimport numpy as np\n\nimage = np.arange(12,dtype=np.uint8).reshape(3,4)\nroi = image[1:3,1:4].copy()\nassert roi.tolist()==[[5,6,7],[9,10,11]]\nroi[0,0]=0\nassert image[1,1]==5\nassert np.count_nonzero(roi)==5\nprint(image.shape,float(np.mean(image)))\n",
+      "expect": "(3,4) 5.5；修改副本不改变原图。",
+      "experiment": "去掉copy再运行，解释保护原图的断言为何失败。",
+      "docs": "https://numpy.org/doc/stable/user/basics.indexing.html"
+    },
+    {
+      "id": "color",
+      "name": "cv2.cvtColor：颜色空间转换",
+      "signature": "gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)",
+      "parameters": [
+        {
+          "name": "src",
+          "meaning": "输入图像",
+          "choice": "本例uint8 BGR，转换常量必须匹配输入通道"
+        },
+        {
+          "name": "code",
+          "meaning": "从哪种空间转到哪种",
+          "choice": "BGR2GRAY处理亮度；BGR2HSV用于颜色分割"
+        }
+      ],
+      "returns": "灰度为H×W；HSV仍为H×W×3。标准uint8 HSV中H=0..179，S/V=0..255。",
+      "use": "边缘检测前转灰度，按颜色分割前转HSV。",
+      "avoid": "目标背景亮度相近但颜色不同时，灰度会丢失信息。",
+      "pitfall": "二维灰度不能再次按BGR2GRAY转换。",
+      "example": "import cv2\nimport numpy as np\n\nbgr = np.array([[[0,0,255],[0,255,0]]],np.uint8)\nhsv = cv2.cvtColor(bgr,cv2.COLOR_BGR2HSV)\ngray = cv2.cvtColor(bgr,cv2.COLOR_BGR2GRAY)\nassert hsv[0,:,0].tolist()==[0,60]\nassert gray.shape==(1,2)\nprint(hsv.tolist(),gray.shape)\n",
+      "expect": "红色H=0，绿色H=60；灰度shape=(1,2)。",
+      "experiment": "把红色改为[255,0,0]，先判断是什么颜色再查看H。",
+      "docs": "https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html"
+    },
+    {
+      "id": "threshold",
+      "name": "cv2.threshold：固定阈值与Otsu",
+      "signature": "used, mask = cv2.threshold(gray, t, 255, cv2.THRESH_BINARY)",
+      "parameters": [
+        {
+          "name": "t",
+          "meaning": "亮度分界线",
+          "choice": "固定阈值按样本选；OTSU时设0，由函数估计实际阈值"
+        },
+        {
+          "name": "maxval",
+          "meaning": "选中像素输出值",
+          "choice": "掩膜常用255，不要误当阈值"
+        },
+        {
+          "name": "type",
+          "meaning": "前景方向与策略",
+          "choice": "BINARY选>t；INV选<=t；OTSU与方向常量按位或"
+        }
+      ],
+      "returns": "返回(实际阈值,新图像)两个值。本例uint8单通道，mask只有0/255。",
+      "use": "固定光照的明暗分割；双亮度群明显时尝试Otsu。",
+      "avoid": "局部阴影明显时全局阈值可能失效，考虑局部阈值。",
+      "pitfall": "元组不是mask；等于阈值时BINARY为0。",
+      "example": "import cv2\nimport numpy as np\n\ngray = np.array([[0,99,100,101,255]],np.uint8)\nused, mask = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)\nassert used==100 and mask.tolist()==[[0,0,0,255,255]]\nauto, m = cv2.threshold(gray,0,255,cv2.THRESH_BINARY|cv2.THRESH_OTSU)\nassert np.array_equal(m,(gray>auto).astype(np.uint8)*255)\nprint(used,mask.tolist(),'Otsu=',auto)\n",
+      "expect": "固定结果[[0,0,0,255,255]]；自动阈值看实测值。",
+      "experiment": "阈值改101，先预测值为101的像素，再比较BINARY_INV。",
+      "docs": "https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html"
+    },
+    {
+      "id": "range",
+      "name": "cv2.inRange / bitwise_not / bitwise_or：颜色掩膜",
+      "signature": "mask = cv2.inRange(hsv, lower, upper)",
+      "parameters": [
+        {
+          "name": "lower/upper",
+          "meaning": "各通道上下限，含端点",
+          "choice": "标准HSV按H/S/V排列"
+        },
+        {
+          "name": "bitwise_not",
+          "meaning": "逐位取反",
+          "choice": "0/255掩膜可反转前景背景"
+        },
+        {
+          "name": "bitwise_or",
+          "meaning": "合并掩膜",
+          "choice": "红色拆[170,179]与[0,10]，两段均限制S/V"
+        }
+      ],
+      "returns": "inRange返回同宽高uint8单通道；要求所有通道同时在范围内。",
+      "use": "绿色工作台抠前景、色标识别。",
+      "avoid": "灰色/强反光处色相不稳定，需检查饱和度与亮度。",
+      "pitfall": "lower的H=170、upper的H=10不能表示环绕范围。",
+      "example": "import cv2\nimport numpy as np\n\nhsv = np.array([[[175,255,255],[5,255,255],[60,255,255]]],np.uint8)\na = cv2.inRange(hsv,(170,80,80),(179,255,255))\nb = cv2.inRange(hsv,(0,80,80),(10,255,255))\nred = cv2.bitwise_or(a,b)\nassert red.tolist()==[[255,255,0]]\nassert cv2.bitwise_not(red).tolist()==[[0,0,255]]\nprint(red.tolist())\n",
+      "expect": "两个红色选中，绿色为0。",
+      "experiment": "把第二点S改10，解释H仍为5却不应选中的原因。",
+      "docs": "https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html"
+    },
+    {
+      "id": "morph",
+      "name": "cv2.morphologyEx / getStructuringElement：形态学",
+      "signature": "clean = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)",
+      "parameters": [
+        {
+          "name": "op",
+          "meaning": "对白前景的操作",
+          "choice": "OPEN去小白点；CLOSE补小黑孔，顺序影响结果"
+        },
+        {
+          "name": "kernel",
+          "meaning": "结构元素",
+          "choice": "ones((3,3),uint8)是方形；getStructuringElement可选椭圆；核应小于要保留的细节"
+        },
+        {
+          "name": "iterations",
+          "meaning": "重复次数",
+          "choice": "先从1开始，多次操作加重几何改变"
+        }
+      ],
+      "returns": "返回同尺寸图；本例uint8二值图。会改变边界，不是无损清理。",
+      "use": "分割后清除孤立点、补小孔。",
+      "avoid": "细线或窄间隙是目标时，大核会删除或连接真实结构。",
+      "pitfall": "先确认白色代表前景。",
+      "example": "import cv2\nimport numpy as np\n\nmask = np.zeros((11,11),np.uint8)\nmask[3:8,3:8]=255\nmask[1,1]=255\nkernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))\nclean = cv2.morphologyEx(mask,cv2.MORPH_OPEN,kernel)\nassert np.count_nonzero(mask)==26 and np.count_nonzero(clean)==25\nprint(np.count_nonzero(clean))\n",
+      "expect": "孤立点消失，方块保留25像素。",
+      "experiment": "把方块改为1像素宽线，预测能否保留。",
+      "docs": "https://docs.opencv.org/4.x/d9/d61/tutorial_py_morphological_ops.html"
+    },
+    {
+      "id": "contours",
+      "name": "cv2.findContours / contourArea：边界与面积",
+      "signature": "contours, hierarchy = cv2.findContours(mask, mode, method)",
+      "parameters": [
+        {
+          "name": "mask",
+          "meaning": "uint8单通道",
+          "choice": "非零视为前景，本例0/255"
+        },
+        {
+          "name": "mode",
+          "meaning": "取哪些轮廓",
+          "choice": "EXTERNAL只外边界；孔洞关系用TREE和hierarchy"
+        },
+        {
+          "name": "method",
+          "meaning": "保留边界点方式",
+          "choice": "CHAIN_APPROX_SIMPLE压缩直线点，不是多边形近似epsilon"
+        }
+      ],
+      "returns": "轮廓为点数组列表，常N×1×2；hierarchy为层级或None。contourArea为几何面积。",
+      "use": "独立工件的外形、几何面积筛选。",
+      "avoid": "粘连通常只有一个外轮廓，换模式不会自动分开。",
+      "pitfall": "列表顺序不是身份；几何面积不同于像素面积。",
+      "example": "import cv2\nimport numpy as np\n\nmask = np.zeros((8,8),np.uint8)\nmask[2:6,2:6]=255\ncs,h = cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)\nassert len(cs)==1 and cv2.contourArea(cs[0])==9\nassert np.count_nonzero(mask)==16\nprint(cv2.contourArea(cs[0]),np.count_nonzero(mask))\n",
+      "expect": "几何面积9，白像素16。",
+      "experiment": "方块中心挖孔，比较EXTERNAL与TREE的数量和层级。",
+      "docs": "https://docs.opencv.org/4.x/d4/d73/tutorial_py_contours_begin.html"
+    },
+    {
+      "id": "geometry",
+      "name": "cv2.moments / arcLength / approxPolyDP：轮廓几何",
+      "signature": "m = cv2.moments(c); p = cv2.approxPolyDP(c, epsilon, True)",
+      "parameters": [
+        {
+          "name": "m00/m10/m01",
+          "meaning": "面积矩/一阶矩",
+          "choice": "m00非0时质心=(m10/m00,m01/m00)"
+        },
+        {
+          "name": "arcLength(c,closed)",
+          "meaning": "周长，单位像素",
+          "choice": "闭合轮廓用True"
+        },
+        {
+          "name": "epsilon",
+          "meaning": "近似允许误差，像素",
+          "choice": "可先试周长1%~3%，再测角点误差，不保证恰好4点"
+        }
+      ],
+      "returns": "moments返回字典，arcLength返回浮点，approxPolyDP返回点数组，reshape(-1,2)方便遍历。",
+      "use": "碎片质心和角点、形状简化。",
+      "avoid": "非凸物体质心可能在外部；近似不等于物体分类。",
+      "pitfall": "退化轮廓m00=0，不能直接相除。",
+      "example": "import cv2\nimport numpy as np\n\nc = np.array([[0,0],[4,0],[4,2],[0,2]],np.int32).reshape(-1,1,2)\nm = cv2.moments(c)\nassert m['m00']!=0\ncenter = (m['m10']/m['m00'],m['m01']/m['m00'])\np = cv2.approxPolyDP(c,0.02*cv2.arcLength(c,True),True)\nassert center==(2,1) and len(p)==4\nprint(center,p.reshape(-1,2).tolist())\n",
+      "expect": "质心(2,1)，四角保留。",
+      "experiment": "把epsilon改成周长一半，解释角点减少。",
+      "docs": "https://docs.opencv.org/4.x/dd/d49/tutorial_py_contour_features.html"
+    },
+    {
+      "id": "rotation",
+      "name": "NumPy：角度、旋转矩阵、平移",
+      "signature": "out = (points-center) @ rotation.T + center + shift",
+      "parameters": [
+        {
+          "name": "deg2rad",
+          "meaning": "角度转弧度",
+          "choice": "sin/cos接收弧度，不直接传90"
+        },
+        {
+          "name": "center",
+          "meaning": "旋转中心xy",
+          "choice": "先减中心，旋转后加回"
+        },
+        {
+          "name": "@ rotation.T",
+          "meaning": "行向量乘转置",
+          "choice": "图像y向下，视觉转向按坐标约定判断"
+        }
+      ],
+      "returns": "N×2浮点坐标，变换点集不等于重采样图像。asarray(...,float)避免整数截断。",
+      "use": "碎片顶点旋转、平面几何变换。",
+      "avoid": "透视显著时旋转平移不足。",
+      "pitfall": "旋转中心错会导致绕原点跑走。",
+      "example": "import cv2\nimport numpy as np\n\npoints = np.array([[1,0],[0,1]],float)\na = np.deg2rad(90)\nr = np.array([[np.cos(a),-np.sin(a)],[np.sin(a),np.cos(a)]])\nout = points@r.T+[2,3]\nassert np.allclose(out,[[2,4],[1,3]])\nprint(out.round(3).tolist())\n",
+      "expect": "[[2,4],[1,3]]。",
+      "experiment": "平移放到旋转前，手算为何结果一般不同。",
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.deg2rad.html"
+    },
+    {
+      "id": "raster",
+      "name": "cv2.fillPoly / count_nonzero：栅格覆盖",
+      "signature": "cv2.fillPoly(mask, [points_int], 255)",
+      "parameters": [
+        {
+          "name": "mask",
+          "meaning": "预分配画布",
+          "choice": "zeros((height,width),uint8)，函数原地绘图"
+        },
+        {
+          "name": "pts",
+          "meaning": "多边形数组列表",
+          "choice": "浮点顶点先rint再astype(int32)"
+        },
+        {
+          "name": "count_nonzero",
+          "meaning": "统计非零/真值",
+          "choice": "逻辑交集算重叠，逻辑并集算覆盖"
+        }
+      ],
+      "returns": "fillPoly修改画布，count_nonzero返回数量；栅格面积含边界像素。",
+      "use": "拼图覆盖、碰撞近似、掩膜交并。",
+      "avoid": "亚像素精密测量不宜只依赖低分辨率栅格。",
+      "pitfall": "重复填白不记录次数；统计重叠需分别画或用整数累计。",
+      "example": "import cv2\nimport numpy as np\n\na = np.zeros((8,8),np.uint8)\nb = np.zeros_like(a)\ncv2.fillPoly(a,[np.array([[1,1],[3,1],[3,3],[1,3]],np.int32)],255)\ncv2.fillPoly(b,[np.array([[3,1],[5,1],[5,3],[3,3]],np.int32)],255)\ni = np.count_nonzero((a>0)&(b>0))\nassert i==3\nprint(i)\n",
+      "expect": "共享边界列有3个重叠像素。",
+      "experiment": "第二块右移1像素，区分连续边界接触与像素重叠。",
+      "docs": "https://docs.opencv.org/4.x/d6/d6e/group__imgproc__draw.html"
+    },
+    {
+      "id": "python",
+      "name": "enumerate / append / return：筛选原下标",
+      "signature": "for index, value in enumerate(values): ...",
+      "parameters": [
+        {
+          "name": "values",
+          "meaning": "输入序列",
+          "choice": "空列表不进入循环"
+        },
+        {
+          "name": "index/value",
+          "meaning": "原下标/数值",
+          "choice": "下标默认从0开始"
+        },
+        {
+          "name": "append/return",
+          "meaning": "追加/交回调用者",
+          "choice": "append返回None；print日志不等于return"
+        }
+      ],
+      "returns": "enumerate逐项给出(下标,值)；append原地改列表；函数return才交付结果。",
+      "use": "筛选轮廓、候选框时保留对应关系。",
+      "avoid": "遍历中删同一列表元素容易跳项。",
+      "pitfall": "kept=kept.append(i)会把列表变None。",
+      "example": "import cv2\nimport numpy as np\n\nvalues = [5,10,12]\nkept = []\nfor i,value in enumerate(values):\n    if value>=10:\n        kept.append(i)\nassert kept==[1,2]\nprint(kept)\n",
+      "expect": "[1,2]是下标，不是面积。",
+      "experiment": "试空列表、恰好等于阈值，再把>=换>比较。",
+      "docs": "https://docs.python.org/3/library/functions.html#enumerate"
+    },
+    {
+      "id": "template_array",
+      "name": "np.rot90 / mean / argmin：小图案比较",
+      "signature": "score = np.mean((patch.astype(float)-template.astype(float))**2)",
+      "parameters": [
+        {
+          "name": "astype(float)",
+          "meaning": "提升类型",
+          "choice": "避免uint8差值/平方回绕"
+        },
+        {
+          "name": "rot90(template,k)",
+          "meaning": "旋转k个90度",
+          "choice": "非方形旋转后宽高交换"
+        },
+        {
+          "name": "argmin(scores)",
+          "meaning": "最小分数下标",
+          "choice": "均方误差越小越像；同分取第一个，另需拒识阈值"
+        }
+      ],
+      "returns": "均方误差是浮点；argmin是索引，分数不是概率。",
+      "use": "尺寸对齐、光照接近、种类有限的小图案。",
+      "avoid": "尺度、透视或光照差异大时像素差会失效。",
+      "pitfall": "先几何归一化，不同尺寸不能直接相减。",
+      "example": "import cv2\nimport numpy as np\n\nt = np.array([[0,50],[100,255]],np.uint8)\np = np.rot90(t)\nscores = [float(np.mean((p.astype(float)-np.rot90(t,k).astype(float))**2)) for k in range(4)]\nassert int(np.argmin(scores))==1 and scores[1]==0\nprint(scores)\n",
+      "expect": "索引1对应90度旋转，误差0。",
+      "experiment": "给patch整体加亮度（先转浮点再clip），观察误差。",
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.rot90.html"
+    },
+    {
+      "id": "median",
+      "name": "np.median：跨帧稳健统计",
+      "signature": "stable = np.median(points, axis=0)",
+      "parameters": [
+        {
+          "name": "points",
+          "meaning": "同一对象的多帧坐标",
+          "choice": "先按身份对齐，不能按检测列表下标"
+        },
+        {
+          "name": "axis=0",
+          "meaning": "跨帧分别统计x/y",
+          "choice": "None会把x/y混成一个标量"
+        },
+        {
+          "name": "window",
+          "meaning": "帧数",
+          "choice": "窗口越长一般更稳但响应更慢"
+        }
+      ],
+      "returns": "N×2沿轴0取中位数得到2项；偶数项中位数可能小数。",
+      "use": "静止工件定位抑制离群点。",
+      "avoid": "持续运动会滞后，身份混乱不能靠中位数修复。",
+      "pitfall": "别混合像素和毫米坐标。",
+      "example": "import cv2\nimport numpy as np\n\np = np.array([[10,20],[11,21],[500,800]],float)\ns = np.median(p,axis=0)\nassert s.tolist()==[11,21]\nprint(s.tolist(),p.mean(axis=0).tolist())\n",
+      "expect": "中位数[11,21]；均值被离群点拉偏。",
+      "experiment": "换成连续移动的三帧，解释中位数不等于最新位置。",
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.median.html"
+    },
+    {
+      "id": "lstsq",
+      "name": "np.linalg.matrix_rank / lstsq：仿射拟合",
+      "signature": "coef, residuals, rank, singular = np.linalg.lstsq(design, target, rcond=None)",
+      "parameters": [
+        {
+          "name": "design",
+          "meaning": "每行[u,v,1]，N×3",
+          "choice": "column_stack加常数列，至少三组不共线点"
+        },
+        {
+          "name": "target",
+          "meaning": "N×2对应坐标",
+          "choice": "点序一一对应、单位固定"
+        },
+        {
+          "name": "rcond=None",
+          "meaning": "库默认秩判定策略",
+          "choice": "matrix_rank(design)<3时拒绝退化输入"
+        }
+      ],
+      "returns": "coef为3×2；新点扩为[u,v,1]再@coef。residuals有时为空，不能假设总有误差值。",
+      "use": "近似平面仿射映射、像素到平台坐标。",
+      "avoid": "透视/镜头畸变明显、点共线时不足。",
+      "pitfall": "用未参与拟合的检查点评估。",
+      "example": "import cv2\nimport numpy as np\n\nuv = np.array([[0,0],[1,0],[0,1],[1,1]],float)\nd = np.column_stack([uv,np.ones(len(uv))])\nassert np.linalg.matrix_rank(d)==3\ncoef,_,_,_ = np.linalg.lstsq(d,uv*[2,3]+[10,20],rcond=None)\npred = np.array([[2,3,1]])@coef\nassert np.allclose(pred,[[14,29]])\nprint(pred.round(6).tolist())\n",
+      "expect": "独立检查点[[14,29]]。",
+      "experiment": "所有v改0，解释秩为什么不足。",
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.lstsq.html"
+    },
+    {
+      "id": "compose",
+      "name": "普通Python函数组合：连接已验证步骤",
+      "signature": "mask = segment(image); result = measure(mask)",
+      "parameters": [
+        {
+          "name": "输入/返回值",
+          "meaning": "阶段之间的接口",
+          "choice": "明确shape、dtype、坐标系"
+        },
+        {
+          "name": "import",
+          "meaning": "导入自己的模块",
+          "choice": "VS Code用from exercises.T04 import solve；独立工程可自定模块名"
+        },
+        {
+          "name": "student/read_image",
+          "meaning": "旧网页辅助入口",
+          "choice": "不是OpenCV API；VS Code/导出用普通import与imdecode"
+        }
+      ],
+      "returns": "返回值由你定义，字典可同时传掩膜和几何；复制params防止意外修改调用者。",
+      "use": "组合已验收的分割、清理、轮廓模块。",
+      "avoid": "不要把读文件、算法、绘图全塞一个大函数。",
+      "pitfall": "前置未完成要报明确错误，不能伪造成功空结果。",
+      "example": "import cv2\nimport numpy as np\n\ndef bright_mask(image,t):\n    gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)\n    return cv2.threshold(gray,t,255,cv2.THRESH_BINARY)[1]\n\ndef count_pixels(mask):\n    return int(np.count_nonzero(mask))\n\nimage = np.array([[[0,0,0],[255,255,255]]],np.uint8)\nassert count_pixels(bright_mask(image,100))==1\nprint('组合验证通过')\n",
+      "expect": "两个普通函数组合通过，不依赖平台。",
+      "experiment": "单独输入全黑图，再验证组合也返回0。",
+      "docs": "https://docs.python.org/3/tutorial/modules.html"
+    },
+    {
+      "id": "gaussian",
+      "name": "cv2.GaussianBlur：高斯平滑",
+      "signature": "smooth = cv2.GaussianBlur(image, (k,k), sigmaX)",
+      "parameters": [
+        {
+          "name": "ksize",
+          "meaning": "窗口宽高",
+          "choice": "先试(3,3)/(5,5)正奇数核"
+        },
+        {
+          "name": "sigmaX",
+          "meaning": "标准差",
+          "choice": "0时由核尺寸估计；更大通常更平滑"
+        },
+        {
+          "name": "borderType",
+          "meaning": "边界扩展方式",
+          "choice": "本课用默认值；对比实现时保持一致"
+        }
+      ],
+      "returns": "返回同尺寸同类型图，邻域加权平均也会模糊边缘。",
+      "use": "Canny前抑制随机波动，平滑近似高斯噪声。",
+      "avoid": "椒盐点先比较中值；窄裂纹可能被平滑掉。",
+      "pitfall": "更平滑不等于检测更准确，要检查小目标漏检。",
+      "example": "import cv2\nimport numpy as np\n\na = np.zeros((9,9),np.uint8)\na[4,4]=255\nb = cv2.GaussianBlur(a,(3,3),0)\nassert 0<b[4,4]<255 and np.count_nonzero(b)==9\nprint(b[3:6,3:6].tolist())\n",
+      "expect": "单点扩散到3×3邻域，中心值下降。",
+      "experiment": "改5×5核，记录中心值与非零数，解释小目标损失。",
+      "docs": "https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html"
+    },
+    {
+      "id": "canny",
+      "name": "cv2.Canny：双阈值边缘",
+      "signature": "edges = cv2.Canny(gray, low, high)",
+      "parameters": [
+        {
+          "name": "image",
+          "meaning": "本例uint8灰度",
+          "choice": "一般先适当平滑"
+        },
+        {
+          "name": "low/high",
+          "meaning": "梯度阈值，不是灰度阈值",
+          "choice": "弱边缘要连接强边缘才保留"
+        },
+        {
+          "name": "apertureSize/L2gradient",
+          "meaning": "梯度核/幅值算法",
+          "choice": "默认3/False；比较参数时固定"
+        }
+      ],
+      "returns": "同尺寸uint8 0/255细边缘图，不是填充区域。",
+      "use": "工件外形、直线检测、文档边缘候选。",
+      "avoid": "纹理丰富背景会有大量边缘，不自动判断物体归属。",
+      "pitfall": "边缘白像素数不等于物体面积。",
+      "example": "import cv2\nimport numpy as np\n\na = np.zeros((40,40),np.uint8)\na[10:30,10:30]=255\ne = cv2.Canny(a,50,150)\nassert e.dtype==np.uint8 and e[20,20]==0\nassert 0<np.count_nonzero(e)<np.count_nonzero(a)\nprint(np.count_nonzero(e))\n",
+      "expect": "有边缘但中心为0，边缘像素少于区域面积。",
+      "experiment": "给背景加纹理，观察为什么阈值不能保证只保留方块。",
+      "docs": "https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html"
+    },
+    {
+      "id": "perspective",
+      "name": "cv2.getPerspectiveTransform / warpPerspective：四点校正",
+      "signature": "H = cv2.getPerspectiveTransform(src4,dst4); out = cv2.warpPerspective(image,H,(w,h))",
+      "parameters": [
+        {
+          "name": "src4/dst4",
+          "meaning": "四对对应点，float32 4×2",
+          "choice": "顺序一致，避免三点共线或自交四边形"
+        },
+        {
+          "name": "dsize",
+          "meaning": "输出宽/高",
+          "choice": "不是shape的高/宽"
+        },
+        {
+          "name": "flags",
+          "meaning": "采样方式",
+          "choice": "照片可线性，类别标签用最近邻"
+        }
+      ],
+      "returns": "H为3×3源到目标单应矩阵；warpPerspective变换图像；perspectiveTransform变换点集。",
+      "use": "平面纸张、标牌透视展开。",
+      "avoid": "弯曲纸、镜头畸变不能仅靠四点单应解决；物理尺度还需标定。",
+      "pitfall": "四角顺序错会镜像、扭曲或黑图。",
+      "example": "import cv2\nimport numpy as np\n\na = np.arange(16,dtype=np.uint8).reshape(4,4)\np = np.array([[0,0],[3,0],[3,3],[0,3]],np.float32)\nH = cv2.getPerspectiveTransform(p,p)\nb = cv2.warpPerspective(a,H,(4,4))\nassert np.allclose(H,np.eye(3)) and np.array_equal(a,b)\nprint(b.tolist())\n",
+      "expect": "相同四角产生单位变换，输出不变。",
+      "experiment": "交换两个目标角点，先画对应连线再观察错误结果。",
+      "docs": "https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html"
+    },
+    {
+      "id": "iou",
+      "name": "min / max：半开框IoU",
+      "signature": "iou = intersection / (area_a + area_b - intersection)",
+      "parameters": [
+        {
+          "name": "xyxy",
+          "meaning": "左上/右下连续坐标",
+          "choice": "面积宽×高，本课不加1"
+        },
+        {
+          "name": "min/max",
+          "meaning": "交集右下/左上界",
+          "choice": "每条交集边长max(0,...)"
+        },
+        {
+          "name": "union",
+          "meaning": "并集面积",
+          "choice": "先检查框正面积；不能对零分母直接除"
+        }
+      ],
+      "returns": "IoU在0..1，0无面积交集，1完全重合；不考虑类别。",
+      "use": "检测框评估、NMS、一对一匹配。",
+      "avoid": "细长框轻微平移IoU就可能大降，要结合目标尺度解释。",
+      "pitfall": "不同模块的包含端点/半开约定不能混用。",
+      "example": "import cv2\nimport numpy as np\n\na,b = [0,0,4,4],[2,0,6,4]\ni = max(0,min(a[2],b[2])-max(a[0],b[0]))*max(0,min(a[3],b[3])-max(a[1],b[1]))\nu = (a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-i\nassert np.isclose(i/u,1/3)\nprint(i/u)\n",
+      "expect": "交集8，并集24，IoU=1/3。",
+      "experiment": "试相同、分离、刚好接触三种框，先手算。",
+      "docs": "https://docs.python.org/3/library/functions.html#max"
+    },
+    {
+      "id": "sorting",
+      "name": "sorted / set：NMS与匹配的状态",
+      "signature": "order = sorted(range(len(scores)), key=lambda i: (-scores[i], i))",
+      "parameters": [
+        {
+          "name": "key",
+          "meaning": "排序优先级",
+          "choice": "负分数降序，原下标决定同分顺序"
+        },
+        {
+          "name": "used=set()",
+          "meaning": "记录已使用真值",
+          "choice": "add之后不能再次贡献TP"
+        },
+        {
+          "name": "IoU阈值",
+          "meaning": "筛选条件",
+          "choice": "NMS和评估是不同流程，各自遵守题目>或>=约定"
+        }
+      ],
+      "returns": "sorted返回新列表；set存唯一成员，不依赖它的遍历顺序。",
+      "use": "NMS逐个保留高分框；评估时确保真值只用一次。",
+      "avoid": "NMS不消除所有误检，邻近真实目标也可能被误抑制。",
+      "pitfall": "预测去重与对真值计算TP/FP不能互相代替。",
+      "example": "import cv2\nimport numpy as np\n\nscores = [0.8,0.9,0.9]\norder = sorted(range(len(scores)),key=lambda i:(-scores[i],i))\nassert order==[1,2,0]\nused = set()\nused.add(5)\nassert 5 in used and len(used)==1\nprint(order)\n",
+      "expect": "排序[1,2,0]；这是算法组件演示，不是完整NMS。",
+      "experiment": "两个同位置预测框，手算第二个何时成为FP，何时被NMS抑制。",
+      "docs": "https://docs.python.org/3/library/functions.html#sorted"
+    },
+    {
+      "id": "dfs",
+      "name": "递归 / append / pop：DFS回溯",
+      "signature": "path.append(choice); search(next_state); path.pop()",
+      "parameters": [
+        {
+          "name": "state",
+          "meaning": "当前局部解",
+          "choice": "used记已用碎片，path记顺序"
+        },
+        {
+          "name": "base case",
+          "meaning": "停止条件",
+          "choice": "位置填满后保存path.copy()"
+        },
+        {
+          "name": "undo",
+          "meaning": "撤销修改",
+          "choice": "append对应pop，add对应remove"
+        }
+      ],
+      "returns": "返回或收集解，必须复制路径，不能存同一个可变列表引用。",
+      "use": "规模小的拼图、排列与约束搜索。",
+      "avoid": "规模大排列数激增，需有效剪枝或换求解方式。",
+      "pitfall": "错误剪枝会漏解，没撤销会污染兄弟分支。",
+      "example": "import cv2\nimport numpy as np\n\nanswers = []\ndef search(path,used):\n    if len(path)==3:\n        answers.append(path.copy())\n        return\n    for value in range(3):\n        if value in used:\n            continue\n        path.append(value); used.add(value)\n        search(path,used)\n        used.remove(value); path.pop()\nsearch([],set())\nassert len(answers)==6 and len({tuple(row) for row in answers})==6\nprint(answers)\n",
+      "expect": "三个元素共6种排列。",
+      "experiment": "删一次撤销观察错误；再添加“第一项为0”的有效剪枝。",
+      "docs": "https://docs.python.org/3/tutorial/datastructures.html"
+    },
+    {
+      "id": "labels",
+      "name": "split / float / math.isfinite：标签校验",
+      "signature": "values = list(map(float, line.split()))",
+      "parameters": [
+        {
+          "name": "split()",
+          "meaning": "按任意空白拆字段",
+          "choice": "空行先strip；split(\" \")会产生空字段"
+        },
+        {
+          "name": "float/is_integer",
+          "meaning": "解析值/类别整数检查",
+          "choice": "字段数、有限性、类别范围都要查"
+        },
+        {
+          "name": "math.isfinite",
+          "meaning": "拒绝NaN与无穷",
+          "choice": "float(\"nan\")不报错，需显式检查"
+        }
+      ],
+      "returns": "split给字符串列表，float可抛ValueError；标签框为归一化cx,cy,w,h。",
+      "use": "训练前审计标注、导入外部数据。",
+      "avoid": "数值合法不等于语义正确，仍要核对图片和类别。",
+      "pitfall": "只查中心在[0,1]不够，还要按本题约定查整个框边界。",
+      "example": "import cv2\nimport numpy as np\n\nimport math\nvalues = list(map(float,'1  0.5 0.5 0.2 0.4'.split()))\nassert len(values)==5 and all(math.isfinite(v) for v in values)\ncls,cx,cy,w,h = values\nassert cls.is_integer()\nassert np.allclose([cx-w/2,cy-h/2,cx+w/2,cy+h/2],[0.4,0.3,0.6,0.7])\nassert not math.isfinite(float('nan'))\nprint('字段与边界检查通过')\n",
+      "expect": "合法框边界[0.4,0.3,0.6,0.7]，NaN被拒绝。",
+      "experiment": "构造少字段、类别1.5、宽0、越界，指出拒绝位置。",
+      "docs": "https://docs.python.org/3/library/math.html#math.isfinite"
+    },
+    {
+      "id": "clip",
+      "name": "np.asarray / reshape / clip：letterbox逆变换",
+      "signature": "original = (boxes-[px,py,px,py]) / scale",
+      "parameters": [
+        {
+          "name": "boxes",
+          "meaning": "N×4 xyxy浮点框",
+          "choice": "asarray(...,float).reshape(-1,4)使空输入为(0,4)"
+        },
+        {
+          "name": "pad/scale",
+          "meaning": "真实前处理补边/比例",
+          "choice": "先减补边再除正比例"
+        },
+        {
+          "name": "clip",
+          "meaning": "限制边界",
+          "choice": "x限[0,width]，y限[0,height]，为连续边界"
+        }
+      ],
+      "returns": "N×4浮点数组，四元素偏移广播到每行。",
+      "use": "模型框画回原图。",
+      "avoid": "非等比拉伸、其他补边策略必须按实际逆变换。",
+      "pitfall": "clip可能生成零面积框，不等于有效性校验。",
+      "example": "import cv2\nimport numpy as np\n\nb = np.array([[20,40,100,120]],float)\no = (b-[0,20,0,20])/2\no[:,[0,2]] = np.clip(o[:,[0,2]],0,40)\no[:,[1,3]] = np.clip(o[:,[1,3]],0,60)\nassert o.tolist()==[[10,10,40,50]]\nassert np.asarray([],float).reshape(-1,4).shape==(0,4)\nprint(o.tolist())\n",
+      "expect": "[[10,10,40,50]]。",
+      "experiment": "先除再减，手算y会偏移多少，用已知框验证。",
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.clip.html"
+    },
+    {
+      "id": "metrics",
+      "name": "zip / sum：precision与recall",
+      "signature": "precision = tp/(tp+fp); recall = tp/(tp+fn)",
+      "parameters": [
+        {
+          "name": "zip",
+          "meaning": "配对真实和预测",
+          "choice": "先确保等长，默认会在较短序列末尾停止"
+        },
+        {
+          "name": "sum条件",
+          "meaning": "True按1计数",
+          "choice": "TP=(1,1)，FP=(0,1)，FN=(1,0)"
+        },
+        {
+          "name": "零分母",
+          "meaning": "无正预测/无真阳性",
+          "choice": "本课约定返回0，并说明该约定"
+        }
+      ],
+      "returns": "整数计数、0..1浮点指标；本例二分类，检测框先做类别和IoU一对一匹配。",
+      "use": "分析误报/漏报代价、阈值变化。",
+      "avoid": "单个precision/recall不是完整mAP。",
+      "pitfall": "不能把没有报出目标直接解释成100%准确。",
+      "example": "import cv2\nimport numpy as np\n\ntruth,predicted = [1,1,0,0],[1,0,1,0]\nassert len(truth)==len(predicted)\npairs = list(zip(truth,predicted))\ntp = sum(t==1 and p==1 for t,p in pairs)\nfp = sum(t==0 and p==1 for t,p in pairs)\nfn = sum(t==1 and p==0 for t,p in pairs)\nassert (tp,fp,fn)==(1,1,1)\nprint(tp/(tp+fp),tp/(tp+fn))\n",
+      "expect": "precision=0.5，recall=0.5。",
+      "experiment": "预测全改0，补零分母保护并解释指标。",
+      "docs": "https://docs.python.org/3/library/functions.html#zip"
+    },
+    {
+      "id": "logs",
+      "name": "str.partition：日志级别提取",
+      "signature": "level, separator, message = line.partition(\" \")",
+      "parameters": [
+        {
+          "name": "separator",
+          "meaning": "第一个空格",
+          "choice": "本课约定级别后空格，实际日志按真实格式"
+        },
+        {
+          "name": "level",
+          "meaning": "第一个字段",
+          "choice": "只比较INFO/WARN/ERROR，不搜正文"
+        },
+        {
+          "name": "last_error",
+          "meaning": "最后错误正文",
+          "choice": "初值None，遇到ERROR时更新"
+        }
+      ],
+      "returns": "始终返回3个字符串，没分隔符时后两项为空。",
+      "use": "离线日志初筛、采集或加载失败定位。",
+      "avoid": "不是Linux驱动模拟；实际需时间、进程、退出码与上下文。",
+      "pitfall": "INFO正文含ERROR不算ERROR记录。",
+      "example": "import cv2\nimport numpy as np\n\nlevel,sep,message = 'INFO ERROR count is zero'.partition(' ')\nassert level=='INFO' and message=='ERROR count is zero'\nassert 'BROKEN'.partition(' ')==('BROKEN','','')\nprint(level,message)\n",
+      "expect": "级别仍INFO，格式异常可识别。",
+      "experiment": "加入ERROR与WARN记录，手敲循环计数并保留最后错误。",
+      "docs": "https://docs.python.org/3/library/stdtypes.html#str.partition"
+    },
+    {
+      "id": "hist",
+      "name": "np.bincount / ravel：灰度直方图",
+      "signature": "counts = np.bincount(gray.ravel(), minlength=256)",
+      "parameters": [
+        {
+          "name": "ravel",
+          "meaning": "展开一维",
+          "choice": "统计后失去空间位置"
+        },
+        {
+          "name": "minlength",
+          "meaning": "至少桶数",
+          "choice": "0..255输入才恰好256项，大值不会自动截断"
+        },
+        {
+          "name": "counts[i]",
+          "meaning": "灰度i的次数",
+          "choice": "总和应等于像素数；除总数才是频率"
+        }
+      ],
+      "returns": "一维整数计数，含空桶。",
+      "use": "观察曝光、亮度分群，提出阈值假设。",
+      "avoid": "同直方图可能有不同形状，不能定位目标。",
+      "pitfall": "彩色直接ravel混合通道，先转灰度或分通道。",
+      "example": "import cv2\nimport numpy as np\n\na = np.array([[0,0,1],[1,1,255]],np.uint8)\nc = np.bincount(a.ravel(),minlength=256)\nassert c.shape==(256,) and c.sum()==a.size\nassert c[[0,1,255]].tolist()==[2,3,1]\nprint(c[[0,1,255]].tolist())\n",
+      "expect": "[2,3,1]，总6像素。",
+      "experiment": "打乱像素位置再统计，解释分布不变但形状变化。",
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.bincount.html"
+    },
+    {
+      "id": "adaptive",
+      "name": "cv2.adaptiveThreshold：局部阈值",
+      "signature": "mask = cv2.adaptiveThreshold(gray,255,method,cv2.THRESH_BINARY,blockSize,C)",
+      "parameters": [
+        {
+          "name": "method",
+          "meaning": "局部亮度估计",
+          "choice": "MEAN_C均值，GAUSSIAN_C加权均值"
+        },
+        {
+          "name": "blockSize",
+          "meaning": "邻域边长",
+          "choice": "大于1奇数，结合笔画和光照变化尺度"
+        },
+        {
+          "name": "C",
+          "meaning": "局部估计减去的常数",
+          "choice": "BINARY时增大C通常更易变白"
+        }
+      ],
+      "returns": "uint8单通道输入返回同尺寸二值图，只返回图，不返回阈值表。",
+      "use": "阴影纸张、缓变背景的局部文字分割。",
+      "avoid": "小窗口跟随纹理；并非每个目标都比邻域亮。",
+      "pitfall": "先选BINARY或INV再讨论C的方向。",
+      "example": "import cv2\nimport numpy as np\n\ng = np.full((9,9),100,np.uint8)\na = cv2.adaptiveThreshold(g,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,3,0)\nb = cv2.adaptiveThreshold(g,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,3,2)\nassert np.count_nonzero(a)==0 and np.count_nonzero(b)==81\nprint(np.unique(a).tolist(),np.unique(b).tolist())\n",
+      "expect": "均匀图C=0全黑、C=2全白。",
+      "experiment": "换渐变背景与全局阈值比较，一次只改窗口或C。",
+      "docs": "https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html"
+    },
+    {
+      "id": "median_blur",
+      "name": "cv2.medianBlur：中值滤波",
+      "signature": "clean = cv2.medianBlur(image, ksize)",
+      "parameters": [
+        {
+          "name": "image",
+          "meaning": "本课uint8图",
+          "choice": "不同核尺寸对类型支持有限制"
+        },
+        {
+          "name": "ksize",
+          "meaning": "正奇数边长",
+          "choice": "从3开始，越大越容易删除小结构"
+        }
+      ],
+      "returns": "同尺寸同类型图，邻域中值替换，边界复制。",
+      "use": "孤立椒盐点，常比平均平滑保边更清晰。",
+      "avoid": "细点和窄线是目标时可能被删。",
+      "pitfall": "噪点与小目标由任务定义区分。",
+      "example": "import cv2\nimport numpy as np\n\na = np.full((7,7),100,np.uint8)\na[3,3]=255; a[1,1]=0\nb = cv2.medianBlur(a,3)\nassert np.all(b==100)\nprint(np.unique(b).tolist())\n",
+      "expect": "孤立脉冲恢复为100。",
+      "experiment": "亮点扩大成3×3，比较3核和5核保留像素。",
+      "docs": "https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html"
+    },
+    {
+      "id": "sobel",
+      "name": "cv2.Sobel / magnitude：有符号梯度",
+      "signature": "gx = cv2.Sobel(gray,cv2.CV_32F,1,0,ksize=3)",
+      "parameters": [
+        {
+          "name": "ddepth",
+          "meaning": "输出深度",
+          "choice": "CV_32F保留负值和大于255的值"
+        },
+        {
+          "name": "dx/dy",
+          "meaning": "求导方向",
+          "choice": "(1,0)水平变化，(0,1)垂直变化"
+        },
+        {
+          "name": "ksize",
+          "meaning": "求导核",
+          "choice": "本课3或5，核变化也改变数值尺度"
+        }
+      ],
+      "returns": "gx/gy浮点同尺寸；magnitude=sqrt(gx²+gy²)。",
+      "use": "边缘方向、亮度跳变分析。",
+      "avoid": "高梯度也可能是纹理/反光。",
+      "pitfall": "显示取绝对值或归一化，不应覆盖原始测量梯度。",
+      "example": "import cv2\nimport numpy as np\n\na = np.tile(np.array([0,10,20,30,40],np.uint8),(5,1))\nx = cv2.Sobel(a,cv2.CV_32F,1,0,ksize=3)\ny = cv2.Sobel(a,cv2.CV_32F,0,1,ksize=3)\nm = cv2.magnitude(x,y)\nassert np.allclose(y,0) and x[2,2]==80 and m[2,2]==80\nprint(float(x[2,2]),float(y[2,2]))\n",
+      "expect": "中心gx=80，gy=0。",
+      "experiment": "亮度顺序反转，预测导数符号与幅值变化。",
+      "docs": "https://docs.opencv.org/4.x/d5/d0f/tutorial_py_gradients.html"
+    },
+    {
+      "id": "integral",
+      "name": "cv2.integral：矩形快速求和",
+      "signature": "I = cv2.integral(gray, sdepth=cv2.CV_64F)",
+      "parameters": [
+        {
+          "name": "sdepth",
+          "meaning": "累计类型",
+          "choice": "CV_64F避免较大整数累加溢出"
+        },
+        {
+          "name": "I[y,x]",
+          "meaning": "左上前缀和",
+          "choice": "额外第0行/列为0"
+        },
+        {
+          "name": "roi",
+          "meaning": "半开x,y,w,h",
+          "choice": "I[y+h,x+w]-I[y,x+w]-I[y+h,x]+I[y,x]"
+        }
+      ],
+      "returns": "H×W输入得到(H+1)×(W+1)，不是图像增强结果。",
+      "use": "同一图反复查很多矩形和/均值。",
+      "avoid": "只查小ROI直接求和更简单；旋转矩形不能套此公式。",
+      "pitfall": "别写反xy或漏掉额外行列。",
+      "example": "import cv2\nimport numpy as np\n\na = np.arange(12,dtype=np.uint8).reshape(3,4)\nI = cv2.integral(a,sdepth=cv2.CV_64F)\nx,y,w,h = 1,1,2,2\nt = I[y+h,x+w]-I[y,x+w]-I[y+h,x]+I[y,x]\nassert I.shape==(4,5) and t==a[1:3,1:3].sum()==30\nprint(float(t),float(t/(w*h)))\n",
+      "expect": "和30、均值7.5。",
+      "experiment": "ROI移到左上角，验证公式无需为x/y为0特殊减1。",
+      "docs": "https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html"
+    },
+    {
+      "id": "resize",
+      "name": "cv2.resize：尺寸与插值",
+      "signature": "out = cv2.resize(image,(width,height),interpolation=cv2.INTER_AREA)",
+      "parameters": [
+        {
+          "name": "dsize",
+          "meaning": "宽/高",
+          "choice": "与shape相反；非等比会改变外形"
+        },
+        {
+          "name": "interpolation",
+          "meaning": "像素计算方式",
+          "choice": "照片缩小试AREA，类别标签用NEAREST避免新类别"
+        },
+        {
+          "name": "fx/fy",
+          "meaning": "缩放比例",
+          "choice": "与固定dsize是两种指定方式，初学选择一种"
+        }
+      ],
+      "returns": "目标高×宽图；框坐标需要另按比例变换。",
+      "use": "统一模型输入、预览、工作分辨率。",
+      "avoid": "保持比例时应等比缩放并记录padding。",
+      "pitfall": "线性插值标签会制造不存在类别。",
+      "example": "import cv2\nimport numpy as np\n\na = np.array([[0,2],[2,0]],np.uint8)\nn = cv2.resize(a,(6,4),interpolation=cv2.INTER_NEAREST)\nl = cv2.resize(a,(6,4),interpolation=cv2.INTER_LINEAR)\nassert n.shape==(4,6) and set(np.unique(n))=={0,2}\nassert 1 in np.unique(l)\nprint(np.unique(n).tolist(),np.unique(l).tolist())\n",
+      "expect": "最近邻只有0/2，线性多出1。",
+      "experiment": "照片与标签分别缩放，解释不同插值选择。",
+      "docs": "https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html"
+    },
+    {
+      "id": "lut",
+      "name": "cv2.LUT / arange / floor：Gamma查表",
+      "signature": "table = floor(255*(arange(256)/255)**gamma).astype(uint8)",
+      "parameters": [
+        {
+          "name": "gamma",
+          "meaning": "本课公式指数",
+          "choice": "<1提亮，>1压暗，别混用1/gamma定义"
+        },
+        {
+          "name": "table",
+          "meaning": "256项映射",
+          "choice": "float64计算后floor、uint8"
+        },
+        {
+          "name": "LUT",
+          "meaning": "逐像素查表",
+          "choice": "本例uint8单通道输入"
+        }
+      ],
+      "returns": "同尺寸映射结果；0和255端点不变。",
+      "use": "重复处理同一亮度映射。",
+      "avoid": "不能恢复过曝细节，也不消除空间阴影。",
+      "pitfall": "先除255归一化再幂运算。",
+      "example": "import cv2\nimport numpy as np\n\na = np.array([[0,64,128,255]],np.uint8)\nt = np.floor(255*(np.arange(256,dtype=np.float64)/255)**2).astype(np.uint8)\nb = cv2.LUT(a,t)\nassert b.tolist()==[[0,16,64,255]]\nprint(b.tolist())\n",
+      "expect": "gamma=2得到[0,16,64,255]。",
+      "experiment": "换0.5，预测中间灰度变化方向并检查端点。",
+      "docs": "https://docs.opencv.org/4.x/d2/de8/group__core__array.html"
+    },
+    {
+      "id": "clahe",
+      "name": "cv2.createCLAHE / apply：局部对比度",
+      "signature": "clahe = cv2.createCLAHE(clipLimit=2.0,tileGridSize=(8,8)); out = clahe.apply(gray)",
+      "parameters": [
+        {
+          "name": "clipLimit",
+          "meaning": "增强限制",
+          "choice": "较大可能增强更多，也放大噪声"
+        },
+        {
+          "name": "tileGridSize",
+          "meaning": "横纵网格数量",
+          "choice": "8×8是网格数，不是每块像素尺寸"
+        },
+        {
+          "name": "apply",
+          "meaning": "执行对象",
+          "choice": "本课uint8灰度；彩色需明确亮度通道"
+        }
+      ],
+      "returns": "先得到CLAHE对象，再apply返回图像。",
+      "use": "局部低对比度增强的候选预处理。",
+      "avoid": "无信息区域不能凭空恢复细节。",
+      "pitfall": "对比度更强不等于分割更准确，要检查误检。",
+      "example": "import cv2\nimport numpy as np\n\na = np.tile(np.arange(100,116,dtype=np.uint8),(16,1))\nb = cv2.createCLAHE(clipLimit=2.0,tileGridSize=(2,2)).apply(a)\nassert b.shape==a.shape and b.dtype==np.uint8\nassert not np.array_equal(a,b)\nprint(int(b.min()),int(b.max()))\n",
+      "expect": "尺寸/类型不变，亮度分布改变，极值看实测。",
+      "experiment": "只改clipLimit，记录噪声是否也增强。",
+      "docs": "https://docs.opencv.org/4.x/d5/daf/tutorial_py_histogram_equalization.html"
+    },
+    {
+      "id": "components",
+      "name": "cv2.connectedComponentsWithStats：连通域",
+      "signature": "n, labels, stats, centers = cv2.connectedComponentsWithStats(mask, connectivity=8)",
+      "parameters": [
+        {
+          "name": "mask",
+          "meaning": "8位单通道",
+          "choice": "0背景非0前景"
+        },
+        {
+          "name": "connectivity",
+          "meaning": "4或8邻接",
+          "choice": "4仅上下左右，8含对角；用关键字传"
+        },
+        {
+          "name": "stats",
+          "meaning": "标签统计行",
+          "choice": "LEFT/TOP/WIDTH/HEIGHT/AREA，第0行背景"
+        }
+      ],
+      "returns": "n包括背景；labels标签图、stats含像素面积、centers质心。编号不是跨帧身份。",
+      "use": "区域计数、像素面积筛选、外接框。",
+      "avoid": "接触物体会合并，需要更好的分割。",
+      "pitfall": "像素面积不同于contourArea。",
+      "example": "import cv2\nimport numpy as np\n\na = np.zeros((5,5),np.uint8)\na[1,1]=a[2,2]=255\nn4,_,_,_ = cv2.connectedComponentsWithStats(a,connectivity=4)\nn8,_,s,_ = cv2.connectedComponentsWithStats(a,connectivity=8)\nassert n4-1==2 and n8-1==1\nassert s[1,cv2.CC_STAT_AREA]==2\nprint(n4-1,n8-1)\n",
+      "expect": "对角相接：4连通2目标，8连通1目标。",
+      "experiment": "第二点移到右侧，预测是否还有差异。",
+      "docs": "https://docs.opencv.org/4.x/d3/dc0/group__imgproc__shape.html"
+    },
+    {
+      "id": "distance",
+      "name": "cv2.distanceTransform：到背景的距离",
+      "signature": "d = cv2.distanceTransform(mask,cv2.DIST_L2,cv2.DIST_MASK_PRECISE)",
+      "parameters": [
+        {
+          "name": "src",
+          "meaning": "含背景的二值图",
+          "choice": "0背景，非0前景"
+        },
+        {
+          "name": "distanceType",
+          "meaning": "距离度量",
+          "choice": "L2欧氏，L1曼哈顿"
+        },
+        {
+          "name": "maskSize",
+          "meaning": "算法方式",
+          "choice": "本课PRECISE，别混近似3/5核"
+        }
+      ],
+      "returns": "同尺寸float32距离，背景0，单位像素，显示归一化会改变单位。",
+      "use": "内部厚度估计、分水岭种子候选。",
+      "avoid": "多个峰不必然代表多个物体。",
+      "pitfall": "交付原始浮点距离，不是显示用0..255图。",
+      "example": "import cv2\nimport numpy as np\n\na = np.zeros((7,7),np.uint8)\na[1:6,1:6]=255\nd = cv2.distanceTransform(a,cv2.DIST_L2,cv2.DIST_MASK_PRECISE)\nassert d.dtype==np.float32 and d[3,3]==3 and d[0,0]==0\nprint(float(d[3,3]))\n",
+      "expect": "中心到最近背景像素为3。",
+      "experiment": "中心挖黑孔，解释距离为什么降低。",
+      "docs": "https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html"
+    },
+    {
+      "id": "match",
+      "name": "cv2.matchTemplate / minMaxLoc：滑窗定位",
+      "signature": "response = cv2.matchTemplate(image,template,cv2.TM_SQDIFF)",
+      "parameters": [
+        {
+          "name": "image/template",
+          "meaning": "同类型同通道",
+          "choice": "本例uint8灰度，模板不大于原图"
+        },
+        {
+          "name": "method",
+          "meaning": "相似度定义",
+          "choice": "SQDIFF最小最好；相关性类通常最大最好"
+        },
+        {
+          "name": "minMaxLoc",
+          "meaning": "取极值",
+          "choice": "依次minVal,maxVal,minLoc,maxLoc，位置xy"
+        }
+      ],
+      "returns": "响应图(H-h+1,W-w+1)，位置为模板左上角；分数不是概率。",
+      "use": "尺度与朝向固定的图标、小部件定位。",
+      "avoid": "旋转透视尺度变化大时考虑特征或检测。",
+      "pitfall": "总有极值不代表存在目标，必须准备无目标样本。",
+      "example": "import cv2\nimport numpy as np\n\nt = np.array([[10,80],[200,40]],np.uint8)\na = np.zeros((8,9),np.uint8)\na[3:5,4:6]=t\nr = cv2.matchTemplate(a,t,cv2.TM_SQDIFF)\nv,_,p,_ = cv2.minMaxLoc(r)\nassert r.shape==(7,8) and p==(4,3)\nprint(p,float(v))\n",
+      "expect": "左上角(4,3)，差平方分数接近0。",
+      "experiment": "移除模板再运行，解释为什么仍有最优位置却应该拒识。",
+      "docs": "https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html"
+    },
+    {
+      "id": "absdiff",
+      "name": "cv2.absdiff：两帧双向差异",
+      "signature": "delta = cv2.absdiff(current, previous)",
+      "parameters": [
+        {
+          "name": "current/previous",
+          "meaning": "对应两帧",
+          "choice": "尺寸类型通道一致"
+        },
+        {
+          "name": "threshold",
+          "meaning": "过滤小变化",
+          "choice": "差值再THRESH_BINARY，严格大于"
+        },
+        {
+          "name": "time",
+          "meaning": "时间",
+          "choice": "函数不接收时间，不输出速度"
+        }
+      ],
+      "returns": "同尺寸类型绝对差；变亮变暗都响应。",
+      "use": "固定摄像头变化区域初筛。",
+      "avoid": "抖动光照也响应，静止物体可能消失。",
+      "pitfall": "uint8直接相减回绕；移动物体新旧位置都可能出现。",
+      "example": "import cv2\nimport numpy as np\n\na = np.array([[10,200,50]],np.uint8)\nb = np.array([[200,10,60]],np.uint8)\nd = cv2.absdiff(a,b)\nm = cv2.threshold(d,10,255,cv2.THRESH_BINARY)[1]\nassert d.tolist()==[[190,190,10]] and m.tolist()==[[255,255,0]]\nprint(d.tolist(),m.tolist())\n",
+      "expect": "两方向均190；恰好差10不超过阈值。",
+      "experiment": "整帧亮度同时加20，解释有响应却不代表物体移动。",
+      "docs": "https://docs.opencv.org/4.x/d2/de8/group__core__array.html"
+    },
+    {
+      "id": "groups",
+      "name": "dict.setdefault / set.add：分组审计",
+      "signature": "groups.setdefault(group,set()).add(split)",
+      "parameters": [
+        {
+          "name": "group",
+          "meaning": "视频/采集批次/工件组",
+          "choice": "不能每张图单独命名掩盖关联"
+        },
+        {
+          "name": "setdefault",
+          "meaning": "不存在时插入默认值",
+          "choice": "返回组对应的集合"
+        },
+        {
+          "name": "set",
+          "meaning": "唯一分区",
+          "choice": "长度>1为跨分区；sorted确定输出顺序"
+        }
+      ],
+      "returns": "group映射split集合，输出泄漏组列表。",
+      "use": "避免邻帧/原图增强版本跨训练验证。",
+      "avoid": "依赖group可靠性，不检测视觉近重复或类别平衡。",
+      "pitfall": "先按组划分，再对训练集增强。",
+      "example": "import cv2\nimport numpy as np\n\nsamples = [('cam1','train'),('cam1','val'),('cam2','train')]\ngroups = {}\nfor group,split in samples:\n    groups.setdefault(group,set()).add(split)\nleaked = sorted(k for k,v in groups.items() if len(v)>1)\nassert leaked==['cam1']\nprint(leaked)\n",
+      "expect": "cam1跨两个分区。",
+      "experiment": "同视频帧故意标不同group，解释代码通过但仍泄漏。",
+      "docs": "https://docs.python.org/3/library/stdtypes.html#dict.setdefault"
+    },
+    {
+      "id": "stride",
+      "name": "reshape / copy：BGR行步幅",
+      "signature": "image = buffer.reshape(h,stride)[:,:w*3].reshape(h,w,3).copy()",
+      "parameters": [
+        {
+          "name": "width/height",
+          "meaning": "有效宽高",
+          "choice": "每像素3字节仅适用本例单平面BGR8"
+        },
+        {
+          "name": "stride",
+          "meaning": "实际每行字节数",
+          "choice": ">=width*3，多余为padding"
+        },
+        {
+          "name": "copy",
+          "meaning": "独立连续数据",
+          "choice": "采集缓冲区复用前明确所有权"
+        }
+      ],
+      "returns": "H×W×3 uint8，去行尾填充；reshape改变解释不重新排列字节。",
+      "use": "嵌入式相机SDK缓冲区转图像。",
+      "avoid": "NV12/YUYV不能套BGR8公式，先协商格式。",
+      "pitfall": "忽略stride会错位或尺寸报错。",
+      "example": "import cv2\nimport numpy as np\n\nbuffer = np.array([1,2,3,99,4,5,6,99],np.uint8)\nh,w,stride = 2,1,4\nimage = buffer.reshape(h,stride)[:,:w*3].reshape(h,w,3).copy()\nassert image.tolist()==[[[1,2,3]],[[4,5,6]]]\nassert image.flags.c_contiguous\nbuffer[:]=0\nassert image[0,0,0]==1\nprint(image.tolist())\n",
+      "expect": "99被剔除；原buffer重写不影响副本。",
+      "experiment": "去copy后重写buffer，观察生命周期影响。",
+      "docs": "https://numpy.org/doc/stable/user/basics.copies.html"
+    },
+    {
+      "id": "latency",
+      "name": "sum / mean / percentile：端到端延迟",
+      "signature": "totals = np.asarray(frames,dtype=np.float64).sum(axis=1)",
+      "parameters": [
+        {
+          "name": "axis=1",
+          "meaning": "每帧各阶段相加",
+          "choice": "axis=0是跨帧同阶段统计"
+        },
+        {
+          "name": "percentile(...,95)",
+          "meaning": "95百分位",
+          "choice": "本课默认linear插值，不固定取某下标"
+        },
+        {
+          "name": "1000/mean_ms",
+          "meaning": "串行FPS估计",
+          "choice": "无重叠串行假设，不代表异步吞吐实测"
+        }
+      ],
+      "returns": "总耗时数组、均值、P95单位毫秒；小样本也受插值影响。",
+      "use": "查慢帧、评估采集到输出延迟。",
+      "avoid": "GPU异步需正确同步测时，只计前向遗漏其他等待。",
+      "pitfall": "平均FPS与1000/平均耗时不是同一统计。",
+      "example": "import cv2\nimport numpy as np\n\nframes = np.array([[1,2,3,4],[1,2,3,94]],np.float64)\nt = frames.sum(axis=1)\nassert t.tolist()==[10,100] and t.mean()==55\nassert np.isclose(np.percentile(t,95),95.5)\nprint(float(t.mean()),float(np.percentile(t,95)),1000/t.mean())\n",
+      "expect": "均值55ms、P95=95.5ms、串行约18.18FPS。",
+      "experiment": "加很多10ms正常帧与少量慢帧，比较均值和P95。",
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.percentile.html"
+    }
+  ],
+  "lessons": {
+    "T01": {
+      "cards": [
+        "read",
+        "array"
+      ],
+      "decision": "先解码成功，再检查尺寸和像素。",
+      "question": "为什么检查None必须在shape前？"
+    },
+    "T02": {
+      "cards": [
+        "array"
+      ],
+      "decision": "画出ROI原点与宽高，再切片。",
+      "question": "局部点如何回原图，什么时候需copy？"
+    },
+    "T03": {
+      "cards": [
+        "color",
+        "threshold"
+      ],
+      "decision": "先判断亮度能否分离目标，再转灰度阈值。",
+      "question": "颜色不同但亮度相近时方案为何失败？"
+    },
+    "T04": {
+      "cards": [
+        "color",
+        "range"
+      ],
+      "decision": "先选绿色背景再取反，最终白色为纸片。",
+      "question": "为什么不直接选择白色纸片？"
+    },
+    "T05": {
+      "cards": [
+        "morph"
+      ],
+      "decision": "量出最小真实结构尺度，再决定核。",
+      "question": "更干净的图可能丢掉哪些结构？"
+    },
+    "T06": {
+      "cards": [
+        "contours",
+        "components"
+      ],
+      "decision": "外轮廓配几何面积筛选，区别像素计数。",
+      "question": "粘连目标会返回几个外轮廓？"
+    },
+    "T07": {
+      "cards": [
+        "geometry"
+      ],
+      "decision": "有效轮廓求质心和近似，别先假定四角。",
+      "question": "m00为0怎么处理，epsilon改变检查什么？"
+    },
+    "T08": {
+      "cards": [
+        "rotation"
+      ],
+      "decision": "统一坐标约定，绕指定中心旋转再平移。",
+      "question": "两种操作交换顺序结果相同吗？"
+    },
+    "T09": {
+      "cards": [
+        "raster"
+      ],
+      "decision": "分别画每块，再统计重叠覆盖和越界。",
+      "question": "像素重叠与连续几何相接相同吗？"
+    },
+    "T10": {
+      "cards": [
+        "python",
+        "compose",
+        "raster"
+      ],
+      "decision": "复用自己的评分函数筛选合法候选。",
+      "question": "所有候选不合法时能随便选最高分吗？"
+    },
+    "T11": {
+      "cards": [
+        "template_array"
+      ],
+      "decision": "规整小图尺寸后比较旋转候选。",
+      "question": "最小误差仍很大时要强制给类别吗？"
+    },
+    "T12": {
+      "cards": [
+        "median"
+      ],
+      "decision": "先按身份对应，再跨帧统计位置。",
+      "question": "身份错误与位置抖动分别怎么解决？"
+    },
+    "T13": {
+      "cards": [
+        "lstsq"
+      ],
+      "decision": "分散不共线点拟合，用独立检查点评估。",
+      "question": "只看拟合点误差为什么不够？"
+    },
+    "T14": {
+      "cards": [
+        "compose",
+        "range",
+        "morph",
+        "contours",
+        "geometry"
+      ],
+      "decision": "分割、清理、轮廓、几何逐步保存证据。",
+      "question": "角点错如何区分是分割还是近似参数问题？"
+    },
+    "P01": {
+      "cards": [
+        "python"
+      ],
+      "decision": "先普通循环正确返回，再学习简写。",
+      "question": "append返回什么，空输入会怎样？"
+    },
+    "P02": {
+      "cards": [
+        "array"
+      ],
+      "decision": "先看shape和dtype，明确统计元素还是像素。",
+      "question": "三通道count_nonzero能叫像素数吗？"
+    },
+    "A01": {
+      "cards": [
+        "gaussian",
+        "median_blur"
+      ],
+      "decision": "按噪声形态选滤波，同时检查细节损失。",
+      "question": "为什么不能只按更平滑选择方法？"
+    },
+    "A02": {
+      "cards": [
+        "color",
+        "gaussian",
+        "canny"
+      ],
+      "decision": "灰度、轻度平滑、边缘逐级检查。",
+      "question": "Canny阈值比较灰度还是梯度？"
+    },
+    "A03": {
+      "cards": [
+        "perspective"
+      ],
+      "decision": "明确四角对应，先以单位变换验证接口。",
+      "question": "点序错与宽高反会有什么现象？"
+    },
+    "A04": {
+      "cards": [
+        "iou"
+      ],
+      "decision": "统一坐标约定，手算交并边界样例。",
+      "question": "刚好接触时交集面积是多少？"
+    },
+    "A05": {
+      "cards": [
+        "sorting",
+        "iou",
+        "compose"
+      ],
+      "decision": "按分数迭代保留，调用自己的IoU。",
+      "question": "邻近真实物体重叠高有什么风险？"
+    },
+    "A06": {
+      "cards": [
+        "dfs"
+      ],
+      "decision": "小规模穷举保证正确，再添加可靠剪枝。",
+      "question": "为什么撤销状态和copy路径不可少？"
+    },
+    "Y01": {
+      "cards": [
+        "labels"
+      ],
+      "decision": "先格式和有限值，再类别和框，最后核对图像。",
+      "question": "float能读取NaN代表合法标签吗？"
+    },
+    "Y02": {
+      "cards": [
+        "clip",
+        "resize"
+      ],
+      "decision": "记录真实补边与比例，再逆变换。",
+      "question": "减padding与除scale能交换吗？"
+    },
+    "Y03": {
+      "cards": [
+        "metrics"
+      ],
+      "decision": "从具体TP/FP/FN数起，再解释指标。",
+      "question": "全部预测负时如何处理零分母？"
+    },
+    "L01": {
+      "cards": [
+        "logs"
+      ],
+      "decision": "按字段而不是正文关键词识别级别。",
+      "question": "INFO正文含ERROR要增加错误数吗？"
+    },
+    "V01": {
+      "cards": [
+        "hist"
+      ],
+      "decision": "用分布提出阈值假设，再回图像验证。",
+      "question": "相同直方图说明形状相同吗？"
+    },
+    "V02": {
+      "cards": [
+        "adaptive",
+        "threshold"
+      ],
+      "decision": "缓变光照尝试局部阈值，固定方向再调参。",
+      "question": "C增大会选更多还是更少白像素？"
+    },
+    "V03": {
+      "cards": [
+        "median_blur",
+        "gaussian"
+      ],
+      "decision": "确认椒盐噪声，检查中值对真实细点的影响。",
+      "question": "小目标与噪点怎么区分？"
+    },
+    "V04": {
+      "cards": [
+        "sobel"
+      ],
+      "decision": "保留有符号导数再组合幅值，显示测量分开。",
+      "question": "亮度反向后导数和幅值怎么变？"
+    },
+    "V05": {
+      "cards": [
+        "integral",
+        "array"
+      ],
+      "decision": "多次查询才建积分图，用切片求和交叉核对。",
+      "question": "宽高为什么各多1？"
+    },
+    "V06": {
+      "cards": [
+        "hist",
+        "threshold"
+      ],
+      "decision": "自动全局阈值仍需用阴影场景检查。",
+      "question": "自动选阈值意味着适用所有场景吗？"
+    },
+    "V07": {
+      "cards": [
+        "resize"
+      ],
+      "decision": "先辨别照片还是标签，再选插值与尺寸。",
+      "question": "新出现类别1为什么是错？"
+    },
+    "V08": {
+      "cards": [
+        "lut"
+      ],
+      "decision": "写清Gamma公式，先手算少量灰度。",
+      "question": "本课gamma=2调亮还是压暗？"
+    },
+    "V09": {
+      "cards": [
+        "clahe"
+      ],
+      "decision": "增强只是候选预处理，比较后续指标和噪声。",
+      "question": "tileGridSize是网格数还是像素数？"
+    },
+    "V10": {
+      "cards": [
+        "components",
+        "contours"
+      ],
+      "decision": "先选连通性，排背景，按像素面积筛选。",
+      "question": "角点相接何时算同一物体？"
+    },
+    "V11": {
+      "cards": [
+        "distance"
+      ],
+      "decision": "距离表达内部到背景，再考虑种子。",
+      "question": "挖孔后距离为何降低？"
+    },
+    "V12": {
+      "cards": [
+        "match",
+        "template_array"
+      ],
+      "decision": "确认外观固定，选择分数方向，备无目标反例。",
+      "question": "有极值位置能证明目标存在吗？"
+    },
+    "V13": {
+      "cards": [
+        "color",
+        "range"
+      ],
+      "decision": "红色跨零点拆两段，统一S/V限制合并。",
+      "question": "浮点HSV能直接套uint8范围吗？"
+    },
+    "V14": {
+      "cards": [
+        "absdiff",
+        "threshold"
+      ],
+      "decision": "先对齐固定相机两帧，再分析变化来源。",
+      "question": "全局光照变化为何也响应？"
+    },
+    "Y04": {
+      "cards": [
+        "groups"
+      ],
+      "decision": "正确定义采集组，再审计集合交叉。",
+      "question": "每图一个group会掩盖什么？"
+    },
+    "Y05": {
+      "cards": [
+        "iou",
+        "sorting",
+        "metrics"
+      ],
+      "decision": "按分数匹配同类未使用真值，再计算指标。",
+      "question": "重复预测为什么不能再贡献TP？"
+    },
+    "L02": {
+      "cards": [
+        "stride",
+        "array"
+      ],
+      "decision": "先确认像素格式和stride，明确缓冲区所有权。",
+      "question": "BGR8公式能直接处理NV12吗？"
+    },
+    "L03": {
+      "cards": [
+        "latency"
+      ],
+      "decision": "逐帧求和，再统计均值与尾部，注明串行假设。",
+      "question": "异步吞吐为何不能直接用1000/延迟？"
+    }
+  }
+}

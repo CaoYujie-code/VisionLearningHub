@@ -12,9 +12,11 @@ from .project_data import prepare, contact_sheet
 from .project_runner import parse_files, write_sources, run_main, assess, image_output, output_path
 
 def validate_request(key,block,source,verify,custom=False):
-    if key not in PROJECT_IDS or block not in BLOCK_IDS:raise ValueError('未知工程任务块')
+    from .feature_steps import IDS,STANDARD
+    allowed=BLOCK_IDS+IDS if key=='E07' else BLOCK_IDS
+    if key not in PROJECT_IDS or block not in allowed:raise ValueError('未知工程任务块')
     if source not in ('own','standard'):raise ValueError('未知任务块输入方式')
-    if source=='standard' and block!='render':raise ValueError('只有可视化任务允许标准检测结果')
+    if source=='standard' and block!='render' and not (key=='E07' and block in STANDARD):raise ValueError('该任务不接受标准上游输入')
     if verify!=(block=='accept') or custom:raise ValueError('任务块与正式验收/自有图片设置不兼容')
 
 def read_payload(outputs):
@@ -58,6 +60,10 @@ def execute(request):
     from .project_runner import execute as complete
     key=request['lesson'];block=request['project_block'];input_source=request.get('block_source','own')
     validate_request(key,block,input_source,request['verify'],bool(request.get('project_custom')))
+    from .feature_steps import IDS
+    if key=='E07' and block in IDS:
+        from .feature_steps import execute as feature_execute
+        return feature_execute(request)
     if block in ('batch','accept'):
         clean={k:v for k,v in request.items() if k not in ('project_block','block_source')}
         response=complete(clean)

@@ -2,7 +2,7 @@
   "name": "vision-learning-hub",
   "displayName": "Vision Learning Hub · 视觉学习",
   "description": "OpenCV / YOLO / Linux 学习路线、原生 Python 编写调试、图像实验与本地进度。",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "publisher": "CaoYujie-code",
   "engines": {
     "vscode": "^1.95.0"

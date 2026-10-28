@@ -1,22 +1,34 @@
 # Vision Learning Hub · 视觉学习实验室
 
+0.8.0 为现有 **44 道基础题**增加“函数与场景”：**40 组函数/算法组件讲解**，包含关键参数、输入输出类型、适用与不适用场景、常见错误、可独立运行的断言示例、改参实验和相关题目跳转。可按函数名或场景搜索，下载本题 Python 示例与离线讲义；VS Code 可直接打开独立示例，已有修改保留。阅读与示例运行不计通关。
+
+E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配器维修五个可自动检查的细分块，现有工程共 **50 个任务块**。匹配与定位可用标准或自己的上游结果；两类记录分开，完整工程仍需正式验收。
+
+[函数学习指南与推荐顺序](VisionLearningHub/docs/函数学习指南-0.8.0.md)
+
 **从读懂图像，到独立交付一个能运行、能验证的视觉工程。**
 
 面向视觉初学者的本地学习平台：阅读课程、手敲 Python、观察处理结果，再通过多场景验收检验实现。支持网页版和可选安装的 VS Code 扩展，使用 OpenCV、NumPy 和普通 Python 模块组织代码。
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.7.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.8.0.md)
 
-> 当前源码版本为 **0.7.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.8.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.8.0：理解函数，再动手解题
+
+![函数参数、场景、例子与验证](VisionLearningHub/docs/images/function-handbook-0.8.0.png)
+
+从 **基础练习 → 函数与场景** 打开；先看参数与预期，手敲独立例子，改变一处参数并记录，再回到原题做正式验收。支持本题/全部检索，相关练习跳转后返回保留原位置。完整讲解可离线阅读[40组函数手册](VisionLearningHub/docs/函数速查手册.md)。
 
 ## 平台概览
 
 | 模块 | 当前能力 |
 | --- | --- |
 | 学习路线 | **33 章**，从 Python / NumPy、OpenCV 到经典算法、YOLO 数据处理及 Linux / 嵌入式基础 |
-| 基础练习 | **44 道**，包含题目契约、提示、参考实现与每题 5 组正式验收样例 |
-| 工程实训 | **9 个多文件工程、45 个任务块**，可独立挑战，也可跟随分块引导 |
+| 基础练习 | **44 道**，含40组函数讲解、场景选择、独立例子、题目契约、提示、参考实现与每题5组验收样例 |
+| 工程实训 | **9 个多文件工程、50 个任务块**，可独立挑战，也可跟随分块引导 |
 | 工程深入学习 | **37 个专属小任务、9 组方法对比、9 道故障维修**，按输入、实现、验证证据逐步学习 |
 | 图像实验室 | **12 种方法、4 类内置场景**，支持调参、中间图对照和自有图片探索 |
 | 学习资料 | **35 份官方资料索引**，支持搜索、筛选与收藏；工程另附相关官方教程 |
@@ -170,7 +182,7 @@ npm --prefix extensions/vscode run package
 .\.venv\Scripts\python.exe tests\test_calibration.py
 ```
 
-0.7.0 本机验收覆盖 **42 组 Python/API 检查、75 项浏览器流程、32 项隔离 VS Code 检查、10 项 Node 检查**。53 项基础题与工程参考实现覆盖 265 组完整验收输入；另有分块专项测试。具体环境、证据和验证边界见 [0.7.0 验收记录](VisionLearningHub/docs/验收记录-0.7.0.md)。
+0.8.0 本机验收覆盖 **49组Python/API检查、83项浏览器流程、35项隔离VS Code检查、10项Node检查**。40个函数例子在平台外独立运行；53项基础题与工程参考实现覆盖265组完整验收输入。具体环境、证据和验证边界见 [0.8.0验收记录](VisionLearningHub/docs/验收记录-0.8.0.md)。
 
 ## 仓库结构
 

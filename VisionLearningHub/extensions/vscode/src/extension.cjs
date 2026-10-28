@@ -192,9 +192,24 @@ class Hub {
       return Buffer.isBuffer(result)?{status:200,base64:result.toString('base64')}:{status:200,json:await this.images(result)};
     }
     if(action==='download'){
-      if(!['/backup','/export-code'].includes(args.path)&&!/^\/projects\/E\d{2}\/export$/.test(args.path))throw new Error('不支持的导出');await this.saveFiles();
+      if(!['/backup','/export-code'].includes(args.path)&&!/^\/projects\/E\d{2}\/export$/.test(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/examples$/.test(args.path))throw new Error('不支持的导出');await this.saveFiles();
       const destination=await vscode.window.showSaveDialog({defaultUri:vscode.Uri.file(path.join(this.project,path.basename(args.name))),filters:{ZIP:['zip']}});
       if(!destination)throw new Error('已取消导出');const bytes=await this.request(args.path);await vscode.workspace.fs.writeFile(destination,bytes);return true;
+    }
+    if(action==='openFunctionExample'){
+      await this.ensure();const key=lessonKey(args.key,this.known);
+      const boot=await this.request('/bootstrap');const card=boot.lessons.find(l=>l.id===key)?.function_guide?.cards.find(c=>c.id===args.id);
+      if(!card||!/^[a-z_]+$/.test(card.id))throw new Error('未知函数示例');
+      const directory=path.join(this.root,'function-examples',key);const rootReal=await fs.realpath(this.root);
+      // Check each ancestor before mkdir, and each existing file before opening.
+      for(const part of [path.join(this.root,'function-examples'),directory]){
+        try{if(!inside(rootReal,await fs.realpath(part)))throw new Error('示例目录超出学习工程');}
+        catch(error){if(error.code!=='ENOENT')throw error;await fs.mkdir(part);}
+      }
+      const file=path.join(directory,card.id+'.py');
+      try{await fs.writeFile(file,card.example,{encoding:'utf8',flag:'wx'});}catch(error){if(error.code!=='EEXIST')throw error;}
+      if(!inside(await fs.realpath(directory),await fs.realpath(file)))throw new Error('示例文件超出目录');
+      const document=await vscode.workspace.openTextDocument(vscode.Uri.file(file));await vscode.window.showTextDocument(document,{viewColumn:vscode.ViewColumn.One});return true;
     }
     if(action==='confirm')return (await vscode.window.showWarningMessage(String(args.message),{modal:true},'继续'))==='继续';
     if(action==='external'){const uri=vscode.Uri.parse(args.url);if(!['https','http'].includes(uri.scheme))throw new Error('仅支持文档网页链接');return vscode.env.openExternal(uri);}

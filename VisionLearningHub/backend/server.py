@@ -111,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.7.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.8.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -176,13 +176,19 @@ def initialize_project_guide(key: str):
     with LOCK,database() as store:
         if active():raise HTTPException(409,'请等待运行结束')
         code,note=store.draft(key);files=parse_files(code)
+        missing=False
         if 'checkpoint.py' not in files:
-            files['checkpoint.py']=STARTER
+            files['checkpoint.py']=STARTER;missing=True
+        if key=='E07' and 'feature_steps.py' not in files:
+            from learning.feature_steps_source import STARTER as FEATURE_STARTER
+            files['feature_steps.py']=FEATURE_STARTER;missing=True
+        if missing:
             try:code=serialize(files)
             except ValueError as error:raise HTTPException(400,str(error)) from error
             if WORKSPACE:
                 write_sources(WORKSPACE.file(key).parent,files,overwrite=False)
                 WORKSPACE.sync(store)
+                if key=='E07':materialize(key,WORKSPACE.file(key).parent,files)
             else:store.save(key,code,note)
     return engineering_project(key)
 
@@ -212,6 +218,22 @@ def lesson(key: str):
         _, params, _ = fixture(key, 17, folder)
         return public({'code': code, 'note': note, 'input': params['image_path'], 'params': compact_value(params),
                        'history': [{'stamp': r[0], 'verified': bool(r[1]), 'passed': bool(r[2]), 'report': json.loads(r[3])} for r in store.history(key)]})
+
+
+@app.get('/api/lesson/{key}/examples')
+def function_examples(key: str):
+    item = known(key)
+    if not item.get('function_guide'):
+        raise HTTPException(404, '此题没有基础函数示例')
+    from learning.function_handbook import write_examples
+    with LOCK:
+        folder = ROOT/'exports'/('functions-'+uuid.uuid4().hex)
+        write_examples(folder, key)
+        archive_path = folder.with_suffix('.zip')
+        with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as archive:
+            for file in folder.iterdir():
+                archive.write(file, file.name)
+        return FileResponse(archive_path, filename=key+'-function-examples.zip', media_type='application/zip')
 
 
 @app.get('/api/lesson/{key}/reference')

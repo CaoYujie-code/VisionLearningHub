@@ -39,6 +39,8 @@ jobs:
       - run: python tests/test_projects.py
       - run: python tests/test_guides.py
       - run: python tests/test_calibration.py
+      - run: python tests/test_handbook.py
+      - run: python tests/test_feature_steps.py
       - run: npm ci --prefix extensions/vscode
       - run: npm --prefix extensions/vscode run check
       - run: npm --prefix extensions/vscode test

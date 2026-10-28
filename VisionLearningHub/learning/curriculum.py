@@ -211,5 +211,9 @@ from .advanced_lessons import ADVANCED_LESSONS
 LESSONS.extend(ADVANCED_LESSONS)
 from .project_catalog import PROJECT_LESSONS
 LESSONS.extend(PROJECT_LESSONS)
+from .function_handbook import guide as function_guide
+for item in LESSONS:
+    if not item['id'].startswith('E'):
+        item['function_guide'] = function_guide(item['id'])
 BY_ID = {item["id"]: item for item in LESSONS}
 COURSE_VERSION = 2

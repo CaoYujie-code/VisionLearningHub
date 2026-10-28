@@ -12,7 +12,7 @@ try{
  assert.equal(await page.locator('.lesson-scroll button').count(),44);assert.equal(await page.locator('.lesson-scroll').getByRole('button',{name:/^E0/}).count(),0);ok('basic list excludes engineering tasks');
  await page.locator('.lesson-scroll').getByRole('button',{name:/^V13/}).click();await page.getByLabel('Python 代码编辑器').waitFor();
  await project('E05');await nav('基础练习');await page.locator('.task-description h2').filter({hasText:'V13'}).waitFor();ok('engineering to basics restores last basic lesson');
- await project('E07');await page.getByRole('navigation',{name:'工程任务块'}).getByRole('button',{name:/2\. 算法/}).click();
+ await project('E07');await page.getByRole('navigation',{name:'工程任务块'}).getByRole('button',{name:/5\. 算法/}).click();
  await page.getByRole('button',{name:'代码与运行',exact:true}).click();await page.locator('.project-files').getByRole('button',{name:'imaging.py',exact:true}).click();
  const draft='def learner_marker():\n    return 707\n';await page.getByLabel('工程代码编辑器').fill(draft);
  await page.getByRole('button',{name:'复习前置题 V12',exact:true}).click();await page.getByLabel('Python 代码编辑器').waitFor();

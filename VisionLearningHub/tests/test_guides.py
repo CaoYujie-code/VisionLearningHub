@@ -29,7 +29,7 @@ class GuideChecks(unittest.TestCase):
 
     def test_01_all_checkpoint_references(self):
         for key in sorted(PROJECT_IDS):
-            self.assertEqual(len(guide(key)['blocks']),5)
+            self.assertEqual(len(guide(key)['blocks']),10 if key=='E07' else 5)
             for block,source in [('io','own'),('detect','own'),('render','standard'),('render','own'),('batch','own'),('accept','own')]:
                 with tempfile.TemporaryDirectory() as folder:
                     result=execute(dict(lesson=key,codes={key:serialize(source_bundle(key,True))},verify=block=='accept',project_block=block,block_source=source,folder=folder))

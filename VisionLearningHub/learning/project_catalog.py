@@ -254,7 +254,11 @@ def run_batch(input_dir, output_dir, config):
     # TODO: 根据任务说明处理坏文件/空目标/时序状态
     raise NotImplementedError('请实现工程流水线')
 '''
-    return {'checkpoint.py':checkpoint_source(key,reference),'main.py':MAIN,'imaging.py':imaging,'pipeline.py':pipeline,'config.json':json.dumps(project['config'],ensure_ascii=False,indent=2)+'\n'}
+    files={'checkpoint.py':checkpoint_source(key,reference),'main.py':MAIN,'imaging.py':imaging,'pipeline.py':pipeline,'config.json':json.dumps(project['config'],ensure_ascii=False,indent=2)+'\n'}
+    if key=='E07':
+        from .feature_steps_source import STARTER as STEP_STARTER,REFERENCE as STEP_REFERENCE
+        files['feature_steps.py']=STEP_REFERENCE if reference else STEP_STARTER
+    return files
 
 PROJECT_LESSONS=[]
 for p in PROJECTS:

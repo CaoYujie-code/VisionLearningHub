@@ -62,6 +62,12 @@ def materialize(key,folder,files,include_holdout=False):
     guide_file=folder/'GUIDED_LEARNING.md'
     if guide_file.is_symlink():raise ValueError('引导说明不能是链接')
     if not guide_file.exists():guide_file.write_text(guide_readme(key),encoding='utf-8')
+    if key=='E07':
+        from .feature_steps import readme as feature_readme,export_standard as feature_data
+        doc=folder/'FEATURE_STEPS.md'
+        if doc.is_symlink():raise ValueError('学习说明不能是链接')
+        if not doc.exists():doc.write_text(feature_readme(),encoding='utf-8')
+        if 'feature_steps.py' in files:feature_data(folder)
     if include_holdout:
         from .project_checkpoints import export_standard
         export_standard(key,folder)
@@ -76,7 +82,7 @@ def run_main(source,input_dir,output_dir,block=None):
     cwd=Path.cwd();argv=sys.argv[:];old_path=sys.path[:]
     try:
         sys.path.insert(0,str(source));os.chdir(source)
-        entry=source/('checkpoint.py' if block else 'main.py')
+        entry=source/('feature_steps.py' if block in ('features','matches','geometry','compare','repair') else 'checkpoint.py' if block else 'main.py')
         sys.argv=[str(entry),'--input',str(input_dir),'--output',str(output_dir),'--config',str(source/'config.json')]
         if block:sys.argv.extend(['--block',block])
         try:runpy.run_path(str(entry),run_name='__main__')

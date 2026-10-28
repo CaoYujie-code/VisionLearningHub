@@ -259,11 +259,14 @@ def export_project(folder,codes,notes=None):
             continue
         (folder/"student"/(key+".py")).write_text(code,encoding="utf-8")
         (folder/"exercises"/(key+".py")).write_text(native_code(code),encoding="utf-8")
+    from .function_handbook import CATALOG, write_examples
+    for key in CATALOG['lessons']:
+        write_examples(folder/'function-examples'/key, key)
     (folder/"run_detector.py").write_text(EXPORT_RUNNER,encoding="utf-8")
     (folder/"requirements.txt").write_text("numpy\nopencv-python-headless>=4,<5\n",encoding="utf-8")
     (folder/"README.md").write_text(
         "# 我的 OpenCV 实训项目\n\nexercises/ 为普通 Python 模块；student/ 保留原始快照。未完成关卡保留 TODO。\n"
-        "综合检测器依赖 T04、T05、T06、T07、T14。\n\n"
+        "function-examples/ 含各基础题的独立函数例子和离线讲义，不修改 exercises/，运行示例不计通关。\n综合检测器依赖 T04、T05、T06、T07、T14。\n\n"
         "独立开发运行需要 Python，并安装 requirements.txt：\n\n"
         "    python -m pip install -r requirements.txt\n"
         "    python run_detector.py 图片.png\n\n"

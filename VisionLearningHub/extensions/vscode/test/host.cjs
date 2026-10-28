@@ -85,6 +85,24 @@ exports.run=async()=>{
   for(let i=0;i<100&&(hub.viewState?.page!=='practice'||hub.viewState?.lesson!=='V13');i++)await new Promise(r=>setTimeout(r,100));
   assert.equal(hub.viewState.page,'practice');assert.equal(hub.viewState.lesson,'V13');passed.push('native basic entry leaves project and restores last basic lesson');
 
+  const handbookBoot=await hub.request('/bootstrap');assert.equal(handbookBoot.lessons.filter(l=>l.function_guide).length,44);
+  const beforeExample=await fs.readFile(hub.file('T03'),'utf8');
+  await hub.message('openFunctionExample',{key:'T03',id:'threshold'});
+  const exampleDocument=vscode.window.activeTextEditor.document;assert.equal(path.basename(exampleDocument.fileName),'threshold.py');assert.ok(exampleDocument.getText().includes('cv2.threshold'));
+  await fs.appendFile(exampleDocument.fileName,'\n# keep learner experiment\n');
+  await hub.message('openFunctionExample',{key:'T03',id:'threshold'});
+  assert.ok((await fs.readFile(exampleDocument.fileName,'utf8')).includes('keep learner experiment'));
+  assert.equal(await fs.readFile(hub.file('T03'),'utf8'),beforeExample);
+  await assert.rejects(hub.message('openFunctionExample',{key:'T03',id:'../outside'}),/未知函数示例/);
+  passed.push('native function example opens independently and preserves edits and exercise source');
+  const exampleZip=await hub.request('/lesson/T03/examples');assert.ok(Buffer.isBuffer(exampleZip)&&exampleZip.length>1000);
+  passed.push('function handbook and standalone ZIP are available in packaged extension');
+  const featureRef=JSON.parse((await hub.request('/lesson/E07/reference')).code);
+  const featureRoot=path.join(hub.root,'projects','E07');for(const [name,content] of Object.entries(featureRef))await fs.writeFile(path.join(featureRoot,name),content);
+  const featureJob=await hub.request('/jobs','POST',{lesson:'E07',code:JSON.stringify(featureRef),note:'',verify:false,project_block:'matches',block_source:'standard'});
+  let step;for(let i=0;i<200;i++){step=await hub.request('/jobs/'+featureJob.id);if(!['queued','running'].includes(step.status))break;await new Promise(r=>setTimeout(r,100));}
+  assert.ok(step.result?.passed,JSON.stringify(step));assert.equal(step.result.verify,false);
+  passed.push('packaged E07 Hamming step executes with explicit standard upstream input');
   const crashed=hub.child;crashed.kill();
   for(let i=0;i<100&&hub.service;i++)await new Promise(r=>setTimeout(r,50));
   assert.ok(hub.failure);assert.equal(hub.service,null);await assert.rejects(hub.request('/bootstrap'),/服务已退出/);
