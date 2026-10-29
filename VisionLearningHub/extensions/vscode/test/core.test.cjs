@@ -11,8 +11,8 @@ test('directory boundary does not accept siblings',()=>{
  assert.ok(!inside(root,path.resolve('space-other','P01.py')));assert.ok(!inside(root,path.join(root,'..','private')));
 });
 test('bridge accepts application operations only',()=>{
- for(const route of ['/bootstrap','/lesson/T03/examples','/lesson/V01/reference','/jobs/abcdef/stop','/settings/course.S12','/workspace/reset/P01','/clear'])assert.equal(apiPath(route),route);
- for(const route of ['http://other/','/shutdown','/assets/../../x','/lesson/../x','/lesson/T03/examples/../../private','//bootstrap','/settings/private'])assert.throws(()=>apiPath(route));
+ for(const route of ['/bootstrap','/function-review','/lesson/T03/examples','/lesson/V01/reference','/jobs/abcdef/stop','/settings/course.S12','/workspace/reset/P01','/clear'])assert.equal(apiPath(route),route);
+ for(const route of ['http://other/','/shutdown','/assets/../../x','/lesson/../x','/lesson/T03/examples/../../private','//bootstrap','/settings/private','/function-review/private'])assert.throws(()=>apiPath(route));
 });
 
 test('saved view state is restricted to existing lessons and courses',()=>{

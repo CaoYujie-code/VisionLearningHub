@@ -25,7 +25,26 @@
       "example": "import cv2\nimport numpy as np\n\npixel = np.array([[[0,0,255]]],np.uint8)\nok, encoded = cv2.imencode('.png',pixel)\nassert ok\nimage = cv2.imdecode(encoded,cv2.IMREAD_COLOR)\nassert image is not None and image.shape==(1,1,3)\nassert image[0,0].tolist()==[0,0,255]\nprint(image.shape,image[0,0].tolist())\n",
       "expect": "(1,1,3) [0,0,255]。",
       "experiment": "改成灰度解码，预测 shape 少哪一维，再修改相应断言。",
-      "docs": "https://docs.opencv.org/4.x/d4/da8/group__imgcodecs.html"
+      "docs": "https://docs.opencv.org/4.x/d4/da8/group__imgcodecs.html",
+      "quiz": {
+        "question": "一张PNG解码后 image 是 None。接下来应该怎么做？",
+        "options": [
+          {
+            "text": "先报告解码失败，检查文件内容与读图模式",
+            "explanation": "None不是图像；在访问shape或像素前停止并给出明确诊断。"
+          },
+          {
+            "text": "直接执行 image.shape 判断宽高",
+            "explanation": "None没有shape属性，这会掩盖最先发生的读图问题。"
+          },
+          {
+            "text": "把压缩文件字节reshape为H×W×3",
+            "explanation": "PNG字节包含压缩编码和头信息，不能当原始像素缓冲区解释。"
+          }
+        ],
+        "answer": 0,
+        "revision": "6b427c7546c46214"
+      }
     },
     {
       "id": "array",
@@ -55,7 +74,26 @@
       "example": "import cv2\nimport numpy as np\n\nimage = np.arange(12,dtype=np.uint8).reshape(3,4)\nroi = image[1:3,1:4].copy()\nassert roi.tolist()==[[5,6,7],[9,10,11]]\nroi[0,0]=0\nassert image[1,1]==5\nassert np.count_nonzero(roi)==5\nprint(image.shape,float(np.mean(image)))\n",
       "expect": "(3,4) 5.5；修改副本不改变原图。",
       "experiment": "去掉copy再运行，解释保护原图的断言为何失败。",
-      "docs": "https://numpy.org/doc/stable/user/basics.indexing.html"
+      "docs": "https://numpy.org/doc/stable/user/basics.indexing.html",
+      "quiz": {
+        "question": "roi=image[1:3,1:4] 后执行 roi[0,0]=0，希望原图不变。应该怎么改？",
+        "options": [
+          {
+            "text": "把 image.shape 打印一次再修改",
+            "explanation": "读取属性不会创建副本，也不会改变数组所有权。"
+          },
+          {
+            "text": "裁剪后加 .copy()，再修改ROI",
+            "explanation": "普通切片通常共享原数组存储；copy建立独立数组。"
+          },
+          {
+            "text": "把切片写成 image[1:4,1:3]",
+            "explanation": "交换行列范围只改变裁剪区域，不能解除共享存储。"
+          }
+        ],
+        "answer": 1,
+        "revision": "4ce0373f646bbdfc"
+      }
     },
     {
       "id": "color",
@@ -80,7 +118,26 @@
       "example": "import cv2\nimport numpy as np\n\nbgr = np.array([[[0,0,255],[0,255,0]]],np.uint8)\nhsv = cv2.cvtColor(bgr,cv2.COLOR_BGR2HSV)\ngray = cv2.cvtColor(bgr,cv2.COLOR_BGR2GRAY)\nassert hsv[0,:,0].tolist()==[0,60]\nassert gray.shape==(1,2)\nprint(hsv.tolist(),gray.shape)\n",
       "expect": "红色H=0，绿色H=60；灰度shape=(1,2)。",
       "experiment": "把红色改为[255,0,0]，先判断是什么颜色再查看H。",
-      "docs": "https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html"
+      "docs": "https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html",
+      "quiz": {
+        "question": "红色工件与灰色背景亮度接近，但饱和度差异明显。哪个预处理最值得先验证？",
+        "options": [
+          {
+            "text": "只转灰度，保证所有颜色更容易分开",
+            "explanation": "灰度丢弃色相；两者亮度接近时可能更难分开。"
+          },
+          {
+            "text": "把BGR像素顺序随意互换再用原阈值",
+            "explanation": "通道约定和阈值必须一致，随意换通道没有可解释的分类依据。"
+          },
+          {
+            "text": "转标准HSV，结合H和S/V范围分割",
+            "explanation": "颜色与饱和度信息可能分离二者，仍需用不同光照样本验证。"
+          }
+        ],
+        "answer": 2,
+        "revision": "613a54e952c8401d"
+      }
     },
     {
       "id": "threshold",
@@ -110,7 +167,26 @@
       "example": "import cv2\nimport numpy as np\n\ngray = np.array([[0,99,100,101,255]],np.uint8)\nused, mask = cv2.threshold(gray,100,255,cv2.THRESH_BINARY)\nassert used==100 and mask.tolist()==[[0,0,0,255,255]]\nauto, m = cv2.threshold(gray,0,255,cv2.THRESH_BINARY|cv2.THRESH_OTSU)\nassert np.array_equal(m,(gray>auto).astype(np.uint8)*255)\nprint(used,mask.tolist(),'Otsu=',auto)\n",
       "expect": "固定结果[[0,0,0,255,255]]；自动阈值看实测值。",
       "experiment": "阈值改101，先预测值为101的像素，再比较BINARY_INV。",
-      "docs": "https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html"
+      "docs": "https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html",
+      "quiz": {
+        "question": "灰度像素值是100，阈值100，maxval=255，使用THRESH_BINARY。输出是多少？",
+        "options": [
+          {
+            "text": "0",
+            "explanation": "BINARY使用严格大于阈值的条件；等于阈值属于0这一侧。"
+          },
+          {
+            "text": "255",
+            "explanation": "255是满足条件后的输出值，不代表等于阈值也满足条件。"
+          },
+          {
+            "text": "100",
+            "explanation": "THRESH_BINARY输出0或maxval；保留/截断原值属于其他阈值模式。"
+          }
+        ],
+        "answer": 0,
+        "revision": "ce7188099ae21845"
+      }
     },
     {
       "id": "range",
@@ -140,7 +216,26 @@
       "example": "import cv2\nimport numpy as np\n\nhsv = np.array([[[175,255,255],[5,255,255],[60,255,255]]],np.uint8)\na = cv2.inRange(hsv,(170,80,80),(179,255,255))\nb = cv2.inRange(hsv,(0,80,80),(10,255,255))\nred = cv2.bitwise_or(a,b)\nassert red.tolist()==[[255,255,0]]\nassert cv2.bitwise_not(red).tolist()==[[0,0,255]]\nprint(red.tolist())\n",
       "expect": "两个红色选中，绿色为0。",
       "experiment": "把第二点S改10，解释H仍为5却不应选中的原因。",
-      "docs": "https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html"
+      "docs": "https://docs.opencv.org/4.x/df/d9d/tutorial_py_colorspaces.html",
+      "quiz": {
+        "question": "要在标准uint8 HSV中选红色H=170..179或0..10，应该怎么写？",
+        "options": [
+          {
+            "text": "先把H除以255，再使用170和10",
+            "explanation": "改变数值范围却不改变阈值单位，二者不再匹配。"
+          },
+          {
+            "text": "分别inRange两段，再bitwise_or，并在两段限制S/V",
+            "explanation": "色相跨零点，拆区间后逻辑合并才能表达环绕范围。"
+          },
+          {
+            "text": "一次inRange，H下限170上限10",
+            "explanation": "单次上下限不表达跨零点的并集，普通大小比较不会选中所需范围。"
+          }
+        ],
+        "answer": 1,
+        "revision": "4f92d8b65b636bad"
+      }
     },
     {
       "id": "morph",
@@ -170,7 +265,26 @@
       "example": "import cv2\nimport numpy as np\n\nmask = np.zeros((11,11),np.uint8)\nmask[3:8,3:8]=255\nmask[1,1]=255\nkernel = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))\nclean = cv2.morphologyEx(mask,cv2.MORPH_OPEN,kernel)\nassert np.count_nonzero(mask)==26 and np.count_nonzero(clean)==25\nprint(np.count_nonzero(clean))\n",
       "expect": "孤立点消失，方块保留25像素。",
       "experiment": "把方块改为1像素宽线，预测能否保留。",
-      "docs": "https://docs.opencv.org/4.x/d9/d61/tutorial_py_morphological_ops.html"
+      "docs": "https://docs.opencv.org/4.x/d9/d61/tutorial_py_morphological_ops.html",
+      "quiz": {
+        "question": "二值前景中有孤立1像素白噪点，真实区域最窄约20像素。哪个起点更合理？",
+        "options": [
+          {
+            "text": "直接使用31×31开运算，越干净越好",
+            "explanation": "核大于部分真实结构宽度，会删除目标，不能只追求平滑。"
+          },
+          {
+            "text": "对掩膜做取反就能去掉白噪点",
+            "explanation": "取反会交换前景背景，噪点变黑但并未消失。"
+          },
+          {
+            "text": "先尝试3×3开运算，再检查细节损失",
+            "explanation": "小核开运算可去孤立白点，仍需确认真实区域没有被错误删除。"
+          }
+        ],
+        "answer": 2,
+        "revision": "99ed3686785f11cc"
+      }
     },
     {
       "id": "contours",
@@ -200,7 +314,26 @@
       "example": "import cv2\nimport numpy as np\n\nmask = np.zeros((8,8),np.uint8)\nmask[2:6,2:6]=255\ncs,h = cv2.findContours(mask,cv2.RETR_EXTERNAL,cv2.CHAIN_APPROX_SIMPLE)\nassert len(cs)==1 and cv2.contourArea(cs[0])==9\nassert np.count_nonzero(mask)==16\nprint(cv2.contourArea(cs[0]),np.count_nonzero(mask))\n",
       "expect": "几何面积9，白像素16。",
       "experiment": "方块中心挖孔，比较EXTERNAL与TREE的数量和层级。",
-      "docs": "https://docs.opencv.org/4.x/d4/d73/tutorial_py_contours_begin.html"
+      "docs": "https://docs.opencv.org/4.x/d4/d73/tutorial_py_contours_begin.html",
+      "quiz": {
+        "question": "一块4×4白像素方块，白像素16个，外轮廓contourArea为9。怎样解释？",
+        "options": [
+          {
+            "text": "两个值描述不同面积，筛选阈值要对应所用定义",
+            "explanation": "像素计数是16；轮廓顶点间的几何宽高是3×3，因此面积9。"
+          },
+          {
+            "text": "OpenCV算错了，必须把contourArea强制改成16",
+            "explanation": "这是定义不同，不是库错误；强改会让其他形状的测量失真。"
+          },
+          {
+            "text": "只要使用RETR_TREE，两种面积总会相等",
+            "explanation": "轮廓层级模式不改变几何面积和像素计数的定义。"
+          }
+        ],
+        "answer": 0,
+        "revision": "3c4e820d55d7cd8c"
+      }
     },
     {
       "id": "geometry",
@@ -230,7 +363,26 @@
       "example": "import cv2\nimport numpy as np\n\nc = np.array([[0,0],[4,0],[4,2],[0,2]],np.int32).reshape(-1,1,2)\nm = cv2.moments(c)\nassert m['m00']!=0\ncenter = (m['m10']/m['m00'],m['m01']/m['m00'])\np = cv2.approxPolyDP(c,0.02*cv2.arcLength(c,True),True)\nassert center==(2,1) and len(p)==4\nprint(center,p.reshape(-1,2).tolist())\n",
       "expect": "质心(2,1)，四角保留。",
       "experiment": "把epsilon改成周长一半，解释角点减少。",
-      "docs": "https://docs.opencv.org/4.x/dd/d49/tutorial_py_contour_features.html"
+      "docs": "https://docs.opencv.org/4.x/dd/d49/tutorial_py_contour_features.html",
+      "quiz": {
+        "question": "一条退化线轮廓的m00=0，求质心时应该怎样处理？",
+        "options": [
+          {
+            "text": "增加approxPolyDP的epsilon保证面积非零",
+            "explanation": "近似不会把真正共线的轮廓变成有效面积区域。"
+          },
+          {
+            "text": "按任务约定跳过或报告退化，避免除以0",
+            "explanation": "面积质心公式要求非零面积；退化输入需明确处理。"
+          },
+          {
+            "text": "令m00=1继续计算，得到可靠几何质心",
+            "explanation": "随意改分母并不能恢复正确几何意义。"
+          }
+        ],
+        "answer": 1,
+        "revision": "39d60090eb26b357"
+      }
     },
     {
       "id": "rotation",
@@ -260,7 +412,26 @@
       "example": "import cv2\nimport numpy as np\n\npoints = np.array([[1,0],[0,1]],float)\na = np.deg2rad(90)\nr = np.array([[np.cos(a),-np.sin(a)],[np.sin(a),np.cos(a)]])\nout = points@r.T+[2,3]\nassert np.allclose(out,[[2,4],[1,3]])\nprint(out.round(3).tolist())\n",
       "expect": "[[2,4],[1,3]]。",
       "experiment": "平移放到旋转前，手算为何结果一般不同。",
-      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.deg2rad.html"
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.deg2rad.html",
+      "quiz": {
+        "question": "点(1,0)绕原点按标准数学矩阵旋转90度，再平移(2,3)，结果是哪一个？",
+        "options": [
+          {
+            "text": "(-3,3)",
+            "explanation": "这是先平移到(3,3)再旋转的结果，操作顺序不同。"
+          },
+          {
+            "text": "(3,3)",
+            "explanation": "这是只做平移而没有旋转。"
+          },
+          {
+            "text": "(2,4)",
+            "explanation": "先变为(0,1)，再加(2,3)得到(2,4)；这里指定数学坐标约定。"
+          }
+        ],
+        "answer": 2,
+        "revision": "f8cc24114e179e10"
+      }
     },
     {
       "id": "raster",
@@ -290,7 +461,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.zeros((8,8),np.uint8)\nb = np.zeros_like(a)\ncv2.fillPoly(a,[np.array([[1,1],[3,1],[3,3],[1,3]],np.int32)],255)\ncv2.fillPoly(b,[np.array([[3,1],[5,1],[5,3],[3,3]],np.int32)],255)\ni = np.count_nonzero((a>0)&(b>0))\nassert i==3\nprint(i)\n",
       "expect": "共享边界列有3个重叠像素。",
       "experiment": "第二块右移1像素，区分连续边界接触与像素重叠。",
-      "docs": "https://docs.opencv.org/4.x/d6/d6e/group__imgproc__draw.html"
+      "docs": "https://docs.opencv.org/4.x/d6/d6e/group__imgproc__draw.html",
+      "quiz": {
+        "question": "在同一uint8画布上把两块多边形都填成255，如何判断重叠次数？",
+        "options": [
+          {
+            "text": "应分别画掩膜做逻辑交集，或使用足够宽的整数累计",
+            "explanation": "重复覆盖255不会累加次数，需要保存各区域或计数图。"
+          },
+          {
+            "text": "重叠处自然变成510，所以直接查大于255",
+            "explanation": "uint8不能存510，而且fillPoly是赋值不是累加。"
+          },
+          {
+            "text": "对最终画布取反就能恢复每块身份",
+            "explanation": "并集图已丢掉单块身份，取反不能恢复这些信息。"
+          }
+        ],
+        "answer": 0,
+        "revision": "2dfe9cc09fdce814"
+      }
     },
     {
       "id": "python",
@@ -320,7 +510,26 @@
       "example": "import cv2\nimport numpy as np\n\nvalues = [5,10,12]\nkept = []\nfor i,value in enumerate(values):\n    if value>=10:\n        kept.append(i)\nassert kept==[1,2]\nprint(kept)\n",
       "expect": "[1,2]是下标，不是面积。",
       "experiment": "试空列表、恰好等于阈值，再把>=换>比较。",
-      "docs": "https://docs.python.org/3/library/functions.html#enumerate"
+      "docs": "https://docs.python.org/3/library/functions.html#enumerate",
+      "quiz": {
+        "question": "kept=[] 后写 kept=kept.append(3)，下一行 kept 是什么？",
+        "options": [
+          {
+            "text": "3",
+            "explanation": "append不会把追加元素作为返回值交回。"
+          },
+          {
+            "text": "None",
+            "explanation": "append原地修改列表但返回None；应单独写kept.append(3)。"
+          },
+          {
+            "text": "[3]",
+            "explanation": "原列表对象确实添加了3，但赋值把变量绑定到了append的返回值None。"
+          }
+        ],
+        "answer": 1,
+        "revision": "f7a7f5f60d18bffd"
+      }
     },
     {
       "id": "template_array",
@@ -350,7 +559,26 @@
       "example": "import cv2\nimport numpy as np\n\nt = np.array([[0,50],[100,255]],np.uint8)\np = np.rot90(t)\nscores = [float(np.mean((p.astype(float)-np.rot90(t,k).astype(float))**2)) for k in range(4)]\nassert int(np.argmin(scores))==1 and scores[1]==0\nprint(scores)\n",
       "expect": "索引1对应90度旋转，误差0。",
       "experiment": "给patch整体加亮度（先转浮点再clip），观察误差。",
-      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.rot90.html"
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.rot90.html",
+      "quiz": {
+        "question": "两个uint8小图做均方差比较，为什么先astype(float)再相减？",
+        "options": [
+          {
+            "text": "浮点转换会自动消除光照差异",
+            "explanation": "转换类型不做亮度归一化，照明变化仍会影响像素差。"
+          },
+          {
+            "text": "转换类型会自动对齐两个不同尺寸图像",
+            "explanation": "类型转换不改变几何尺寸，仍需明确的配准/缩放步骤。"
+          },
+          {
+            "text": "避免负差值回绕以及平方溢出",
+            "explanation": "无符号8位算术无法表达负数或大平方值，先提升类型保留实际误差。"
+          }
+        ],
+        "answer": 2,
+        "revision": "dd6ca3ad8b091950"
+      }
     },
     {
       "id": "median",
@@ -380,7 +608,26 @@
       "example": "import cv2\nimport numpy as np\n\np = np.array([[10,20],[11,21],[500,800]],float)\ns = np.median(p,axis=0)\nassert s.tolist()==[11,21]\nprint(s.tolist(),p.mean(axis=0).tolist())\n",
       "expect": "中位数[11,21]；均值被离群点拉偏。",
       "experiment": "换成连续移动的三帧，解释中位数不等于最新位置。",
-      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.median.html"
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.median.html",
+      "quiz": {
+        "question": "三帧同一静止点x坐标为10、11、500。使用中位数的主要理由是什么？",
+        "options": [
+          {
+            "text": "减少单次离群测量的影响，得到11",
+            "explanation": "中位数对少量极端值较稳健；前提是确为同一静止对象。"
+          },
+          {
+            "text": "它保证预测真实运动目标的下一帧位置",
+            "explanation": "中位数没有运动模型，对移动物体可能滞后。"
+          },
+          {
+            "text": "它能自动修正跨帧目标ID关联错误",
+            "explanation": "统计无法判断不同对象被错误混到一起，关联需先完成。"
+          }
+        ],
+        "answer": 0,
+        "revision": "d3d5a7257b3004ee"
+      }
     },
     {
       "id": "lstsq",
@@ -410,7 +657,26 @@
       "example": "import cv2\nimport numpy as np\n\nuv = np.array([[0,0],[1,0],[0,1],[1,1]],float)\nd = np.column_stack([uv,np.ones(len(uv))])\nassert np.linalg.matrix_rank(d)==3\ncoef,_,_,_ = np.linalg.lstsq(d,uv*[2,3]+[10,20],rcond=None)\npred = np.array([[2,3,1]])@coef\nassert np.allclose(pred,[[14,29]])\nprint(pred.round(6).tolist())\n",
       "expect": "独立检查点[[14,29]]。",
       "experiment": "所有v改0，解释秩为什么不足。",
-      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.lstsq.html"
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.linalg.lstsq.html",
+      "quiz": {
+        "question": "用于二维仿射标定的全部视觉点共线，design的秩小于3。应如何处理？",
+        "options": [
+          {
+            "text": "训练点残差小就直接验收",
+            "explanation": "退化拟合也可能对训练线拟合很好，但线外预测不受充分约束。"
+          },
+          {
+            "text": "拒绝退化标定并重新采集不共线、分布合理的点",
+            "explanation": "共线数据无法唯一约束完整二维仿射关系，检查点也需独立采集。"
+          },
+          {
+            "text": "只增加同一直线上的点，保证恢复完整二维映射",
+            "explanation": "增加重复方向信息不能补足缺失维度。"
+          }
+        ],
+        "answer": 1,
+        "revision": "b124e553c10113f8"
+      }
     },
     {
       "id": "compose",
@@ -440,7 +706,26 @@
       "example": "import cv2\nimport numpy as np\n\ndef bright_mask(image,t):\n    gray = cv2.cvtColor(image,cv2.COLOR_BGR2GRAY)\n    return cv2.threshold(gray,t,255,cv2.THRESH_BINARY)[1]\n\ndef count_pixels(mask):\n    return int(np.count_nonzero(mask))\n\nimage = np.array([[[0,0,0],[255,255,255]]],np.uint8)\nassert count_pixels(bright_mask(image,100))==1\nprint('组合验证通过')\n",
       "expect": "两个普通函数组合通过，不依赖平台。",
       "experiment": "单独输入全黑图，再验证组合也返回0。",
-      "docs": "https://docs.python.org/3/tutorial/modules.html"
+      "docs": "https://docs.python.org/3/tutorial/modules.html",
+      "quiz": {
+        "question": "组合分割、清理和轮廓函数后结果为空，怎样最快定位？",
+        "options": [
+          {
+            "text": "把所有函数合成一大段，再同时改全部阈值",
+            "explanation": "同时改动多个步骤会丢失因果线索，难以定位。"
+          },
+          {
+            "text": "直接返回一个固定轮廓让验收看到非空",
+            "explanation": "伪造结果不解决输入相关的算法问题，也不能证明泛化能力。"
+          },
+          {
+            "text": "逐步检查每个输出的shape/dtype、前景数量和中间图",
+            "explanation": "稳定接口和中间证据能区分哪一步开始出错。"
+          }
+        ],
+        "answer": 2,
+        "revision": "dd72cb22f661f1fc"
+      }
     },
     {
       "id": "gaussian",
@@ -470,7 +755,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.zeros((9,9),np.uint8)\na[4,4]=255\nb = cv2.GaussianBlur(a,(3,3),0)\nassert 0<b[4,4]<255 and np.count_nonzero(b)==9\nprint(b[3:6,3:6].tolist())\n",
       "expect": "单点扩散到3×3邻域，中心值下降。",
       "experiment": "改5×5核，记录中心值与非零数，解释小目标损失。",
-      "docs": "https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html"
+      "docs": "https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html",
+      "quiz": {
+        "question": "Canny前图像有小幅随机噪声，同时必须保留窄裂纹。怎样选高斯核？",
+        "options": [
+          {
+            "text": "从小核开始，比较降噪和裂纹漏检，再决定是否使用",
+            "explanation": "平滑与细节保留存在权衡，应依据后续任务而非观感。"
+          },
+          {
+            "text": "选最大核，边缘最少说明效果最好",
+            "explanation": "目标裂纹也可能被抹去，边缘少不等于正确。"
+          },
+          {
+            "text": "把sigma设置成负数来增强细节",
+            "explanation": "高斯平滑不是通过负sigma恢复细节的锐化方法。"
+          }
+        ],
+        "answer": 0,
+        "revision": "b214876076f335b5"
+      }
     },
     {
       "id": "canny",
@@ -500,7 +804,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.zeros((40,40),np.uint8)\na[10:30,10:30]=255\ne = cv2.Canny(a,50,150)\nassert e.dtype==np.uint8 and e[20,20]==0\nassert 0<np.count_nonzero(e)<np.count_nonzero(a)\nprint(np.count_nonzero(e))\n",
       "expect": "有边缘但中心为0，边缘像素少于区域面积。",
       "experiment": "给背景加纹理，观察为什么阈值不能保证只保留方块。",
-      "docs": "https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html"
+      "docs": "https://docs.opencv.org/4.x/da/d22/tutorial_py_canny.html",
+      "quiz": {
+        "question": "一张实心白方块经过Canny，方块中心变为0。说明什么？",
+        "options": [
+          {
+            "text": "Canny的高阈值一定写成了低阈值",
+            "explanation": "中心为0本身并不能证明阈值顺序错误。"
+          },
+          {
+            "text": "正常，Canny交付细边缘而不是填充区域",
+            "explanation": "中心亮度恒定，没有边缘响应；不能把边缘图当目标掩膜。"
+          },
+          {
+            "text": "中心漏检了，应把所有0都填白",
+            "explanation": "全图填白会失去边缘结构，也把背景变成前景。"
+          }
+        ],
+        "answer": 1,
+        "revision": "14cef289c332ca8d"
+      }
     },
     {
       "id": "perspective",
@@ -530,7 +853,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.arange(16,dtype=np.uint8).reshape(4,4)\np = np.array([[0,0],[3,0],[3,3],[0,3]],np.float32)\nH = cv2.getPerspectiveTransform(p,p)\nb = cv2.warpPerspective(a,H,(4,4))\nassert np.allclose(H,np.eye(3)) and np.array_equal(a,b)\nprint(b.tolist())\n",
       "expect": "相同四角产生单位变换，输出不变。",
       "experiment": "交换两个目标角点，先画对应连线再观察错误结果。",
-      "docs": "https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html"
+      "docs": "https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html",
+      "quiz": {
+        "question": "纸张透视展开后出现扭曲，源/目标四点各自准确。首先还应核对什么？",
+        "options": [
+          {
+            "text": "立即改灰度阈值直到输出看起来正常",
+            "explanation": "矩阵配对问题不能通过改颜色阈值系统修复。"
+          },
+          {
+            "text": "把H随意转置，任何扭曲都会消失",
+            "explanation": "矩阵转置不是通用逆变换，需依据明确的源到目标约定。"
+          },
+          {
+            "text": "四对点的对应顺序、画布宽高和是否退化",
+            "explanation": "各点准确不代表配对正确，错误顺序会产生错误映射。"
+          }
+        ],
+        "answer": 2,
+        "revision": "54fb62a9f3c8458a"
+      }
     },
     {
       "id": "iou",
@@ -560,7 +902,26 @@
       "example": "import cv2\nimport numpy as np\n\na,b = [0,0,4,4],[2,0,6,4]\ni = max(0,min(a[2],b[2])-max(a[0],b[0]))*max(0,min(a[3],b[3])-max(a[1],b[1]))\nu = (a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-i\nassert np.isclose(i/u,1/3)\nprint(i/u)\n",
       "expect": "交集8，并集24，IoU=1/3。",
       "experiment": "试相同、分离、刚好接触三种框，先手算。",
-      "docs": "https://docs.python.org/3/library/functions.html#max"
+      "docs": "https://docs.python.org/3/library/functions.html#max",
+      "quiz": {
+        "question": "半开框[0,0,4,4]与[4,0,8,4]刚好接触，IoU是多少？",
+        "options": [
+          {
+            "text": "0",
+            "explanation": "交集宽度为0，因此交集面积0，两个框仍各有正面积。"
+          },
+          {
+            "text": "1",
+            "explanation": "IoU=1要求两个区域完全重合，接触边界不满足。"
+          },
+          {
+            "text": "必须给交集宽度加1，所以大于0",
+            "explanation": "本题采用连续半开坐标，加1混入了其他坐标约定。"
+          }
+        ],
+        "answer": 0,
+        "revision": "728c5a7b29fbe552"
+      }
     },
     {
       "id": "sorting",
@@ -590,7 +951,26 @@
       "example": "import cv2\nimport numpy as np\n\nscores = [0.8,0.9,0.9]\norder = sorted(range(len(scores)),key=lambda i:(-scores[i],i))\nassert order==[1,2,0]\nused = set()\nused.add(5)\nassert 5 in used and len(used)==1\nprint(order)\n",
       "expect": "排序[1,2,0]；这是算法组件演示，不是完整NMS。",
       "experiment": "两个同位置预测框，手算第二个何时成为FP，何时被NMS抑制。",
-      "docs": "https://docs.python.org/3/library/functions.html#sorted"
+      "docs": "https://docs.python.org/3/library/functions.html#sorted",
+      "quiz": {
+        "question": "同一真值被两个同类高IoU预测框覆盖，一对一评估时最多能产生几个TP？",
+        "options": [
+          {
+            "text": "只要先排序，就一定没有FP",
+            "explanation": "排序只决定处理顺序，并不删除重复框或保证预测正确。"
+          },
+          {
+            "text": "1",
+            "explanation": "每个真值只使用一次；第二个重复预测不能再贡献TP。"
+          },
+          {
+            "text": "2",
+            "explanation": "这会重复奖励同一个真实对象，使评估失真。"
+          }
+        ],
+        "answer": 1,
+        "revision": "ce5c4b6532b0e55f"
+      }
     },
     {
       "id": "dfs",
@@ -620,7 +1000,26 @@
       "example": "import cv2\nimport numpy as np\n\nanswers = []\ndef search(path,used):\n    if len(path)==3:\n        answers.append(path.copy())\n        return\n    for value in range(3):\n        if value in used:\n            continue\n        path.append(value); used.add(value)\n        search(path,used)\n        used.remove(value); path.pop()\nsearch([],set())\nassert len(answers)==6 and len({tuple(row) for row in answers})==6\nprint(answers)\n",
       "expect": "三个元素共6种排列。",
       "experiment": "删一次撤销观察错误；再添加“第一项为0”的有效剪枝。",
-      "docs": "https://docs.python.org/3/tutorial/datastructures.html"
+      "docs": "https://docs.python.org/3/tutorial/datastructures.html",
+      "quiz": {
+        "question": "回溯时answers.append(path)后继续pop，为什么最终解可能都变了？",
+        "options": [
+          {
+            "text": "必须禁止所有pop操作",
+            "explanation": "不撤销会污染兄弟分支；应复制答案并保留正确回溯。"
+          },
+          {
+            "text": "把递归深度加大即可",
+            "explanation": "问题是对象共享，与可递归深度无关。"
+          },
+          {
+            "text": "保存的是同一个可变列表引用，应append(path.copy())",
+            "explanation": "后续撤销会修改原列表；副本保留当时的解。"
+          }
+        ],
+        "answer": 2,
+        "revision": "762775cffca86fc6"
+      }
     },
     {
       "id": "labels",
@@ -650,7 +1049,26 @@
       "example": "import cv2\nimport numpy as np\n\nimport math\nvalues = list(map(float,'1  0.5 0.5 0.2 0.4'.split()))\nassert len(values)==5 and all(math.isfinite(v) for v in values)\ncls,cx,cy,w,h = values\nassert cls.is_integer()\nassert np.allclose([cx-w/2,cy-h/2,cx+w/2,cy+h/2],[0.4,0.3,0.6,0.7])\nassert not math.isfinite(float('nan'))\nprint('字段与边界检查通过')\n",
       "expect": "合法框边界[0.4,0.3,0.6,0.7]，NaN被拒绝。",
       "experiment": "构造少字段、类别1.5、宽0、越界，指出拒绝位置。",
-      "docs": "https://docs.python.org/3/library/math.html#math.isfinite"
+      "docs": "https://docs.python.org/3/library/math.html#math.isfinite",
+      "quiz": {
+        "question": "float(\"nan\")成功解析，应该把该字段当有效标签值吗？",
+        "options": [
+          {
+            "text": "不应该，需math.isfinite排除NaN和无穷",
+            "explanation": "能解析不等于有效数值；后续还需范围和类别检查。"
+          },
+          {
+            "text": "应该，只有float抛异常才是不合法",
+            "explanation": "NaN和inf可以成功解析，但不能作可靠坐标。"
+          },
+          {
+            "text": "只需把NaN转成类别0即可",
+            "explanation": "静默替换会制造错误标注，应明确报告原行问题。"
+          }
+        ],
+        "answer": 0,
+        "revision": "bc7083ac96604b66"
+      }
     },
     {
       "id": "clip",
@@ -680,7 +1098,26 @@
       "example": "import cv2\nimport numpy as np\n\nb = np.array([[20,40,100,120]],float)\no = (b-[0,20,0,20])/2\no[:,[0,2]] = np.clip(o[:,[0,2]],0,40)\no[:,[1,3]] = np.clip(o[:,[1,3]],0,60)\nassert o.tolist()==[[10,10,40,50]]\nassert np.asarray([],float).reshape(-1,4).shape==(0,4)\nprint(o.tolist())\n",
       "expect": "[[10,10,40,50]]。",
       "experiment": "先除再减，手算y会偏移多少，用已知框验证。",
-      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.clip.html"
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.clip.html",
+      "quiz": {
+        "question": "模型坐标y=40，pad_y=20，scale=2。还原原图y应该是多少？",
+        "options": [
+          {
+            "text": "30",
+            "explanation": "40-20/2=30，没有对去除padding后的坐标整体缩放。"
+          },
+          {
+            "text": "10",
+            "explanation": "先减补边再除比例：(40-20)/2=10。"
+          },
+          {
+            "text": "0",
+            "explanation": "40/2-20=0，是把逆变换顺序写反。"
+          }
+        ],
+        "answer": 1,
+        "revision": "c33b9c405e3569ee"
+      }
     },
     {
       "id": "metrics",
@@ -710,7 +1147,26 @@
       "example": "import cv2\nimport numpy as np\n\ntruth,predicted = [1,1,0,0],[1,0,1,0]\nassert len(truth)==len(predicted)\npairs = list(zip(truth,predicted))\ntp = sum(t==1 and p==1 for t,p in pairs)\nfp = sum(t==0 and p==1 for t,p in pairs)\nfn = sum(t==1 and p==0 for t,p in pairs)\nassert (tp,fp,fn)==(1,1,1)\nprint(tp/(tp+fp),tp/(tp+fn))\n",
       "expect": "precision=0.5，recall=0.5。",
       "experiment": "预测全改0，补零分母保护并解释指标。",
-      "docs": "https://docs.python.org/3/library/functions.html#zip"
+      "docs": "https://docs.python.org/3/library/functions.html#zip",
+      "quiz": {
+        "question": "样本二分类TP=1、FP=1、FN=3，precision和recall分别是多少？",
+        "options": [
+          {
+            "text": "0.25和0.5",
+            "explanation": "把precision与recall的分母交换了。"
+          },
+          {
+            "text": "两者都是0.2",
+            "explanation": "TP+FP+FN不是这两个指标共同的分母。"
+          },
+          {
+            "text": "0.5和0.25",
+            "explanation": "precision=1/(1+1)，recall=1/(1+3)，分母含义不同。"
+          }
+        ],
+        "answer": 2,
+        "revision": "b6ee05c17ba67fd3"
+      }
     },
     {
       "id": "logs",
@@ -740,7 +1196,26 @@
       "example": "import cv2\nimport numpy as np\n\nlevel,sep,message = 'INFO ERROR count is zero'.partition(' ')\nassert level=='INFO' and message=='ERROR count is zero'\nassert 'BROKEN'.partition(' ')==('BROKEN','','')\nprint(level,message)\n",
       "expect": "级别仍INFO，格式异常可识别。",
       "experiment": "加入ERROR与WARN记录，手敲循环计数并保留最后错误。",
-      "docs": "https://docs.python.org/3/library/stdtypes.html#str.partition"
+      "docs": "https://docs.python.org/3/library/stdtypes.html#str.partition",
+      "quiz": {
+        "question": "日志为“INFO previous ERROR resolved”，该行的错误级别是什么？",
+        "options": [
+          {
+            "text": "INFO",
+            "explanation": "级别由开头字段决定，正文中的ERROR不改变级别。"
+          },
+          {
+            "text": "ERROR",
+            "explanation": "在整行搜索关键词会把正文描述误判为级别。"
+          },
+          {
+            "text": "无法解析，因为正文出现第二个单词",
+            "explanation": "partition只在第一个空格分开，正文可包含多个词。"
+          }
+        ],
+        "answer": 0,
+        "revision": "18f862dc0d847522"
+      }
     },
     {
       "id": "hist",
@@ -770,7 +1245,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.array([[0,0,1],[1,1,255]],np.uint8)\nc = np.bincount(a.ravel(),minlength=256)\nassert c.shape==(256,) and c.sum()==a.size\nassert c[[0,1,255]].tolist()==[2,3,1]\nprint(c[[0,1,255]].tolist())\n",
       "expect": "[2,3,1]，总6像素。",
       "experiment": "打乱像素位置再统计，解释分布不变但形状变化。",
-      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.bincount.html"
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.bincount.html",
+      "quiz": {
+        "question": "把一张灰度图的像素位置打乱，但不改变任何像素值，直方图会怎样？",
+        "options": [
+          {
+            "text": "能够从直方图恢复原来的目标位置",
+            "explanation": "位置已经丢失，单靠频数不能恢复。"
+          },
+          {
+            "text": "不变",
+            "explanation": "直方图统计频数，不记录像素位置；形状可能已完全改变。"
+          },
+          {
+            "text": "必然变成均匀分布",
+            "explanation": "空间乱序不改变每个灰度出现次数。"
+          }
+        ],
+        "answer": 1,
+        "revision": "29f47428fd0a5eab"
+      }
     },
     {
       "id": "adaptive",
@@ -800,7 +1294,26 @@
       "example": "import cv2\nimport numpy as np\n\ng = np.full((9,9),100,np.uint8)\na = cv2.adaptiveThreshold(g,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,3,0)\nb = cv2.adaptiveThreshold(g,255,cv2.ADAPTIVE_THRESH_MEAN_C,cv2.THRESH_BINARY,3,2)\nassert np.count_nonzero(a)==0 and np.count_nonzero(b)==81\nprint(np.unique(a).tolist(),np.unique(b).tolist())\n",
       "expect": "均匀图C=0全黑、C=2全白。",
       "experiment": "换渐变背景与全局阈值比较，一次只改窗口或C。",
-      "docs": "https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html"
+      "docs": "https://docs.opencv.org/4.x/d7/d4d/tutorial_py_thresholding.html",
+      "quiz": {
+        "question": "均匀灰度100，局部均值100，BINARY，C从0改2，理论阈值从100变98。输出如何变化？",
+        "options": [
+          {
+            "text": "由255变0",
+            "explanation": "这是把减C方向或严格大于条件理解反了。"
+          },
+          {
+            "text": "不变，因为输入图没变",
+            "explanation": "局部阈值公式也依赖C，参数改变会改变分类。"
+          },
+          {
+            "text": "由0变255",
+            "explanation": "100不大于100，但大于98；C增大使这个像素更易选白。"
+          }
+        ],
+        "answer": 2,
+        "revision": "c03771378bcd3927"
+      }
     },
     {
       "id": "median_blur",
@@ -825,7 +1338,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.full((7,7),100,np.uint8)\na[3,3]=255; a[1,1]=0\nb = cv2.medianBlur(a,3)\nassert np.all(b==100)\nprint(np.unique(b).tolist())\n",
       "expect": "孤立脉冲恢复为100。",
       "experiment": "亮点扩大成3×3，比较3核和5核保留像素。",
-      "docs": "https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html"
+      "docs": "https://docs.opencv.org/4.x/d4/d13/tutorial_py_filtering.html",
+      "quiz": {
+        "question": "真实目标是一条1像素宽亮线，同时有孤立白噪点。对整图强中值滤波最大的风险是什么？",
+        "options": [
+          {
+            "text": "把真实细线也当小结构删除",
+            "explanation": "中值不理解语义，需要以任务定义检查细节保留。"
+          },
+          {
+            "text": "中值天然识别目标，所以不会影响真实线条",
+            "explanation": "滤波仅依据邻域数值，不知道哪些像素属于目标。"
+          },
+          {
+            "text": "输出自动带目标ID，可用于跟踪",
+            "explanation": "中值只返回图像，没有身份分配功能。"
+          }
+        ],
+        "answer": 0,
+        "revision": "5dc487bf94af3cde"
+      }
     },
     {
       "id": "sobel",
@@ -855,7 +1387,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.tile(np.array([0,10,20,30,40],np.uint8),(5,1))\nx = cv2.Sobel(a,cv2.CV_32F,1,0,ksize=3)\ny = cv2.Sobel(a,cv2.CV_32F,0,1,ksize=3)\nm = cv2.magnitude(x,y)\nassert np.allclose(y,0) and x[2,2]==80 and m[2,2]==80\nprint(float(x[2,2]),float(y[2,2]))\n",
       "expect": "中心gx=80，gy=0。",
       "experiment": "亮度顺序反转，预测导数符号与幅值变化。",
-      "docs": "https://docs.opencv.org/4.x/d5/d0f/tutorial_py_gradients.html"
+      "docs": "https://docs.opencv.org/4.x/d5/d0f/tutorial_py_gradients.html",
+      "quiz": {
+        "question": "水平亮度从左到右递减，为什么Sobel输出不应该直接用uint8保存？",
+        "options": [
+          {
+            "text": "所有边缘导数都非负，所以类型无关",
+            "explanation": "幅值非负，但方向导数可以为负。"
+          },
+          {
+            "text": "负导数会丢失，应使用浮点或适当有符号深度",
+            "explanation": "方向由符号表达；显示绝对值不能替代原始测量。"
+          },
+          {
+            "text": "uint8会自动为负数增加一个符号位",
+            "explanation": "uint8没有符号位，无法表达负梯度。"
+          }
+        ],
+        "answer": 1,
+        "revision": "8aeb2478ef2bb905"
+      }
     },
     {
       "id": "integral",
@@ -885,7 +1436,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.arange(12,dtype=np.uint8).reshape(3,4)\nI = cv2.integral(a,sdepth=cv2.CV_64F)\nx,y,w,h = 1,1,2,2\nt = I[y+h,x+w]-I[y,x+w]-I[y+h,x]+I[y,x]\nassert I.shape==(4,5) and t==a[1:3,1:3].sum()==30\nprint(float(t),float(t/(w*h)))\n",
       "expect": "和30、均值7.5。",
       "experiment": "ROI移到左上角，验证公式无需为x/y为0特殊减1。",
-      "docs": "https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html"
+      "docs": "https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html",
+      "quiz": {
+        "question": "H×W灰度图的普通积分图为什么是(H+1)×(W+1)？",
+        "options": [
+          {
+            "text": "积分图把每个物体放大了一个像素",
+            "explanation": "积分图是累计统计，不是几何缩放。"
+          },
+          {
+            "text": "因为输出多出一个颜色通道",
+            "explanation": "额外的是行列，不是BGR通道。"
+          },
+          {
+            "text": "顶部和左侧额外零边界，方便四角容斥",
+            "explanation": "边界坐标可直接代入，ROI从0开始也统一计算。"
+          }
+        ],
+        "answer": 2,
+        "revision": "09b588c901b2e573"
+      }
     },
     {
       "id": "resize",
@@ -915,7 +1485,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.array([[0,2],[2,0]],np.uint8)\nn = cv2.resize(a,(6,4),interpolation=cv2.INTER_NEAREST)\nl = cv2.resize(a,(6,4),interpolation=cv2.INTER_LINEAR)\nassert n.shape==(4,6) and set(np.unique(n))=={0,2}\nassert 1 in np.unique(l)\nprint(np.unique(n).tolist(),np.unique(l).tolist())\n",
       "expect": "最近邻只有0/2，线性多出1。",
       "experiment": "照片与标签分别缩放，解释不同插值选择。",
-      "docs": "https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html"
+      "docs": "https://docs.opencv.org/4.x/da/d6e/tutorial_py_geometric_transformations.html",
+      "quiz": {
+        "question": "类别标签只有0和2，放大后出现类别1。最应该检查哪项？",
+        "options": [
+          {
+            "text": "是否用了线性插值，标签通常应最近邻",
+            "explanation": "插值可生成中间数值；离散类别不应随意制造新编号。"
+          },
+          {
+            "text": "把新类别1直接当作模型发现的新物体",
+            "explanation": "这是重采样的数值产物，没有语义发现过程。"
+          },
+          {
+            "text": "把图像改成float就能保证没有新类别",
+            "explanation": "浮点不会消除线性插值，反而还可出现更多中间值。"
+          }
+        ],
+        "answer": 0,
+        "revision": "23683dbb51d9d714"
+      }
     },
     {
       "id": "lut",
@@ -945,7 +1534,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.array([[0,64,128,255]],np.uint8)\nt = np.floor(255*(np.arange(256,dtype=np.float64)/255)**2).astype(np.uint8)\nb = cv2.LUT(a,t)\nassert b.tolist()==[[0,16,64,255]]\nprint(b.tolist())\n",
       "expect": "gamma=2得到[0,16,64,255]。",
       "experiment": "换0.5，预测中间灰度变化方向并检查端点。",
-      "docs": "https://docs.opencv.org/4.x/d2/de8/group__core__array.html"
+      "docs": "https://docs.opencv.org/4.x/d2/de8/group__core__array.html",
+      "quiz": {
+        "question": "按本课程255*(x/255)**gamma公式，gamma=2对中间灰度有什么作用？",
+        "options": [
+          {
+            "text": "能恢复已经全白的过曝纹理",
+            "explanation": "相同输入255都映射255，丢失的信息无法从查表恢复。"
+          },
+          {
+            "text": "压暗，0和255端点保持不变",
+            "explanation": "0<x/255<1时平方更小；要区别另一种1/gamma定义。"
+          },
+          {
+            "text": "调亮，因为所有Gamma公式都是指数1/gamma",
+            "explanation": "必须依据实际公式，不能凭参数名猜。"
+          }
+        ],
+        "answer": 1,
+        "revision": "3cb58a987bb80b81"
+      }
     },
     {
       "id": "clahe",
@@ -975,7 +1583,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.tile(np.arange(100,116,dtype=np.uint8),(16,1))\nb = cv2.createCLAHE(clipLimit=2.0,tileGridSize=(2,2)).apply(a)\nassert b.shape==a.shape and b.dtype==np.uint8\nassert not np.array_equal(a,b)\nprint(int(b.min()),int(b.max()))\n",
       "expect": "尺寸/类型不变，亮度分布改变，极值看实测。",
       "experiment": "只改clipLimit，记录噪声是否也增强。",
-      "docs": "https://docs.opencv.org/4.x/d5/daf/tutorial_py_histogram_equalization.html"
+      "docs": "https://docs.opencv.org/4.x/d5/daf/tutorial_py_histogram_equalization.html",
+      "quiz": {
+        "question": "tileGridSize=(8,8)具体表示什么？",
+        "options": [
+          {
+            "text": "每个网格固定为8×8像素",
+            "explanation": "把网格数与块像素尺寸混淆了。"
+          },
+          {
+            "text": "输出图像固定为8×8像素",
+            "explanation": "CLAHE增强不以这个参数指定输出分辨率。"
+          },
+          {
+            "text": "图像划分为8列、8行网格",
+            "explanation": "它是网格数量，实际每块像素尺寸还取决于图像宽高。"
+          }
+        ],
+        "answer": 2,
+        "revision": "37dbdbb472835676"
+      }
     },
     {
       "id": "components",
@@ -1005,7 +1632,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.zeros((5,5),np.uint8)\na[1,1]=a[2,2]=255\nn4,_,_,_ = cv2.connectedComponentsWithStats(a,connectivity=4)\nn8,_,s,_ = cv2.connectedComponentsWithStats(a,connectivity=8)\nassert n4-1==2 and n8-1==1\nassert s[1,cv2.CC_STAT_AREA]==2\nprint(n4-1,n8-1)\n",
       "expect": "对角相接：4连通2目标，8连通1目标。",
       "experiment": "第二点移到右侧，预测是否还有差异。",
-      "docs": "https://docs.opencv.org/4.x/d3/dc0/group__imgproc__shape.html"
+      "docs": "https://docs.opencv.org/4.x/d3/dc0/group__imgproc__shape.html",
+      "quiz": {
+        "question": "两个白像素只在对角接触，4连通与8连通各算几个前景区域？",
+        "options": [
+          {
+            "text": "4连通2个，8连通1个",
+            "explanation": "4邻域不含对角，8邻域包含；还要排除背景标签。"
+          },
+          {
+            "text": "两种都2个，因为没有共享边",
+            "explanation": "8连通允许对角连接。"
+          },
+          {
+            "text": "4连通1个，8连通2个",
+            "explanation": "两种邻接定义写反了，8连通允许更多连接。"
+          }
+        ],
+        "answer": 0,
+        "revision": "365e31ce48194191"
+      }
     },
     {
       "id": "distance",
@@ -1035,7 +1681,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.zeros((7,7),np.uint8)\na[1:6,1:6]=255\nd = cv2.distanceTransform(a,cv2.DIST_L2,cv2.DIST_MASK_PRECISE)\nassert d.dtype==np.float32 and d[3,3]==3 and d[0,0]==0\nprint(float(d[3,3]))\n",
       "expect": "中心到最近背景像素为3。",
       "experiment": "中心挖黑孔，解释距离为什么降低。",
-      "docs": "https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html"
+      "docs": "https://docs.opencv.org/4.x/d7/d1b/group__imgproc__misc.html",
+      "quiz": {
+        "question": "白色目标内部增加一个黑色孔洞，附近distanceTransform数值为何可能变小？",
+        "options": [
+          {
+            "text": "这是归一化后必然发生的现象，与原距离无关",
+            "explanation": "即使不归一化，最近背景位置改变也会改变真实距离。"
+          },
+          {
+            "text": "孔洞提供了更近的零像素背景",
+            "explanation": "距离到最近零像素，不只到目标外轮廓。"
+          },
+          {
+            "text": "函数只测距图像中心，所以与孔洞无关",
+            "explanation": "测量定义不是距图像中心。"
+          }
+        ],
+        "answer": 1,
+        "revision": "827bc3a317e39d1a"
+      }
     },
     {
       "id": "match",
@@ -1065,7 +1730,26 @@
       "example": "import cv2\nimport numpy as np\n\nt = np.array([[10,80],[200,40]],np.uint8)\na = np.zeros((8,9),np.uint8)\na[3:5,4:6]=t\nr = cv2.matchTemplate(a,t,cv2.TM_SQDIFF)\nv,_,p,_ = cv2.minMaxLoc(r)\nassert r.shape==(7,8) and p==(4,3)\nprint(p,float(v))\n",
       "expect": "左上角(4,3)，差平方分数接近0。",
       "experiment": "移除模板再运行，解释为什么仍有最优位置却应该拒识。",
-      "docs": "https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html"
+      "docs": "https://docs.opencv.org/4.x/d4/dc6/tutorial_py_template_matching.html",
+      "quiz": {
+        "question": "无目标图片执行matchTemplate仍返回一个最优位置，应该怎样判断？",
+        "options": [
+          {
+            "text": "有最优位置就一定找到了目标",
+            "explanation": "极值只表示候选中最好，不保证足够相似。"
+          },
+          {
+            "text": "改用最大值就能自动处理所有无目标输入",
+            "explanation": "取最大还是最小由方法定义决定，不是通用拒识机制。"
+          },
+          {
+            "text": "不能仅凭位置存在判定有目标，需验证分数与拒识规则",
+            "explanation": "有限响应图总能有极值，需用无目标样本标定阈值与失败行为。"
+          }
+        ],
+        "answer": 2,
+        "revision": "48875359dd79b36e"
+      }
     },
     {
       "id": "absdiff",
@@ -1095,7 +1779,26 @@
       "example": "import cv2\nimport numpy as np\n\na = np.array([[10,200,50]],np.uint8)\nb = np.array([[200,10,60]],np.uint8)\nd = cv2.absdiff(a,b)\nm = cv2.threshold(d,10,255,cv2.THRESH_BINARY)[1]\nassert d.tolist()==[[190,190,10]] and m.tolist()==[[255,255,0]]\nprint(d.tolist(),m.tolist())\n",
       "expect": "两方向均190；恰好差10不超过阈值。",
       "experiment": "整帧亮度同时加20，解释有响应却不代表物体移动。",
-      "docs": "https://docs.opencv.org/4.x/d2/de8/group__core__array.html"
+      "docs": "https://docs.opencv.org/4.x/d2/de8/group__core__array.html",
+      "quiz": {
+        "question": "固定画面突然整体变亮，帧差掩膜大面积响应说明什么？",
+        "options": [
+          {
+            "text": "检测到变化，可能是光照而不是物体运动",
+            "explanation": "absdiff不区分变化原因，需要结合采集条件和其他证据。"
+          },
+          {
+            "text": "必然有大物体高速移动",
+            "explanation": "变化强弱不能直接转成运动速度或语义。"
+          },
+          {
+            "text": "只要用绝对差，光照变化必然被消除",
+            "explanation": "绝对差保留亮度变化，并不做照明补偿。"
+          }
+        ],
+        "answer": 0,
+        "revision": "a64564a4662fd14c"
+      }
     },
     {
       "id": "groups",
@@ -1125,7 +1828,26 @@
       "example": "import cv2\nimport numpy as np\n\nsamples = [('cam1','train'),('cam1','val'),('cam2','train')]\ngroups = {}\nfor group,split in samples:\n    groups.setdefault(group,set()).add(split)\nleaked = sorted(k for k,v in groups.items() if len(v)>1)\nassert leaked==['cam1']\nprint(leaked)\n",
       "expect": "cam1跨两个分区。",
       "experiment": "同视频帧故意标不同group，解释代码通过但仍泄漏。",
-      "docs": "https://docs.python.org/3/library/stdtypes.html#dict.setdefault"
+      "docs": "https://docs.python.org/3/library/stdtypes.html#dict.setdefault",
+      "quiz": {
+        "question": "同一视频邻帧分别分进train和val，但每张图拥有不同group，审计通过能证明无泄漏吗？",
+        "options": [
+          {
+            "text": "只要增加训练增强，就能消除分区泄漏",
+            "explanation": "增强不能修复原始划分问题，还可能扩散近重复。"
+          },
+          {
+            "text": "不能，需要让group表达真实采集关联",
+            "explanation": "检查依赖分组标签；逐图唯一编号掩盖邻帧关联。"
+          },
+          {
+            "text": "能，任何group审计都能识别视觉重复",
+            "explanation": "本检查不比较图像内容，无法凭空识别关联。"
+          }
+        ],
+        "answer": 1,
+        "revision": "92faed9159f5df83"
+      }
     },
     {
       "id": "stride",
@@ -1155,7 +1877,26 @@
       "example": "import cv2\nimport numpy as np\n\nbuffer = np.array([1,2,3,99,4,5,6,99],np.uint8)\nh,w,stride = 2,1,4\nimage = buffer.reshape(h,stride)[:,:w*3].reshape(h,w,3).copy()\nassert image.tolist()==[[[1,2,3]],[[4,5,6]]]\nassert image.flags.c_contiguous\nbuffer[:]=0\nassert image[0,0,0]==1\nprint(image.tolist())\n",
       "expect": "99被剔除；原buffer重写不影响副本。",
       "experiment": "去copy后重写buffer，观察生命周期影响。",
-      "docs": "https://numpy.org/doc/stable/user/basics.copies.html"
+      "docs": "https://numpy.org/doc/stable/user/basics.copies.html",
+      "quiz": {
+        "question": "BGR8宽度100，每行stride=320字节，行尾20字节应如何处理？",
+        "options": [
+          {
+            "text": "把整个buffer直接reshape(height,100,3)",
+            "explanation": "包含padding的总字节数与目标形状不符，可能报错或错位。"
+          },
+          {
+            "text": "把额外20字节当作第四个颜色通道",
+            "explanation": "行填充不是通道，不能按RGBA解释。"
+          },
+          {
+            "text": "每行按320分开，只取前300字节再reshape",
+            "explanation": "100个像素每个3字节，其余20是行填充。"
+          }
+        ],
+        "answer": 2,
+        "revision": "acebe8e477c5dcba"
+      }
     },
     {
       "id": "latency",
@@ -1185,7 +1926,26 @@
       "example": "import cv2\nimport numpy as np\n\nframes = np.array([[1,2,3,4],[1,2,3,94]],np.float64)\nt = frames.sum(axis=1)\nassert t.tolist()==[10,100] and t.mean()==55\nassert np.isclose(np.percentile(t,95),95.5)\nprint(float(t.mean()),float(np.percentile(t,95)),1000/t.mean())\n",
       "expect": "均值55ms、P95=95.5ms、串行约18.18FPS。",
       "experiment": "加很多10ms正常帧与少量慢帧，比较均值和P95。",
-      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.percentile.html"
+      "docs": "https://numpy.org/doc/stable/reference/generated/numpy.percentile.html",
+      "quiz": {
+        "question": "采集、预处理、推理、后处理完全串行，平均总耗时50ms。不含其他等待时FPS估计是多少？",
+        "options": [
+          {
+            "text": "20 FPS",
+            "explanation": "1000/50=20，仅适用于题设串行假设；异步吞吐需实测。"
+          },
+          {
+            "text": "50 FPS",
+            "explanation": "毫秒延迟不是每秒帧数，需要取倒数并换算单位。"
+          },
+          {
+            "text": "只看最快的推理阶段即可得到端到端FPS",
+            "explanation": "忽略采集和其他阶段会高估串行处理能力。"
+          }
+        ],
+        "answer": 0,
+        "revision": "ae6e98cfe46b3de2"
+      }
     }
   ],
   "lessons": {
@@ -1524,5 +2284,6 @@
       "decision": "逐帧求和，再统计均值与尾部，注明串行假设。",
       "question": "异步吞吐为何不能直接用1000/延迟？"
     }
-  }
+  },
+  "quiz_checked_at": "2026-10-29"
 }

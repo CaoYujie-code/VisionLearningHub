@@ -97,6 +97,12 @@ exports.run=async()=>{
   passed.push('native function example opens independently and preserves edits and exercise source');
   const exampleZip=await hub.request('/lesson/T03/examples');assert.ok(Buffer.isBuffer(exampleZip)&&exampleZip.length>1000);
   passed.push('function handbook and standalone ZIP are available in packaged extension');
+  const quiz=handbookBoot.lessons.find(l=>l.id==='T03').function_guide.cards.find(c=>c.id==='threshold').quiz;
+  const gradesBeforeQuiz=(await hub.request('/bootstrap')).passed;
+  const answered=await hub.message('api',{path:'/function-review',method:'POST',body:{card:'threshold',choice:quiz.answer,revision:quiz.revision}});
+  assert.equal(answered.json.records.threshold.correct,true);assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
+  await hub.stop();await hub.ensure();assert.equal((await hub.request('/function-review')).records.threshold.correct,true);
+  passed.push('native understanding checks persist across service restart separately from grades');
   const featureRef=JSON.parse((await hub.request('/lesson/E07/reference')).code);
   const featureRoot=path.join(hub.root,'projects','E07');for(const [name,content] of Object.entries(featureRef))await fs.writeFile(path.join(featureRoot,name),content);
   const featureJob=await hub.request('/jobs','POST',{lesson:'E07',code:JSON.stringify(featureRef),note:'',verify:false,project_block:'matches',block_source:'standard'});

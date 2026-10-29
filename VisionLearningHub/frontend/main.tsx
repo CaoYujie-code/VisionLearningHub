@@ -55,7 +55,7 @@ function App() {
    {page==='lab'&&<Lab notify={notify} onZoom={setZoom} openLesson={openLesson}/>}
    {page==='resources'&&<Resources boot={boot} save={saveSetting} notify={notify}/>}
    {page==='records'&&<Records boot={boot} refresh={refresh} notify={notify} openLesson={openLesson} onZoom={setZoom}/>}
-  </div><footer className="page-footer">VISION LEARNING HUB<span>从理解到实现，每一步都看得见。</span><span>{isIDE?'VS CODE EDITION · 0.8.0':'LOCAL EDITION · 0.8.0'}</span></footer></main>
+  </div><footer className="page-footer">VISION LEARNING HUB<span>从理解到实现，每一步都看得见。</span><span>{isIDE?'VS CODE EDITION · 0.8.1':'LOCAL EDITION · 0.8.1'}</span></footer></main>
   {toast&&<div role="status" className="toast"><Icon name="check" size={18}/>{toast}<button aria-label="关闭提示" onClick={()=>setToast('')}><Icon name="close" size={15}/></button></div>}
   {zoom&&<Modal title="图像查看" wide onClose={()=>setZoom('')}><img className="zoom-image" src={zoom} alt="实验图像原图"/></Modal>}
  </div>;

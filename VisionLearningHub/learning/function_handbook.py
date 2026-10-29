@@ -31,6 +31,12 @@ def markdown(key):
         lines += ['', '运行：`python '+card['id']+'.py`', '', '```python', card['example'].rstrip(), '```', '',
                   '**预期：** '+card['expect'], '', '**动手改一处：** '+card['experiment'], '',
                   '[官方函数资料]('+card['docs']+')', '']
+        quiz=card['quiz']
+        lines += ['### 场景与参数自测', '', quiz['question'], '']
+        lines += ['- **'+chr(65+i)+'.** '+option['text'] for i,option in enumerate(quiz['options'])]
+        lines += ['', '<details><summary>作答后查看解释</summary>', '', '正确选项：'+chr(65+quiz['answer']), '']
+        lines += ['- **'+chr(65+i)+'.** '+option['explanation'] for i,option in enumerate(quiz['options'])]
+        lines += ['', '</details>', '']
     lines += ['## 学完自问', '', item['question'], '', '在平台“笔记”记录输入、预测、实测和适用边界；阅读和示例通过不计基础题通关。', '']
     return '\n'.join(lines)
 

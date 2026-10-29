@@ -111,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.8.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.8.1', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -255,6 +255,31 @@ def save_draft(key: str, body: Draft):
     with LOCK, database() as store:
         store.save(key, store.draft(key)[0] if WORKSPACE else body.code, body.note)
         return {'saved': True, 'passed': progress(store)}
+
+
+@app.get('/api/function-review')
+def function_review_state():
+    from learning.function_review import snapshot
+    with LOCK, database() as store:
+        return snapshot(store)
+
+
+class FunctionAnswer(BaseModel):
+    card: str = Field(max_length=48)
+    choice: int = Field(strict=True, ge=0, le=2)
+    revision: str = Field(min_length=16, max_length=16)
+
+
+@app.post('/api/function-review')
+def save_function_answer(body: FunctionAnswer):
+    from learning.function_review import answer
+    with LOCK, database() as store:
+        try:
+            return answer(store,body.card,body.choice,body.revision)
+        except ValueError as error:
+            raise HTTPException(400,str(error)) from error
+        except RuntimeError as error:
+            raise HTTPException(409,str(error)) from error
 
 
 class Setting(BaseModel):

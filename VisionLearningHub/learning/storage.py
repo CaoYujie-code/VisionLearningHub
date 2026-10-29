@@ -159,6 +159,9 @@ class Store:
                 if key=='hub.bookmarks':
                     if not isinstance(setting,list) or any(not isinstance(v,str) or len(v)>8 for v in setting):
                         raise ValueError("收藏格式无效")
+                elif key=='hub.function-review':
+                    from .function_review import validate_backup
+                    validate_backup(setting)
                 elif key.startswith('hub.course.'):
                     course_id=key[11:]
                     if (len(course_id)!=3 or not course_id.startswith('S') or not course_id[1:].isdigit() or not isinstance(setting,dict)

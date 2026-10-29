@@ -1,6 +1,6 @@
 import {isIDE,bridgeRequest,ide} from './ide';
 import type {Project} from './projects';
-export type FunctionCard = {id:string;name:string;signature:string;parameters:{name:string;meaning:string;choice:string}[];returns:string;use:string;avoid:string;pitfall:string;example:string;expect:string;experiment:string;docs:string};
+export type FunctionCard = {id:string;name:string;signature:string;parameters:{name:string;meaning:string;choice:string}[];returns:string;use:string;avoid:string;pitfall:string;example:string;expect:string;experiment:string;docs:string;quiz:{question:string;options:{text:string;explanation:string}[];answer:number;revision:string}};
 export type FunctionGuide = {decision:string;question:string;cards:FunctionCard[]};
 export type Lesson = {id:string; title:string; goal:string; contract:string; knowledge:string; hints:string[]; prerequisites:string[]; course:string; function_guide?:FunctionGuide};
 export type Course = {id:string; title:string; subtitle:string; track:string; lessons:string[]; resources:string[]; sections:{title:string; paragraphs:string[]}[]; use:string[]; avoid:string[]; checks:string[]; readiness:string};

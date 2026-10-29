@@ -9,7 +9,7 @@ function inside(root, file) {
   return rel === '' || (!rel.startsWith('..' + path.sep) && rel !== '..' && !path.isAbsolute(rel));
 }
 function apiPath(value) {
-  if (typeof value !== 'string' || !/^\/(bootstrap|projects\/[A-Z]\d{2}(\/(export|guide))?|lesson\/[A-Z]\d{2}(\/(reference|examples))?|jobs(\/[a-f0-9]+(\/stop)?)?|settings\/(bookmarks|course\.[A-Z]\d{2})|lab|upload|records(\/\d+)?|environment|backup|restore|export-code|clear|workspace\/reset\/[A-Z]\d{2})$/.test(value)) throw new Error('不支持的接口');
+  if (typeof value !== 'string' || !/^\/(bootstrap|function-review|projects\/[A-Z]\d{2}(\/(export|guide))?|lesson\/[A-Z]\d{2}(\/(reference|examples))?|jobs(\/[a-f0-9]+(\/stop)?)?|settings\/(bookmarks|course\.[A-Z]\d{2})|lab|upload|records(\/\d+)?|environment|backup|restore|export-code|clear|workspace\/reset\/[A-Z]\d{2})$/.test(value)) throw new Error('不支持的接口');
   return value;
 }
 function navigationState(value, lessons, courses) {
