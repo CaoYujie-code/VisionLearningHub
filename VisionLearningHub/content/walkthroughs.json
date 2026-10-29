@@ -1,0 +1,472 @@
+{
+  "T01": {
+    "scene": "相机拍到工作台，后续裁剪和识别之前，先确认读入的图片、尺寸与颜色是否正确。",
+    "target": "读入图像，取得宽、高、通道数和左上角 BGR 像素；额外观察单个颜色通道。",
+    "boundary": "读图不会自动识别物体；一个颜色通道也不等于灰度亮度。",
+    "control": {
+      "name": "channel",
+      "label": "观察的 BGR 通道：0 蓝 / 1 绿 / 2 红",
+      "values": [
+        0,
+        1,
+        2
+      ],
+      "default": 1,
+      "experiment": "保持原图不变，逐个查看三个通道。绿色工作台在哪个通道更亮？"
+    },
+    "steps": [
+      {
+        "title": "解码图片，核对颜色",
+        "code": "image = cv2.imdecode(np.fromfile(params[\"image_path\"], dtype=np.uint8), cv2.IMREAD_COLOR)\nassert image is not None, \"图片读取失败\"",
+        "value": "image",
+        "why": "磁盘上是压缩文件，解码后才得到能索引的像素数组。",
+        "watch": "绿色工作台、白色纸片和红色圆点应各自保持颜色。",
+        "failure": "若 image 为 None，先查文件是否存在、内容是否为有效图片；红蓝互换时检查 BGR/RGB。",
+        "question": "为什么不能把图片文件的字节数当成像素个数？",
+        "answer": "PNG 是编码数据，解码后的数组才包含高×宽×通道个像素分量。",
+        "lines": [
+          "np.fromfile 读取原始文件字节，支持中文路径。",
+          "IMREAD_COLOR 得到三通道 BGR 数组。",
+          "assert 在失败处停止，防止后续 shape 报错掩盖原因。"
+        ],
+        "display": "image",
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "读尺寸与一个通道",
+        "code": "height, width, channels = image.shape\npixel = image[0, 0].tolist()\nplane = image[:, :, params[\"channel\"]]\ndetail = f\"宽={width}，高={height}，通道={channels}，左上角BGR={pixel}\"",
+        "value": "plane",
+        "why": "shape 说明数据结构；单通道图把一种颜色分量显示为亮暗，便于理解通道。",
+        "watch": "查看上方原图中的绿色背景，在 G 通道中通常比 B、R 通道亮。",
+        "failure": "shape 顺序是高、宽、通道；image[0,0] 返回 BGR，不是 RGB。",
+        "question": "切换到 G 通道会改变原始 image 的三个通道吗？",
+        "answer": "此处只读取视图，不修改值，所以原图不变；对视图赋值则可能影响原图。",
+        "lines": [
+          "image.shape 不加括号，是数组属性。",
+          "image[y,x] 先行后列，tolist 把像素转为普通列表。",
+          "两个冒号保留全部行列，最后一维选择一个通道。"
+        ],
+        "display": "image",
+        "id": "step2",
+        "before": "input"
+      }
+    ]
+  },
+  "T02": {
+    "scene": "只检测工作台某一块区域，减少干扰和计算量。",
+    "target": "按 (x,y,width,height) 裁出 ROI，理解局部坐标回到原图的方法。",
+    "boundary": "ROI 必须位于图像内；目标被裁掉后，后续算法无法恢复缺失部分。",
+    "control": {
+      "name": "shift",
+      "label": "ROI 向右移动的像素数",
+      "values": [
+        0,
+        40,
+        80
+      ],
+      "default": 0,
+      "experiment": "只改变横向偏移，观察裁剪宽高是否不变、内容如何移动。"
+    },
+    "steps": [
+      {
+        "title": "先在原图上圈出范围",
+        "code": "x, y, w, h = params[\"roi\"]\nmarked = image.copy()\ncv2.rectangle(marked, (x,y), (x+w-1,y+h-1), (0,0,255), 2)",
+        "value": "marked",
+        "why": "先确认坐标含义，避免裁出错误区域却继续调识别算法。",
+        "watch": "红框左上角是 (x,y)，框内像素数应是 w×h。",
+        "failure": "把宽高当作终点会框错；在原图上直接画框会污染真正输入。",
+        "question": "为什么右下角绘制坐标减 1？",
+        "answer": "切片不含终点，而绘制矩形含端点；最后一个有效像素位于 x+w-1、y+h-1。",
+        "lines": [
+          "解包四个参数，x/y 是位置，w/h 是长度。",
+          "copy 让标记仅出现在演示副本中。",
+          "绘图使用 (x,y)，与数组索引顺序不同。"
+        ],
+        "display": "image",
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "切片得到独立工作区",
+        "code": "roi = image[y:y+h, x:x+w].copy()\ndetail = f\"原图起点=({x},{y})；局部点(10,10)回原图=({x+10},{y+10})\"",
+        "value": "roi",
+        "why": "用数组切片裁图，再 copy 避免后续修改影响原图。",
+        "watch": "裁剪结果尺寸应是 h 行、w 列，不是红框整张原图。",
+        "failure": "若为空图，查范围；宽高颠倒时查 y/x 的顺序。",
+        "question": "局部点 (u,v) 回原图如何换算？",
+        "answer": "原图坐标为 (u+x,v+y)。坐标缩放等其他操作需另行考虑。",
+        "lines": [
+          "第一维 y:y+h 选行，第二维 x:x+w 选列。",
+          "左闭右开：包含起点，不包含终点。",
+          "copy 创建独立数组。"
+        ],
+        "display": "image",
+        "id": "step2",
+        "before": "input"
+      }
+    ]
+  },
+  "T03": {
+    "scene": "按明暗把目标与背景分开；下半幅灰度渐变用于观察阈值边界。",
+    "target": "生成单通道 uint8 掩膜：亮于阈值为白，其余为黑。",
+    "boundary": "背景与目标亮度接近、阴影或目标内黑字，都会让单一阈值难以完整分割。",
+    "control": {
+      "name": "threshold",
+      "label": "二值分界值",
+      "values": [
+        60,
+        100,
+        130,
+        210
+      ],
+      "default": 130,
+      "experiment": "逐渐提高阈值，观察渐变条的白色区域是否缩小，再看纸片内的黑字。"
+    },
+    "steps": [
+      {
+        "title": "彩色变成灰度亮度",
+        "code": "gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)",
+        "value": "gray",
+        "why": "阈值比较一个亮度数值，先把三个颜色分量转换为一个灰度值。",
+        "watch": "颜色消失，明暗和结构仍保留；红图案和绿色背景可能接近。",
+        "failure": "不能把 BGR2GRAY 用到已经单通道的图上；灰度不等于取 G 通道。",
+        "question": "不同颜色会不会得到相同灰度？",
+        "answer": "会。颜色到亮度丢失信息，所以灰度分割无法区分所有颜色。",
+        "lines": [
+          "image 是 BGR 输入。",
+          "COLOR_BGR2GRAY 指定颜色转换。",
+          "gray.shape 从 H×W×3 变为 H×W。"
+        ],
+        "display": "image",
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "逐像素比较阈值",
+        "code": "used, mask = cv2.threshold(gray, params[\"threshold\"], 255, cv2.THRESH_BINARY)\ndetail = f\"实际阈值={used}；白色像素={np.count_nonzero(mask)}\"",
+        "value": "mask",
+        "why": "用同一条规则给每个像素分配前景/背景标签。",
+        "watch": "白色表示亮度大于阈值。看背景是否混入，纸片是否出现黑孔。",
+        "failure": "掩膜全白时阈值可能太低；全黑可能太高，也要检查输入范围是否为 0~1。",
+        "question": "阈值为 100，像素 99、100、101 分别输出多少？",
+        "answer": "依次为 0、0、255。THRESH_BINARY 判断严格大于阈值。",
+        "lines": [
+          "100 这样的阈值使用灰度单位。",
+          "255 是被选中像素的输出值。",
+          "threshold 返回两个值；题目要求返回 mask，而非整个二元组。"
+        ],
+        "display": "image",
+        "id": "step2",
+        "before": "step1"
+      }
+    ]
+  },
+  "T04": {
+    "scene": "纸片有黑字和红色图案，用绿色桌面背景来分离完整纸片。",
+    "target": "先找绿色背景，再取反得到前景掩膜。",
+    "boundary": "前景也为绿色时会一起被去掉；反光、阴影和白平衡改变需要重新验证范围。",
+    "control": {
+      "name": "hue_high",
+      "label": "背景 H 上限（标准 8 位 HSV）",
+      "values": [
+        45,
+        60,
+        95,
+        120
+      ],
+      "default": 95,
+      "experiment": "先把 H 上限降到 45，再恢复到 95，观察背景是否仍被选中。"
+    },
+    "steps": [
+      {
+        "title": "转换 HSV，单独观察 H",
+        "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)\nhue = hsv[:, :, 0]",
+        "value": "hue",
+        "why": "H 主要描述色相，S 描述饱和度，V 描述明亮程度。这里单独显示 H 数值。",
+        "watch": "这是 H 的灰度显示，不是真实彩色照片；低饱和度白纸的 H 不可靠。",
+        "failure": "直接把 HSV 三通道按 BGR 展示会产生假颜色；H 的原值上限是 179。",
+        "question": "白纸与灰色物体能只靠 H 稳定区分吗？",
+        "answer": "通常不能。低饱和度时色相不可靠，需要结合 S、V 和场景。",
+        "lines": [
+          "转换得到 HSV 数组，尺寸仍为 H×W×3。",
+          "选第 0 通道作为观察值。",
+          "显示按 H 原值 0~179，不自动拉伸到 255。"
+        ],
+        "display": "image",
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "选出背景，检查选中范围",
+        "code": "background = cv2.inRange(hsv, np.array(params[\"lower\"], np.uint8), np.array(params[\"upper\"], np.uint8))",
+        "value": "background",
+        "why": "三个通道同时落入区间，才被判为绿色背景。",
+        "watch": "桌面应白、纸片应黑。现在白色代表背景。",
+        "failure": "下限高于上限会选不到；H 合理但 S/V 范围过窄也会漏背景。",
+        "question": "inRange 选中的是目标还是背景？",
+        "answer": "本题范围定义的是绿色桌面，因此选中背景；含义来自任务约定。",
+        "lines": [
+          "lower/upper 都含 H、S、V 三项。",
+          "inRange 包含范围边界。",
+          "输出只包含 0 和 255。"
+        ],
+        "display": "image",
+        "id": "step2",
+        "before": "step1"
+      },
+      {
+        "title": "取反，让前景为白",
+        "code": "foreground = cv2.bitwise_not(background)",
+        "value": "foreground",
+        "why": "统一后续轮廓算法所需的前景约定。",
+        "watch": "纸片、黑字和红点应作为同一前景区域，桌面为黑。",
+        "failure": "如果整张图变白，先回到背景掩膜检查，不要继续调轮廓。",
+        "question": "这里的取反能否用于任意灰度图得到二值分割？",
+        "answer": "不能。这里输入已经是 0/255 掩膜，取反才等于交换前景与背景。",
+        "lines": [
+          "按位取反：uint8 的 0 变 255，255 变 0。",
+          "返回前景掩膜，不返回 HSV 数组。"
+        ],
+        "display": "image",
+        "id": "step3",
+        "before": "step2"
+      }
+    ]
+  },
+  "T05": {
+    "scene": "分割掩膜含有孤立白点与细小黑孔，需要清理后再数碎片。",
+    "target": "依次开、闭运算，观察噪声、孔洞与边界的变化。",
+    "boundary": "真实的小目标可能与噪声一样小；不能仅凭平滑程度判断算法正确。",
+    "control": {
+      "name": "kernel",
+      "label": "方形核边长",
+      "values": [
+        1,
+        3,
+        7,
+        15
+      ],
+      "default": 3,
+      "experiment": "比较 1、3、15。1 基本不处理，较大的核会明显改变边界。"
+    },
+    "steps": [
+      {
+        "title": "开运算去除小白点",
+        "code": "k = params[\"kernel\"]\nkernel = np.ones((k,k), np.uint8)\nopened = cv2.morphologyEx(image, cv2.MORPH_OPEN, kernel)",
+        "value": "opened",
+        "why": "先腐蚀再膨胀，无法容纳结构元素的小白区域容易消失。",
+        "watch": "放大目标外孤立白点和目标角点，检查哪些被消除或磨圆。",
+        "failure": "核过大可能删掉真实细节；白点未消失时先看核尺寸而非盲目重复处理。",
+        "question": "1×1 核为何几乎没有变化？",
+        "answer": "每个邻域只有当前像素，腐蚀与膨胀都不改变它。",
+        "lines": [
+          "np.ones 创建全 1 的 uint8 方形核。",
+          "MORPH_OPEN 内部顺序是腐蚀→膨胀。",
+          "opened 是新结果，保留 image 方便比较。"
+        ],
+        "display": "image",
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "闭运算修补小黑孔",
+        "code": "closed = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)",
+        "value": "closed",
+        "why": "先膨胀再腐蚀，填补细小黑孔和缝隙。",
+        "watch": "对比上一步的小黑孔，同时检查相邻碎片是否粘连。",
+        "failure": "闭运算无法知道哪些缝隙是真实分隔；粘连时应减小核或换处理策略。",
+        "question": "这一步的输入为什么是 opened 而不是 image？",
+        "answer": "本题要求先开后闭，第二步应使用第一步的结果；对原图闭运算是另一条流程。",
+        "lines": [
+          "MORPH_CLOSE 内部顺序是膨胀→腐蚀。",
+          "使用 opened 串联处理。",
+          "输出仍为单通道 uint8 掩膜。"
+        ],
+        "display": "image",
+        "id": "step2",
+        "before": "step1"
+      }
+    ]
+  },
+  "T06": {
+    "scene": "已有碎片掩膜，需要把每块目标转成几何边界，排除左上角小噪点。",
+    "target": "提取外轮廓并按几何面积过滤；图上画线仅用于观察，题目返回轮廓列表。",
+    "boundary": "粘连目标通常只得到一个外轮廓，应先检查分割，不是无限调面积阈值。",
+    "control": {
+      "name": "min_area",
+      "label": "最小几何面积（像素²）",
+      "values": [
+        0,
+        80,
+        500,
+        6000
+      ],
+      "default": 80,
+      "experiment": "先允许所有轮廓，再去掉小噪点；过高时真实纸片也会消失。"
+    },
+    "steps": [
+      {
+        "title": "找出所有外边界",
+        "code": "contours, hierarchy = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\nall_edges = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)\ncv2.drawContours(all_edges, contours, -1, (0,0,255), 2)\ndetail = f\"外轮廓数量={len(contours)}；面积={[round(cv2.contourArea(c),1) for c in contours]}\"",
+        "value": "all_edges",
+        "why": "将像素区域边界转换成点序列，之后才能计算面积和中心。",
+        "watch": "每个外轮廓画成红线；左上角小点也可能是一条轮廓。",
+        "failure": "若有一条包围整张图的轮廓，检查前景背景是否反了。",
+        "question": "内部黑孔会被 RETR_EXTERNAL 单独返回吗？",
+        "answer": "不会。这里只返回最外层轮廓；要研究孔洞应选择其他检索模式。",
+        "lines": [
+          "findContours 的两个返回值分别是轮廓和层级。",
+          "CHAIN_APPROX_SIMPLE 压缩直线上的冗余点。",
+          "drawContours 的 -1 表示绘制全部轮廓；绘图不是题目返回值。"
+        ],
+        "display": "image",
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "按面积筛选，再看保留了谁",
+        "code": "kept = [c for c in contours if cv2.contourArea(c) >= params[\"min_area\"]]\nfiltered = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)\ncv2.drawContours(filtered, kept, -1, (0,0,255), 2)\ndetail = f\"保留={len(kept)}；剔除={len(contours)-len(kept)}\"",
+        "value": "filtered",
+        "why": "小噪声的面积通常比纸片小，筛选候选时用面积证据。",
+        "watch": "被剔除的小点仍在底图上，但不再有红色轮廓线。",
+        "failure": "不要用 len(contour) 当面积；边界点个数受压缩方式影响。",
+        "question": "轮廓面积为何不一定等于白色像素数量？",
+        "answer": "contourArea 计算边界多边形的几何面积，像素计数使用离散网格，两者定义不同。",
+        "lines": [
+          "列表推导逐条检查面积。",
+          ">= 保留等于下限的轮廓。",
+          "基础题返回 kept；此处 filtered 只是帮助观察的叠加图。"
+        ],
+        "display": "image",
+        "id": "step2",
+        "before": "step1"
+      }
+    ]
+  },
+  "V03": {
+    "scene": "灰度画面出现随机黑白点，想去噪并保留目标轮廓。",
+    "target": "使用中值滤波，并通过差异图定位被修改的像素。",
+    "boundary": "中值滤波不适合所有噪声；过大的窗口会损失细线、小孔和角点。",
+    "control": {
+      "name": "kernel",
+      "label": "中值窗口边长",
+      "values": [
+        3,
+        5,
+        9
+      ],
+      "default": 3,
+      "experiment": "比较窗口 3 和 9，先看噪点，再看图中的细斜线是否变细或消失。"
+    },
+    "steps": [
+      {
+        "title": "用邻域中位数替换像素",
+        "code": "filtered = cv2.medianBlur(image, params[\"kernel\"])",
+        "value": "filtered",
+        "why": "孤立极亮或极暗值通常不会成为邻域中间值，因而能被抑制。",
+        "watch": "观察孤立黑白点是否减少，矩形与圆的边缘是否还完整。",
+        "failure": "把中值当平均值会误解算法；窗口过大也会抹掉真实细节。",
+        "question": "邻域值 [10,10,11,12,255] 的中位数是多少？",
+        "answer": "排序后中间值是 11，极端值 255 不会像均值那样显著拉高输出。",
+        "lines": [
+          "kernel 是奇数边长，不是像素总数。",
+          "medianBlur 输出相同尺寸和类型。",
+          "本课程使用 uint8；更大核或其他类型的支持需查原生 API 限制。"
+        ],
+        "display": "image",
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "用差异图定位变化",
+        "code": "difference = cv2.absdiff(image, filtered)",
+        "value": "difference",
+        "why": "结果看起来干净还不够，要知道哪些真实细节也被改掉。",
+        "watch": "黑色表示没变；亮点可能是被去掉的噪声，亮线也可能是真实细节损失。",
+        "failure": "直接做 uint8 减法会发生下溢回绕；亮变化不一定全是改善。",
+        "question": "差异图越亮代表处理效果越好吗？",
+        "answer": "不代表。它只表示修改幅度，不知道被改的是噪声还是真实结构。",
+        "lines": [
+          "absdiff 计算绝对差，不产生 uint8 下溢回绕。",
+          "比较必须基于同一幅输入。",
+          "差异图是分析工具，基础题返回 filtered。"
+        ],
+        "display": "image",
+        "id": "step2",
+        "before": "input"
+      }
+    ]
+  },
+  "V04": {
+    "scene": "想知道边缘在哪里，以及亮度沿哪个方向变化。",
+    "target": "分别得到带符号的 gx、gy，再组合梯度幅值。",
+    "boundary": "边缘响应强不代表就是目标；梯度预览经过显示变换，不能当作原始数组交给后续计算。",
+    "control": {
+      "name": "ksize",
+      "label": "Sobel 核边长",
+      "values": [
+        3,
+        5
+      ],
+      "default": 3,
+      "experiment": "切换 3 与 5，比较原始数值范围；预览各自缩放，不能只凭亮度比较强弱。"
+    },
+    "steps": [
+      {
+        "title": "沿 x 方向求导，保留正负号",
+        "code": "gx = cv2.Sobel(image, cv2.CV_32F, 1, 0, ksize=params[\"ksize\"])",
+        "value": "gx",
+        "why": "x 方向导数对左右明暗变化敏感，常在竖直边界处响应明显。",
+        "watch": "本预览红色为正、蓝色为负、白色接近零。比较矩形左右边。",
+        "failure": "直接用 uint8 输出会丢失负梯度；不要把 x 导数误认为只检测水平线。",
+        "question": "暗到亮和亮到暗的响应符号一样吗？",
+        "answer": "相反。梯度符号保留了亮度变化方向。",
+        "lines": [
+          "CV_32F 保留浮点正负值。",
+          "1,0 分别是 x 与 y 的求导阶数。",
+          "ksize 控制滤波核大小。"
+        ],
+        "display": "signed",
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "沿 y 方向求导",
+        "code": "gy = cv2.Sobel(image, cv2.CV_32F, 0, 1, ksize=params[\"ksize\"])",
+        "value": "gy",
+        "why": "补充上下方向的变化，避免只看一个方向而漏掉边缘。",
+        "watch": "对比 gx：矩形上下边在 gy 中更明显；图像 y 轴向下。",
+        "failure": "交换求导阶数才会改变方向，改变量名不会改变运算。",
+        "question": "gy 应该用 gx 作为输入吗？",
+        "answer": "不应。本题 gx 与 gy 都从原灰度图独立计算，流程有并行分支。",
+        "lines": [
+          "输入仍是 image，而不是 gx。",
+          "0,1 表示只沿 y 求一阶导数。",
+          "两组梯度应保持相同尺寸。"
+        ],
+        "display": "signed",
+        "id": "step2",
+        "before": "input"
+      },
+      {
+        "title": "合成梯度幅值",
+        "code": "magnitude = cv2.magnitude(gx, gy)",
+        "value": "magnitude",
+        "why": "用 sqrt(gx²+gy²) 合并方向，得到整体变化强度。",
+        "watch": "矩形四边都应可见；幅值非负，符号信息不再保留。",
+        "failure": "不能把已归一化的预览图代替原始 gx/gy 来计算。",
+        "question": "梯度幅值能告诉你变化的正负方向吗？",
+        "answer": "不能，平方合成丢失了符号，需要 gx、gy 或 atan2 保留方向。",
+        "lines": [
+          "magnitude 要求两个输入的尺寸和浮点类型匹配。",
+          "运算使用原始浮点值。",
+          "最终题目返回 gx、gy、magnitude 三个数组。"
+        ],
+        "display": "magnitude",
+        "id": "step3",
+        "before": "step2"
+      }
+    ]
+  }
+}

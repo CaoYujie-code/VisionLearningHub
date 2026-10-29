@@ -184,7 +184,7 @@ class Hub {
       apiPath(args.path);let body=args.body;
       if(args.path==='/clear')this.ensureIdle();
       if(args.method==='POST'&&args.path==='/jobs')await this.saveFiles();
-      if(body?.file){if(!['/upload','/restore'].includes(args.path))throw new Error('不支持的上传');const bytes=Buffer.from(body.file.data,'base64');if(bytes.length>(args.path==='/restore'?128:12)*1024*1024)throw new Error('上传文件过大');const form=new FormData();form.append('file',new Blob([bytes],{type:body.file.type}),path.basename(body.file.name));body=form;}
+      if(body?.file){if(!['/upload','/restore'].includes(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/walkthrough\/import$/.test(args.path))throw new Error('不支持的上传');const bytes=Buffer.from(body.file.data,'base64');if(bytes.length>(args.path==='/restore'?128:12)*1024*1024)throw new Error('上传文件过大');const form=new FormData();form.append('file',new Blob([bytes],{type:body.file.type}),path.basename(body.file.name));body=form;}
       const result=await this.request(args.path,args.method,body);
       if(args.path==='/clear'&&(typeof body==='string'?JSON.parse(body):body)?.scope==='all')await this.context.workspaceState.update(this.stateKey(),undefined);
       if(args.path==='/bootstrap'&&this.navigation){const nav=this.navigation,panel=this.panel,version=this.navVersion;this.navigation=null;setTimeout(()=>{if(this.panel===panel&&this.navVersion===version)void panel?.webview.postMessage(nav);},150);}
@@ -192,9 +192,49 @@ class Hub {
       return Buffer.isBuffer(result)?{status:200,base64:result.toString('base64')}:{status:200,json:await this.images(result)};
     }
     if(action==='download'){
-      if(!['/backup','/export-code'].includes(args.path)&&!/^\/projects\/E\d{2}\/export$/.test(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/examples$/.test(args.path))throw new Error('不支持的导出');await this.saveFiles();
+      if(!['/backup','/export-code'].includes(args.path)&&!/^\/projects\/E\d{2}\/export$/.test(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/examples$/.test(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/walkthrough\/export\/\d{1,4}$/.test(args.path))throw new Error('不支持的导出');await this.saveFiles();
       const destination=await vscode.window.showSaveDialog({defaultUri:vscode.Uri.file(path.join(this.project,path.basename(args.name))),filters:{ZIP:['zip']}});
       if(!destination)throw new Error('已取消导出');const bytes=await this.request(args.path);await vscode.workspace.fs.writeFile(destination,bytes);return true;
+    }
+    if(['openWalkthrough','runWalkthrough','readWalkthrough'].includes(action)){
+      await this.ensure();const key=lessonKey(args.key,this.known);
+      if(!Number.isInteger(args.parameter)||args.parameter<0||args.parameter>9999)throw new Error('实验参数无效');
+      const route='/lesson/'+key+'/walkthrough';const pack=await this.request(route+'/files/'+args.parameter);
+      if(!/^[a-f0-9]{16}$/.test(pack.revision))throw new Error('课程版本无效');
+      const parent=path.join(this.root,'walkthrough-experiments');
+      const directory=path.join(parent,key+'-'+pack.revision+'-'+args.parameter);const rootReal=await fs.realpath(this.root);
+      for(const part of [parent,directory]){
+        try{if(!inside(rootReal,await fs.realpath(part)))throw new Error('实验目录超出学习工程');}
+        catch(error){if(error.code!=='ENOENT')throw error;await fs.mkdir(part);}
+      }
+      const names=['practice.py','reference.py','input.npy','input.png','params.json','context.json','README.md'];
+      for(const item of pack.files){
+        if(!names.includes(item.name))throw new Error('未知实验文件');
+        const file=path.join(directory,item.name);
+        try{await fs.writeFile(file,Buffer.from(item.base64,'base64'),{flag:'wx'});}catch(error){if(error.code!=='EEXIST')throw error;}
+        if(!inside(await fs.realpath(directory),await fs.realpath(file)))throw new Error('实验文件超出目录');
+      }
+      const file=path.join(directory,'practice.py');
+      if(action==='openWalkthrough'){
+        const document=await vscode.workspace.openTextDocument(vscode.Uri.file(file));await vscode.window.showTextDocument(document,{viewColumn:vscode.ViewColumn.One});return true;
+      }
+      if(['runWalkthrough','readWalkthrough'].includes(action)&&this.tasks.size)throw new Error('请等待终端任务结束，再运行或读取步骤结果。');
+      if(action==='readWalkthrough'){
+        const result=path.join(directory,'results.zip');let real;
+        try{real=await fs.realpath(result);}catch(error){if(error.code==='ENOENT')throw new Error('尚未生成 results.zip，请先运行分步代码，等待终端结束。');throw error;}
+        if(!inside(await fs.realpath(directory),real))throw new Error('结果文件超出实验目录');
+        if((await fs.stat(real)).size>12*1024*1024)throw new Error('结果包不能超过 12 MB');
+        const form=new FormData();form.append('file',new Blob([await fs.readFile(real)],{type:'application/zip'}),'results.zip');
+        return this.images(await this.request(route+'/import','POST',form));
+      }
+      await this.saveFiles();
+      // Keep the previous generated result separately: an early crash must not import it as this run.
+      const previous=path.join(directory,'results.zip');
+      try{const real=await fs.realpath(previous);if(!inside(await fs.realpath(directory),real))throw new Error('结果文件超出实验目录');await fs.rename(previous,path.join(directory,'results.previous-'+Date.now()+'.zip'));}
+      catch(error){if(error.code!=='ENOENT')throw error;}
+      const execution=new vscode.ProcessExecution(this.pythonExe,[file],{cwd:directory,env:{PYTHONUTF8:'1'}});
+      const task=new vscode.Task({type:'visionLearning',lesson:key},vscode.TaskScope.Workspace,'Vision steps '+key,'Vision',execution,[]);
+      const running=await vscode.tasks.executeTask(task);this.tasks.add(running);const ended=vscode.tasks.onDidEndTask(e=>{if(e.execution===running){this.tasks.delete(running);ended.dispose();}});return true;
     }
     if(action==='openFunctionExample'){
       await this.ensure();const key=lessonKey(args.key,this.known);

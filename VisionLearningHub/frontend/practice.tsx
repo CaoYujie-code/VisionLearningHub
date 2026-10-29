@@ -1,3 +1,5 @@
+import {Walkthrough,visualLessons} from './walkthrough';
+import './walkthrough.css';
 import {FunctionGuideView} from './function-guide';
 import {beforeLeave,useMemory} from './navigation';
 import {isIDE,ide} from './ide';
@@ -9,12 +11,14 @@ type Props={boot:Boot;lessonId:string;open:(id:string)=>void;back:()=>void;backL
 export function Practice({boot,lessonId,open,back,backLabel,job,anyBusy,setJob,notify,updatePassed,onZoom}:Props) {
  const lesson=boot.lessons.find(l=>l.id===lessonId)!;
  const [data,setData]=useState<DraftData|null>(null),[code,setCode]=useState(''),[note,setNote]=useState(''),[query,setQuery]=useMemory('practice.query','');
- const [status,setStatus]=useState('正在读取…'),[tab,setTab]=useMemory(lessonId+'.tab','任务'),[reference,setReference]=useState(''),[report,setReport]=useState<Report|null>(null),[submitting,setSubmitting]=useState(false);
+ const [status,setStatus]=useState('正在读取…'),[tab,setTabState]=useMemory(lessonId+'.tab','任务'),[reference,setReference]=useState(''),[report,setReport]=useState<Report|null>(null),[submitting,setSubmitting]=useState(false);
  const [error,setError]=useState('');
  const editor=useRef<HTMLTextAreaElement>(null),lines=useRef<HTMLDivElement>(null),latest=useRef({code:'',note:'',ready:false,revision:0}),savedRevision=useRef(0);
  const updateRef=useRef(updatePassed);updateRef.current=updatePassed;
  const alive=useRef(true);
- const functionPending=useRef<Promise<unknown>|null>(null);
+ const functionPending=useRef(new Map<string,Promise<unknown>>());
+ const trackLearningTask=(owner:string,task:Promise<unknown>|null)=>{if(task){functionPending.current.set(owner,task);void task.then(()=>{if(functionPending.current.get(owner)===task)functionPending.current.delete(owner);},()=>{});}};
+ const setTab=(value:string)=>{void Promise.all([...functionPending.current.values()]).then(()=>setTabState(value)).catch(e=>notify('学习记录尚未保存，请先重试：'+e.message));};
  const caret=useRef<{start:number;end:number}|null>(null);
  useLayoutEffect(()=>{if(caret.current&&editor.current){editor.current.setSelectionRange(caret.current.start,caret.current.end);caret.current=null;}},[code]);
  const persist=async()=>{
@@ -27,7 +31,7 @@ export function Practice({boot,lessonId,open,back,backLabel,job,anyBusy,setJob,n
  useEffect(()=>{alive.current=true;const warn=(e:BeforeUnloadEvent)=>{if(latest.current.revision!==savedRevision.current){e.preventDefault();}};window.addEventListener('beforeunload',warn);return()=>{alive.current=false;window.removeEventListener('beforeunload',warn);if(latest.current.ready&&latest.current.revision!==savedRevision.current)void persist().catch(()=>{});};},[lessonId]);
  useEffect(()=>{if(!data||latest.current.revision===savedRevision.current)return;const timer=setTimeout(()=>void persist().catch(()=>{}),500);return()=>clearTimeout(timer);},[code,note]);
  useEffect(()=>{if(job?.status==='done'&&job.result){setReport(job.result);api<DraftData>('/lesson/'+lessonId).then(d=>setData(prev=>prev?{...prev,history:d.history}:d)).catch(e=>notify(e.message));}},[job?.id,job?.status]);
- useEffect(()=>beforeLeave(async()=>{if(functionPending.current)await functionPending.current;if(latest.current.ready&&savedRevision.current!==latest.current.revision)await persist();await drain(lessonId);}),[lessonId]);
+ useEffect(()=>beforeLeave(async()=>{await Promise.all([...functionPending.current.values()]);if(latest.current.ready&&savedRevision.current!==latest.current.revision)await persist();await drain(lessonId);}),[lessonId]);
  const change=(value:string)=>{setCode(value);latest.current={...latest.current,code:value,revision:latest.current.revision+1};setStatus('未保存…');};
  const changeNote=(value:string)=>{setNote(value);latest.current={...latest.current,note:value,revision:latest.current.revision+1};setStatus('未保存…');};
  const run=async(verify:boolean)=>{setSubmitting(true);try{await persist();await drain(lessonId);const result=await send<{id:string}>('/jobs',{lesson:lessonId,code:latest.current.code,note:latest.current.note,verify});setReport(null);setJob({id:result.id,lesson:lessonId,status:'queued'});}catch(e){notify((e as Error).message);}finally{setSubmitting(false);}};
@@ -46,9 +50,10 @@ export function Practice({boot,lessonId,open,back,backLabel,job,anyBusy,setJob,n
  const busy=anyBusy||submitting;
  const visible=boot.lessons.filter(l=>!l.id.startsWith('E')).filter(l=>(l.id+l.title).toLowerCase().includes(query.toLowerCase()));
  return <><button className="text-button back" onClick={back}>← {backLabel}</button><div className="title-row"><div><div className="eyebrow">LEARN BY WRITING</div><h1>练习工作台</h1></div><Tag tone="blue">手敲实现 · 可重复验收</Tag></div><div className="practice-layout"><aside className="lesson-nav panel"><label className="search"><Icon name="search" size={16}/><input placeholder="搜索练习" aria-label="搜索练习" value={query} onChange={e=>setQuery(e.target.value)}/></label><div className="lesson-scroll">{visible.map(l=><button key={l.id} onClick={()=>open(l.id)} className={l.id===lessonId?'selected':''}><span>{l.id}</span><b>{l.title}</b>{boot.passed[l.id]&&<Icon name="check" size={15}/>}</button>)}</div><p>仅“多样例验收”通过后计入进度。</p></aside><div className="practice-main">{error?<Empty title="读取失败" body={error}/>:!data?<Empty title="正在准备练习" body="载入代码与输入样例…"/>:<>
-  <section className="panel task-description"><div className="title-row"><h2><span className="mono">{lessonId}</span> {lesson.title}</h2><Tag tone={boot.passed[lessonId]?'green':''}>{boot.passed[lessonId]?'当前版本已验收':'待验收'}</Tag></div><p>{lesson.goal}</p><div className="tabs">{['任务','函数与场景','知识与提示','笔记','历史'].map(t=><button key={t} onClick={()=>setTab(t)} className={tab===t?'selected':''}>{t}</button>)}</div>
-   {tab==='任务'&&<><div className="contract"><b>输入 / 输出约定</b><p>{lesson.contract}</p><button className="secondary" onClick={()=>setTab('函数与场景')}>先学本题函数怎么用</button></div>{lesson.prerequisites.length>0&&<div className="dependency-row"><span>前置练习</span>{lesson.prerequisites.map(id=><button key={id} onClick={()=>open(id)}>{id} {boot.passed[id]?'✓':'待验收'}</button>)}<small>组合题使用你保存的代码。</small></div>}</>}
-   {tab==='函数与场景'&&<FunctionGuideView lesson={lesson} boot={boot} open={open} notes={()=>setTab('笔记')} notify={notify} onPending={task=>{functionPending.current=task;}}/>}
+  <section className="panel task-description"><div className="title-row"><h2><span className="mono">{lessonId}</span> {lesson.title}</h2><Tag tone={boot.passed[lessonId]?'green':''}>{boot.passed[lessonId]?'当前版本已验收':'待验收'}</Tag></div><p>{lesson.goal}</p><div className="tabs">{['任务','逐步图解','函数与场景','知识与提示','笔记','历史'].map(t=><button key={t} onClick={()=>setTab(t)} className={tab===t?'selected':''}>{t}</button>)}</div>
+   {tab==='任务'&&<><div className="contract">{visualLessons.includes(lessonId)&&<button className="primary" onClick={()=>setTab('逐步图解')}>先逐步看图理解本题</button>}<b>输入 / 输出约定</b><p>{lesson.contract}</p><button className="secondary" onClick={()=>setTab('函数与场景')}>先学本题函数怎么用</button></div>{lesson.prerequisites.length>0&&<div className="dependency-row"><span>前置练习</span>{lesson.prerequisites.map(id=><button key={id} onClick={()=>open(id)}>{id} {boot.passed[id]?'✓':'待验收'}</button>)}<small>组合题使用你保存的代码。</small></div>}</>}
+   {tab==='逐步图解'&&<Walkthrough key={lessonId} lessonId={lessonId} open={open} independent={()=>setTab('任务')} notify={notify} onPending={task=>trackLearningTask('walkthrough',task)}/>}
+   {tab==='函数与场景'&&<FunctionGuideView lesson={lesson} boot={boot} open={open} notes={()=>setTab('笔记')} notify={notify} onPending={task=>trackLearningTask('function',task)}/>}
    {tab==='知识与提示'&&<div className="knowledge"><p>{lesson.knowledge}</p>{lesson.hints.map((h,i)=><details key={h}><summary>提示 {i+1}</summary><p>{h}</p></details>)}<button className="text-button" onClick={async()=>{try{setReference((await api<{code:string}>('/lesson/'+lessonId+'/reference')).code);}catch(e){notify((e as Error).message);}}}>查看参考思路 <Icon name="eye" size={16}/></button><p className="small muted">建议先独立尝试。参考实现只供对照，不会自动填入编辑器。</p></div>}
    {tab==='笔记'&&<textarea aria-label="练习笔记" className="notes" maxLength={32000} value={note} onChange={e=>changeNote(e.target.value)} placeholder="记录这次实现的思路、失败原因与下一次的改进…"/>}
    {tab==='历史'&&<div className="history-list">{data.history.length?data.history.map((h,i)=><button key={i} onClick={()=>setReport(h.report)}><span>{when(h.stamp)}</span><span>{h.verified?'多样例验收':'单次运行'}</span><Tag tone={h.passed?'green':'orange'}>{h.passed?'通过':'未通过'}</Tag><Icon name="chevron" size={15}/></button>):<p className="muted">完成第一次运行后，这里会保存结果。</p>}</div>}

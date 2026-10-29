@@ -159,6 +159,9 @@ class Store:
                 if key=='hub.bookmarks':
                     if not isinstance(setting,list) or any(not isinstance(v,str) or len(v)>8 for v in setting):
                         raise ValueError("收藏格式无效")
+                elif key=='hub.walkthrough':
+                    from .walkthrough import validate_progress
+                    validate_progress(setting)
                 elif key=='hub.function-review':
                     from .function_review import validate_backup
                     validate_backup(setting)

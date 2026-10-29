@@ -103,6 +103,23 @@ exports.run=async()=>{
   assert.equal(answered.json.records.threshold.correct,true);assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
   await hub.stop();await hub.ensure();assert.equal((await hub.request('/function-review')).records.threshold.correct,true);
   passed.push('native understanding checks persist across service restart separately from grades');
+  const visual=await hub.message('api',{path:'/lesson/T03/walkthrough',method:'GET'});assert.equal(visual.json.demo.steps.length,2);
+  assert.ok(visual.json.demo.results.step2.output);passed.push('packaged visual demo exposes real step images through the native bridge');
+  await hub.message('openWalkthrough',{key:'T03',parameter:130});
+  const visualFile=vscode.window.activeTextEditor.document.fileName;assert.equal(path.basename(visualFile),'practice.py');
+  await fs.appendFile(visualFile,'\n# keep my visual experiment\n');await hub.message('openWalkthrough',{key:'T03',parameter:130});
+  assert.ok((await fs.readFile(visualFile,'utf8')).includes('keep my visual experiment'));assert.equal(await fs.readFile(hub.file('T03'),'utf8'),beforeExample);
+  await assert.rejects(hub.message('openWalkthrough',{key:'T03',parameter:999}),/参数/);passed.push('visual scaffold preserves learner edits and leaves graded source untouched');
+  await hub.message('runWalkthrough',{key:'T03',parameter:130});
+  const visualZip=path.join(path.dirname(visualFile),'results.zip');for(let i=0;i<100;i++){try{await fs.stat(visualZip);if(hub.tasks.size===0)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+  const emptyVisual=await hub.message('readWalkthrough',{key:'T03',parameter:130});assert.deepEqual(emptyVisual.results,{});passed.push('native task runs the learner scaffold and empty runs show no invented results');
+  const scaffold=await fs.readFile(visualFile,'utf8');await fs.writeFile(visualFile,'raise RuntimeError("before result archive")\n');await hub.message('runWalkthrough',{key:'T03',parameter:130});
+  for(let i=0;i<100&&hub.tasks.size;i++)await new Promise(r=>setTimeout(r,100));
+  await assert.rejects(hub.message('readWalkthrough',{key:'T03',parameter:130}),/尚未生成/);await fs.writeFile(visualFile,scaffold);passed.push('early native execution failure cannot import a previous results archive as current');
+  await new Promise((resolve,reject)=>require('node:child_process').execFile(hub.pythonExe,[path.join(path.dirname(visualFile),'reference.py')],{env:{...process.env,PYTHONUTF8:'1'}},(error)=>error?reject(error):resolve()));
+  const visualOwn=await hub.message('readWalkthrough',{key:'T03',parameter:130});assert.equal(Object.keys(visualOwn.results).length,2);assert.ok(visualOwn.results.step2.output);assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
+  const visualState={...visual.json.progress,step:1,notes:{step2:'host visual note'},done:[0]};await hub.message('api',{path:'/lesson/T03/walkthrough/progress',method:'POST',body:visualState});
+  await hub.stop();await hub.ensure();assert.equal((await hub.request('/lesson/T03/walkthrough')).progress.notes.step2,'host visual note');passed.push('native result imports and step progress survive service restart without granting grades');
   const featureRef=JSON.parse((await hub.request('/lesson/E07/reference')).code);
   const featureRoot=path.join(hub.root,'projects','E07');for(const [name,content] of Object.entries(featureRef))await fs.writeFile(path.join(featureRoot,name),content);
   const featureJob=await hub.request('/jobs','POST',{lesson:'E07',code:JSON.stringify(featureRef),note:'',verify:false,project_block:'matches',block_source:'standard'});

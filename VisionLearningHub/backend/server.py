@@ -111,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.8.1', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.9.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -255,6 +255,65 @@ def save_draft(key: str, body: Draft):
     with LOCK, database() as store:
         store.save(key, store.draft(key)[0] if WORKSPACE else body.code, body.note)
         return {'saved': True, 'passed': progress(store)}
+
+
+
+# The visual course runs shipped demonstration code only. Uploaded results are inert arrays.
+@app.get('/api/lesson/{key}/walkthrough')
+def walkthrough(key: str):
+    from learning import walkthrough as visual
+    try:
+        with LOCK, database() as store:
+            state=visual.state(store,key)
+            return public(dict(demo=visual.demonstration(ROOT,key,state['parameter']),progress=state,own=visual.imported(ROOT,key)))
+    except ValueError as error:raise HTTPException(400,str(error)) from error
+
+
+class WalkthroughParameter(BaseModel):
+    parameter: int = Field(strict=True)
+
+
+@app.post('/api/lesson/{key}/walkthrough/demo')
+def walkthrough_demo(key: str, body: WalkthroughParameter):
+    from learning import walkthrough as visual
+    try:
+        with LOCK:return public(visual.demonstration(ROOT,key,body.parameter))
+    except ValueError as error:raise HTTPException(400,str(error)) from error
+
+
+@app.post('/api/lesson/{key}/walkthrough/progress')
+def walkthrough_progress(key: str, body: dict):
+    from learning import walkthrough as visual
+    try:
+        with LOCK, database() as store:return visual.save_state(store,key,body)
+    except ValueError as error:raise HTTPException(400,str(error)) from error
+
+
+@app.get('/api/lesson/{key}/walkthrough/files/{value}')
+def walkthrough_files(key: str, value: int):
+    from learning import walkthrough as visual
+    try:
+        with LOCK:return dict(revision=visual.revision(key),files=visual.files_json(ROOT,key,value))
+    except ValueError as error:raise HTTPException(400,str(error)) from error
+
+
+@app.get('/api/lesson/{key}/walkthrough/export/{value}')
+def walkthrough_export(key: str, value: int):
+    from learning import walkthrough as visual
+    from fastapi.responses import Response
+    try:
+        with LOCK:raw=visual.archive_bundle(ROOT,key,value)
+        return Response(raw,media_type='application/zip',headers={'Content-Disposition':f'attachment; filename="{key}-steps-{value}.zip"'})
+    except ValueError as error:raise HTTPException(400,str(error)) from error
+
+
+@app.post('/api/lesson/{key}/walkthrough/import')
+def walkthrough_import(key: str, file: UploadFile = File(...)):
+    from learning import walkthrough as visual
+    try:
+        raw=file.file.read(12*1024*1024+1)
+        with LOCK:return public(visual.import_results(ROOT,key,raw))
+    except (ValueError,cv2.error) as error:raise HTTPException(400,str(error)) from error
 
 
 @app.get('/api/function-review')
