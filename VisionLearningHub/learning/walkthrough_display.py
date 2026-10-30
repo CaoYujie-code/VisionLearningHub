@@ -9,7 +9,8 @@ SPATIAL_MODES={'image','signed','magnitude','heatmap','labels'}
 def validate_shape(shape,dtype,mode):
     if dtype.kind not in 'uif' or dtype.hasobject or dtype.itemsize>8:
         raise ValueError('步骤结果需要标准数值类型，不支持对象或复数')
-    if not shape or any(type(n) is not int or n<=0 or n>2000 for n in shape):
+    empty_table=mode=='matrix' and len(shape)==2 and shape[0]==0 and type(shape[1]) is int and 1<=shape[1]<=8
+    if not empty_table and (not shape or any(type(n) is not int or n<=0 or n>2000 for n in shape)):
         raise ValueError('步骤数组维度为空或超限')
     if mode in ('histogram','curve'):
         if tuple(shape)!=(256,):raise ValueError('直方图 / 查找表必须是长度为 256 的一维数组')
@@ -27,6 +28,9 @@ def data_preview(value,mode):
     if mode=='matrix':
         rows,cols=value.shape
         canvas=np.full((max(130,50+rows*42),max(260,70+cols*122),3),250,np.uint8)
+        if rows==0:
+            cv2.putText(canvas,'EMPTY / no rows',(15,70),cv2.FONT_HERSHEY_SIMPLEX,.6,(70,80,90),1)
+            return canvas,'空结果：0 行，没有满足条件的项；不是全零数组，也没有最小值或最大值。'
         for r in range(rows):
             cv2.putText(canvas,f'r{r}',(6,65+r*42),cv2.FONT_HERSHEY_SIMPLEX,.45,(70,80,90),1)
             for c in range(cols):

@@ -1453,5 +1453,608 @@
       }
     ],
     "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "P01": {
+    "scene": "检测到一批轮廓后，先用面积排除小噪点。这里把视觉问题缩小成可手算的列表筛选。",
+    "target": "得到满足面积下限的原始索引，理解 enumerate、条件判断与空结果。",
+    "boundary": "只按面积筛选不能判断物体类别；真实轮廓面积由 cv2.contourArea 得到。",
+    "control": {
+      "name": "min_area",
+      "label": "最小面积（包含等号）",
+      "values": [
+        0,
+        80,
+        150
+      ],
+      "default": 80,
+      "experiment": "面积固定为 20、50、79、80、81、120。预测 80 是否保留，再观察阈值 150 时没有目标的情况。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "把索引与面积对应起来",
+        "code": "areas = params[\"areas\"]\nindexed = np.column_stack([np.arange(len(areas)), areas]).astype(np.int32)",
+        "value": "indexed",
+        "display": "matrix",
+        "why": "先明确输入是面积列表，输出要保留原列表的位置。",
+        "watch": "第 0 列是从 0 开始的索引，第 1 列是面积；索引 3 对应面积 80。",
+        "failure": "如果把面积当成索引，后续用 contours[index] 会越界或取错对象。",
+        "question": "第 4 行（索引 3）代表哪个候选？",
+        "answer": "代表输入列表中的第 4 个候选，面积为 80。",
+        "lines": [
+          "areas 直接读取 JSON 中的普通列表。",
+          "np.arange 生成 0 到长度减 1；column_stack 将两列并排显示。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "逐个检查边界条件",
+        "code": "decisions = []\nfor index, area in enumerate(areas):\n    decisions.append([index, int(area >= params[\"min_area\"])])\nchecks = np.asarray(decisions, dtype=np.int32)",
+        "value": "checks",
+        "display": "matrix",
+        "why": "把每个条件判断显式显示，避免把 > 和 >= 混淆。",
+        "watch": "第 1 列：1 表示保留，0 表示过滤；阈值 80 时应出现 0、0、0、1、1、1。",
+        "failure": "若面积恰好等于阈值却被过滤，检查是否误用了 >。",
+        "question": "阈值为 0 时需要特殊分支吗？",
+        "answer": "不需要。每个面积都大于等于 0，普通循环即可保留全部。",
+        "lines": [
+          "enumerate 同时给出索引和面积。",
+          ">= 包含等于阈值的情况；int 将布尔条件转成可观察的 0/1。"
+        ],
+        "before": "step1"
+      },
+      {
+        "id": "step3",
+        "title": "构造最终索引列表",
+        "code": "kept = []\nfor index, area in enumerate(areas):\n    if area >= params[\"min_area\"]:\n        kept.append(index)\nselected = np.asarray(kept, dtype=np.int32).reshape(-1, 1)",
+        "value": "selected",
+        "display": "matrix",
+        "why": "筛选结果随后用于提取轮廓、框或其他属性，因此保存索引而不是面积。",
+        "watch": "阈值 80 输出 3、4、5；阈值 150 输出 0 行 × 1 列的空表，不是 [0]。",
+        "failure": "不要为凑出一行而填入索引 0；没有候选是合法结果。",
+        "question": "为什么要写 reshape(-1, 1)？",
+        "answer": "教学表格需要二维数组；-1 根据元素数推导行数，空列表也能得到 (0, 1)。",
+        "lines": [
+          "先创建空列表，每次条件满足只追加原索引。",
+          "转换为 int32 后整理成一列，仅改变显示结构，不改变筛选含义。"
+        ],
+        "before": "step2",
+        "before_label": "对照：筛选判断（列表从原始面积构造）"
+      }
+    ],
+    "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
+  },
+  "P02": {
+    "scene": "检测一块区域是否过亮：先裁出 ROI，再统计灰度与亮点数量。",
+    "target": "理解 NumPy 切片、逐元素比较、mean 和 count_nonzero。",
+    "boundary": "这是局部亮度统计，不是目标识别；彩色图需要先明确灰度转换方式。",
+    "control": {
+      "name": "threshold",
+      "label": "亮像素阈值（严格大于）",
+      "values": [
+        64,
+        128,
+        192
+      ],
+      "default": 128,
+      "experiment": "同一 ROI 下，提高阈值只会让亮像素数量减少或不变，平均灰度不会改变。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "裁出要统计的区域",
+        "code": "x, y, width, height = params[\"roi\"]\nroi = image[y:y + height, x:x + width].copy()",
+        "value": "roi",
+        "display": "image",
+        "why": "排除无关背景，只统计指定位置。",
+        "watch": "数组顺序为 [行 y, 列 x]；右端不包含，所以 shape 应为 height × width。",
+        "failure": "裁剪结果为空或位置不对时，检查是否把 x 与 y 对调。",
+        "question": "copy 在这里有什么作用？",
+        "answer": "创建独立数据，后续改 ROI 不会意外修改原图。",
+        "lines": [
+          "解包 ROI 的 x、y、宽、高。",
+          "先按行裁剪，再按列裁剪；右端不包含。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "把亮度条件变成可见掩膜",
+        "code": "bright = roi > params[\"threshold\"]\nbright_mask = bright.astype(np.uint8) * 255",
+        "value": "bright_mask",
+        "display": "image",
+        "why": "布尔数组把每个像素是否满足条件记录下来；黑白图方便核对位置。",
+        "watch": "白色表示严格大于阈值；等于阈值为黑色。",
+        "failure": "直接显示 True/False 可能看起来近乎全黑；显示用 255 不参与条件判定。",
+        "question": "阈值变大后白色区域能增加吗？",
+        "answer": "输入不变时不能；更严格的条件只能保留原白色区域的一部分。",
+        "lines": [
+          "> 逐像素比较，不是对整张数组做一次判断。",
+          "显示时转换为 uint8 并把真值映射成 255。"
+        ],
+        "before": "step1"
+      },
+      {
+        "id": "step3",
+        "title": "汇总均值与数量",
+        "code": "summary = np.array([[float(roi.mean()), int(np.count_nonzero(bright)), roi.shape[0], roi.shape[1]]], dtype=np.float64)",
+        "value": "summary",
+        "display": "matrix",
+        "why": "把图像观察转换成可以传给后续程序的数值。",
+        "watch": "四列依次为平均灰度、亮像素数量、高、宽；数量不能超过高 × 宽。",
+        "failure": "不要对 0/255 掩膜求和当数量，否则结果会大 255 倍。",
+        "question": "mean 与 count_nonzero 回答的问题有什么不同？",
+        "answer": "mean 表示整体平均亮度；count_nonzero 表示满足指定阈值条件的像素个数。",
+        "lines": [
+          "mean 对原始 ROI 求平均，count_nonzero 对布尔条件计数。",
+          "表格统一为 float64 方便混合显示；计数本身仍是整数含义。"
+        ],
+        "before": "step2",
+        "before_label": "对照：亮点掩膜（均值来自 ROI，计数来自布尔条件）"
+      }
+    ],
+    "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
+  },
+  "T07": {
+    "scene": "从拼图轮廓提取中心与角点，供姿态分析和几何匹配使用。",
+    "target": "看清原始轮廓、矩中心、折线近似之间的关系。",
+    "boundary": "中心是面积重心；凹形重心可能在轮廓外。多边形近似不能自动保证固定顶点数。",
+    "control": {
+      "name": "epsilon_milli",
+      "label": "近似误差 / 周长（千分比）",
+      "values": [
+        5,
+        18,
+        80
+      ],
+      "default": 18,
+      "experiment": "epsilon = 参数 / 1000 × 周长。逐渐增大，观察角点丢失；中心来自原轮廓，不随近似参数变化。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "查看原始轮廓",
+        "code": "contours = [np.asarray(c, dtype=np.int32) for c in params[\"contours\"]]\noutlined = image.copy()\ncv2.drawContours(outlined, contours, -1, (0, 0, 255), 2)",
+        "value": "outlined",
+        "display": "image",
+        "why": "先确认输入轮廓确实包围了目标，后续几何才有意义。",
+        "watch": "红线是原始轮廓边界；细小锯齿会增加点数。",
+        "failure": "若背景外框也被提取，先回到二值化和轮廓检索步骤检查。",
+        "question": "drawContours 的 -1 是什么意思？",
+        "answer": "画出列表中的所有轮廓；其他非负索引只画指定轮廓。",
+        "lines": [
+          "JSON 列表恢复为 OpenCV 所需的整数点数组。",
+          "复制图像后叠加轮廓，不修改用于后续计算的原轮廓。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "用面积矩计算中心",
+        "code": "centers = []\nfor contour in contours:\n    moments = cv2.moments(contour)\n    if moments[\"m00\"] != 0:\n        centers.append([moments[\"m10\"] / moments[\"m00\"], moments[\"m01\"] / moments[\"m00\"], cv2.contourArea(contour)])\ncenter_table = np.asarray(centers, dtype=np.float64).reshape(-1, 3)",
+        "value": "center_table",
+        "display": "matrix",
+        "why": "面积矩考虑整个区域，比简单平均边界点更适合求面积重心。",
+        "watch": "三列依次为中心 x、中心 y、面积；浮点中心不要提前取整。",
+        "failure": "m00 为 0 时不能除法；细线、点等退化轮廓应单独处理。",
+        "question": "为什么不用 contour.mean(axis=0)？",
+        "answer": "边界点分布会受采样方式影响，边界点均值不一定等于区域面积重心。",
+        "lines": [
+          "moments 返回面积矩；m10/m00 和 m01/m00 分别给出 x、y。",
+          "先判断零面积，再保存浮点坐标与面积。"
+        ],
+        "before": "step1",
+        "before_label": "对照：原始轮廓叠加（计算使用轮廓坐标）"
+      },
+      {
+        "id": "step3",
+        "title": "近似顶点并标出中心",
+        "code": "annotated = outlined.copy()\nfor contour in contours:\n    epsilon = params[\"epsilon_milli\"] / 1000 * cv2.arcLength(contour, True)\n    polygon = cv2.approxPolyDP(contour, epsilon, True)\n    for point in polygon.reshape(-1, 2):\n        cv2.circle(annotated, tuple(point), 5, (0, 220, 255), -1)\nfor cx, cy, area in centers:\n    cv2.drawMarker(annotated, (round(cx), round(cy)), (255, 0, 0), cv2.MARKER_CROSS, 18, 2)",
+        "value": "annotated",
+        "display": "image",
+        "why": "用较少顶点表达形状，减少后续匹配的复杂度。",
+        "watch": "黄色圆点是近似角点，蓝色十字是原轮廓中心；增大误差可能删掉重要角点。",
+        "failure": "角点太多先增大 epsilon；太少则减小，但先确认原轮廓没有缺边。",
+        "question": "为什么用周长比例，而不是固定 5 个像素？",
+        "answer": "周长比例会随目标尺寸缩放，通常比固定像素更适合不同大小的目标。",
+        "lines": [
+          "arcLength 的 True 表示闭合轮廓；epsilon 是允许的最大近似偏差。",
+          "approxPolyDP 返回近似多边形；reshape 便于逐个画点。",
+          "中心仅在绘图时 round，原始浮点数保留。"
+        ],
+        "before": "step1"
+      }
+    ],
+    "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
+  },
+  "T08": {
+    "scene": "把局部拼图顶点旋转并平移到画布，理解位姿如何作用于每一个点。",
+    "target": "形成旋转矩阵 → 旋转后坐标 → 平移后轮廓的完整链条。",
+    "boundary": "本例绕原点旋转；若绕目标自身中心旋转，需要先减中心，旋转后再加回。图像 y 轴向下。",
+    "control": {
+      "name": "angle",
+      "label": "旋转角度（度）",
+      "values": [
+        0,
+        90,
+        180
+      ],
+      "default": 90,
+      "experiment": "固定同一组点和位移；比较 0、90、180 度。图像坐标下正 90 度在屏幕上呈顺时针。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "把角度转换为旋转矩阵",
+        "code": "points = np.asarray(params[\"points\"], dtype=np.float64)\nradians = np.deg2rad(params[\"angle\"])\nrotation = np.array([[np.cos(radians), -np.sin(radians)], [np.sin(radians), np.cos(radians)]])",
+        "value": "rotation",
+        "display": "matrix",
+        "why": "三角函数接收弧度，矩阵表达对所有点一致的旋转规则。",
+        "watch": "90 度时矩阵近似 [[0,-1],[1,0]]；约 6e-17 的数值可视为浮点误差。",
+        "failure": "若直接把 90 传给 np.sin，会得到 90 弧度的结果。",
+        "question": "0 度的矩阵应该是什么？",
+        "answer": "单位矩阵 [[1,0],[0,1]]，点的位置不变。",
+        "lines": [
+          "deg2rad 将度数转换成弧度。",
+          "cos、sin 按标准二维旋转矩阵的位置排列。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "旋转每个顶点",
+        "code": "rotated = points @ rotation.T",
+        "value": "rotated",
+        "display": "matrix",
+        "why": "点按 N×2 的行形式存储，需要右乘旋转矩阵的转置。",
+        "watch": "第 0 列为 x，第 1 列为 y；90 度时每个 (x,y) 变成 (-y,x)。",
+        "failure": "若写 points @ rotation，旋转方向会反过来。",
+        "question": "旋转后出现负坐标是不是错误？",
+        "answer": "不是。绕原点旋转可能进入其他象限，之后平移可以移回画布。",
+        "lines": [
+          "@ 是矩阵乘法，不是逐元素相乘。",
+          "rotation.T 将列向量公式转换为行向量写法。"
+        ],
+        "before": "step1"
+      },
+      {
+        "id": "step3",
+        "title": "平移并叠加结果",
+        "code": "transformed = rotated + np.asarray(params[\"translation\"], dtype=np.float64)\nplaced = image.copy()\ncv2.polylines(placed, [np.rint(points).astype(np.int32)], True, (160, 160, 160), 2)\ncv2.polylines(placed, [np.rint(transformed).astype(np.int32)], True, (0, 150, 0), 2)\nfor i, point in enumerate(transformed):\n    cv2.putText(placed, str(i), tuple(np.rint(point).astype(int)), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 180), 1)",
+        "value": "placed",
+        "display": "image",
+        "why": "平移给全部点加上同一个向量，把局部坐标放到目标位置。",
+        "watch": "灰线为原始点，绿线为变换结果，数字保持原顶点索引。",
+        "failure": "先平移再旋转会让位移向量也被旋转，结果通常不同。",
+        "question": "平移会改变边长吗？",
+        "answer": "不会；刚体旋转和平移都保持两点之间的距离。",
+        "lines": [
+          "NumPy 广播把同一个二维位移加到每一行。",
+          "只在绘图时取整转换为 int32，几何计算仍用浮点。",
+          "索引标注帮助跟踪每一个原始顶点。"
+        ],
+        "before": "input"
+      }
+    ],
+    "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
+  },
+  "T09": {
+    "scene": "判断两块拼图是否覆盖目标区域，且没有相互压住。",
+    "target": "得到逐像素覆盖次数、重叠位置、覆盖率和重叠率。",
+    "boundary": "本例按像素栅格计算；真实物理面积受分辨率影响。覆盖率不能单独证明布局有效。",
+    "control": {
+      "name": "overlap",
+      "label": "第二块向左移动的像素数",
+      "values": [
+        0,
+        30,
+        80
+      ],
+      "default": 0,
+      "experiment": "两块最初刚好拼合。第二块左移会同时产生中间重叠和右侧缺口。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "累加每块占据的位置",
+        "code": "counts = np.zeros(image.shape[:2], dtype=np.int32)\nfor polygon in params[\"layout\"]:\n    tile = np.zeros(image.shape[:2], dtype=np.uint8)\n    cv2.fillPoly(tile, [np.asarray(polygon, dtype=np.int32)], 1)\n    counts += tile",
+        "value": "counts",
+        "display": "heatmap",
+        "why": "用 0、1、2 表示无人覆盖、覆盖一次、覆盖两次。",
+        "watch": "热图保存原始次数；颜色只是显示。拼合正确时目标区全部为 1。",
+        "failure": "若直接在同一 mask 上反复 fillPoly，后画的 1 会覆盖前面的 1，无法统计重叠。",
+        "question": "为什么每块先画到单独的 tile？",
+        "answer": "独立二值图相加才能记录同一像素被几块覆盖。",
+        "lines": [
+          "counts 使用 int32 避免大量累加时 uint8 回绕。",
+          "每块绘制到 0/1 掩膜后加入计数图。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "定位重叠区域",
+        "code": "overlap_mask = (counts > 1).astype(np.uint8) * 255",
+        "value": "overlap_mask",
+        "display": "image",
+        "why": "将多次覆盖的像素挑出来，比只看总面积更容易排查。",
+        "watch": "白色竖条是两块相互覆盖的位置；参数 0 时应全黑。",
+        "failure": "counts > 0 表示所有被覆盖区域，不是重叠。",
+        "question": "重叠图全黑是否说明完全拼好了？",
+        "answer": "不一定。还可能有空隙，因此必须继续测覆盖率。",
+        "lines": [
+          "> 1 表示至少两块覆盖。",
+          "乘 255 仅用于黑白显示。"
+        ],
+        "before": "step1"
+      },
+      {
+        "id": "step3",
+        "title": "分别统计覆盖与重叠",
+        "code": "x, y, width, height = params[\"target\"]\ninside = counts[y:y + height, x:x + width]\ncoverage = np.count_nonzero(inside > 0) / inside.size\noverlap_ratio = np.count_nonzero(inside > 1) / inside.size\nquality = np.array([[coverage, overlap_ratio]], dtype=np.float64)",
+        "value": "quality",
+        "display": "matrix",
+        "why": "两个指标分别回答有没有缺口、有没有压住。",
+        "watch": "第 0 列覆盖率，第 1 列重叠率。左移 30 时为 0.875、0.125。",
+        "failure": "分母是目标区面积，不是所有块面积之和；本例不统计目标外的越界部分。",
+        "question": "为什么目标宽 240 对应横坐标 80 到 319？",
+        "answer": "栅格包含两端共 240 列；数组切片 [80:320] 则右端不包含。",
+        "lines": [
+          "先裁目标 ROI，再分别统计 >0 和 >1。",
+          "除以 inside.size 得到 0~1 比例，不是百分数。"
+        ],
+        "before": "step1"
+      }
+    ],
+    "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
+  },
+  "T12": {
+    "scene": "同一个静止物体连续检测时中心会抖动，偶尔还会出现一次明显偏差。",
+    "target": "先匹配各帧身份，再比较中位数和均值的稳定效果。",
+    "boundary": "只适用于静止、数量固定、x 顺序不交叉的对象；不能替代运动跟踪或身份关联算法。",
+    "control": {
+      "name": "outlier",
+      "label": "单帧异常位移",
+      "values": [
+        0,
+        20,
+        100
+      ],
+      "default": 20,
+      "experiment": "固定 7 帧小抖动，只改变第 3 帧异常位移。观察均值被拉动，而中位数更稳定。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "观察不同帧的检测点",
+        "code": "frames = np.asarray(params[\"frames\"], dtype=np.float64)\nobserved = image.copy()\nfor frame in frames:\n    for x, y in frame:\n        cv2.circle(observed, (round(x), round(y)), 3, (0, 100, 220), -1)",
+        "value": "observed",
+        "display": "image",
+        "why": "先看噪声尺度与异常值，而不是直接把所有点混在一起求平均。",
+        "watch": "正常点聚在三处，异常帧有三个偏移点；输入顺序每帧被打乱。",
+        "failure": "如果对象真实在运动，平滑可能造成滞后，不能用静止假设解释一切。",
+        "question": "每帧第 0 个点一定是同一物体吗？",
+        "answer": "不一定。本例刻意打乱输入顺序，必须先建立对应。",
+        "lines": [
+          "frames 的形状为 帧数×对象数×2。",
+          "叠加各帧点，只在绘图阶段取整。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "先对齐各帧的对象顺序",
+        "code": "aligned = np.stack([frame[np.argsort(frame[:, 0], kind=\"stable\")] for frame in frames])\naligned_table = aligned.reshape(len(aligned), -1)",
+        "value": "aligned_table",
+        "display": "matrix",
+        "why": "逐帧按 x 排序，在本例约束下让每列持续代表同一对象。",
+        "watch": "7 行分别对应 7 帧；每行依次为对象 0 的 x/y、对象 1 的 x/y、对象 2 的 x/y。",
+        "failure": "不要对 x、y 列分别排序，否则会把不同点的两个坐标拼在一起。",
+        "question": "如果两个物体横向交叉还能按 x 排序吗？",
+        "answer": "不能可靠保持身份，需要最近邻、匹配或跟踪器等关联策略。",
+        "lines": [
+          "argsort 获取整行重排索引，stable 保持相同 x 的原顺序。",
+          "stack 沿帧维堆叠；reshape 只为了把每帧展开为表格。"
+        ],
+        "before": "step1"
+      },
+      {
+        "id": "step3",
+        "title": "沿时间维比较中位数和均值",
+        "code": "median_centers = np.median(aligned, axis=0)\nmean_centers = np.mean(aligned, axis=0)\nstatistics = np.column_stack([median_centers, mean_centers])",
+        "value": "statistics",
+        "display": "matrix",
+        "why": "沿 axis=0 汇总同一物体在不同时间的位置，保留对象和 x/y 维。",
+        "watch": "每行一个物体；四列依次为中位数 x/y、均值 x/y。",
+        "failure": "axis=1 会把同一帧的不同物体混在一起，得到另一种含义。",
+        "question": "为什么一次大异常更容易影响均值？",
+        "answer": "均值累加全部数值；7 个样本的中位数只取排序后的第 4 个，单次极端值通常不会决定它。",
+        "lines": [
+          "median 和 mean 都沿帧维求值。",
+          "column_stack 把两种估计并排，便于数值对照。"
+        ],
+        "before": "step2"
+      },
+      {
+        "id": "step4",
+        "title": "把两种稳定位置画回原图",
+        "code": "stabilized = observed.copy()\nfor x, y in median_centers:\n    cv2.drawMarker(stabilized, (round(x), round(y)), (0, 170, 0), cv2.MARKER_CROSS, 18, 2)\nfor x, y in mean_centers:\n    cv2.circle(stabilized, (round(x), round(y)), 8, (200, 0, 0), 2)",
+        "value": "stabilized",
+        "display": "image",
+        "why": "把统计量映射回空间位置，理解数值差异在控制输出中意味着什么。",
+        "watch": "绿十字是中位数，蓝圈是均值；异常越大，蓝圈通常偏得越明显。",
+        "failure": "若多数帧都错误，中位数也可能错误；稳定不等于准确。",
+        "question": "可以把这一步直接当机械臂坐标吗？",
+        "answer": "不可以，还需要相机标定、坐标变换及单位确认。",
+        "lines": [
+          "保持原检测点作背景，便于比较。",
+          "两种估计用不同符号，避免只靠颜色辨认。"
+        ],
+        "before": "step1"
+      }
+    ],
+    "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
+  },
+  "A04": {
+    "scene": "检测器可能给出多个相邻框，用 IoU 衡量两个框的空间重合程度。",
+    "target": "看到交集区域，手算面积，再得到交并比。",
+    "boundary": "使用连续 xyxy 坐标，面积为 (x2-x1)×(y2-y1)，不加 1；与像素栅格计数约定不同。",
+    "control": {
+      "name": "offset",
+      "label": "第二个框向右移动",
+      "values": [
+        0,
+        50,
+        150
+      ],
+      "default": 0,
+      "experiment": "框的面积不变，向右移动后交集缩小，最终 IoU 为 0。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "求交集边界并画出来",
+        "code": "a = np.asarray(params[\"box_a\"], dtype=np.float64)\nb = np.asarray(params[\"box_b\"], dtype=np.float64)\nleft, top = np.maximum(a[:2], b[:2])\nright, bottom = np.minimum(a[2:], b[2:])\nintersection_view = image.copy()\nfor box, color in [(a, (180, 90, 0)), (b, (0, 130, 0))]:\n    cv2.rectangle(intersection_view, tuple(box[:2].astype(int)), tuple(box[2:].astype(int)), color, 2)\nif right > left and bottom > top:\n    cv2.rectangle(intersection_view, (int(left), int(top)), (int(right), int(bottom)), (0, 180, 240), -1)",
+        "value": "intersection_view",
+        "display": "image",
+        "why": "交集左上角取较大值，右下角取较小值，留下同时位于两个框内的区域。",
+        "watch": "黄色为交集；没有黄色说明交集宽或高不为正。",
+        "failure": "把 maximum/minimum 用反会得到包围两个框的大矩形。",
+        "question": "两框只接触边缘时有交集面积吗？",
+        "answer": "连续坐标中宽或高为 0，交集面积为 0。",
+        "lines": [
+          "切片 [:2] 和 [2:] 分别读取左上与右下。",
+          "绘图是示意，实际面积在下一步用连续坐标计算。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "计算交集、两框面积与并集",
+        "code": "intersection = max(0., right - left) * max(0., bottom - top)\narea_a = float(np.prod(np.maximum(0, a[2:] - a[:2])))\narea_b = float(np.prod(np.maximum(0, b[2:] - b[:2])))\nunion = area_a + area_b - intersection\nareas = np.array([[area_a, area_b, intersection, union]], dtype=np.float64)",
+        "value": "areas",
+        "display": "matrix",
+        "why": "相加两框面积时交集被算了两次，必须减去一次。",
+        "watch": "四列依次为 A 面积、B 面积、交集、并集；默认交集 90×80=7200，并集 23600。",
+        "failure": "无交集时差值可能为负，宽和高必须各自截到 0，不能让两个负数相乘成正面积。",
+        "question": "为什么并集不是两个框的外接矩形面积？",
+        "answer": "并集只包含至少属于一个框的区域，外接矩形还可能包含两框都不覆盖的空白。",
+        "lines": [
+          "分别计算非负宽高。",
+          "并集采用容斥公式 A+B-交集。"
+        ],
+        "before": "step1"
+      },
+      {
+        "id": "step3",
+        "title": "得到有明确范围的 IoU",
+        "code": "iou_value = intersection / union if union > 0 else 0.\niou_table = np.array([[iou_value]], dtype=np.float64)",
+        "value": "iou_table",
+        "display": "matrix",
+        "why": "把重合面积归一化，使不同尺度的框可以按同一指标比较。",
+        "watch": "合法框 IoU 位于 0~1；完全相同为 1，分离为 0。默认约 0.305085。",
+        "failure": "两个零面积框的并集为 0；本例约定返回 0，避免除零。",
+        "question": "IoU 为 0.3 能判断两个框一定是同一个物体吗？",
+        "answer": "不能。它只描述几何重合，还需要类别、场景和任务阈值。",
+        "lines": [
+          "先判断分母，明确定义退化输入行为。",
+          "结果保留浮点数，显示的小数位数不改变实际数据。"
+        ],
+        "before": "step2"
+      }
+    ],
+    "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
+  },
+  "A05": {
+    "scene": "目标检测中同一个物体可能产生多个高分框，NMS 按分数保留代表框。",
+    "target": "从分数排序、两两 IoU、贪心抑制记录到最终保留框，逐步手敲普通 Python 函数。",
+    "boundary": "本例为单类别硬 NMS；多类别应分组处理。相同分数按原索引稳定排序，只在 IoU 严格大于阈值时抑制。",
+    "control": {
+      "name": "iou_percent",
+      "label": "抑制阈值（百分数）",
+      "values": [
+        20,
+        50,
+        80
+      ],
+      "default": 50,
+      "experiment": "提高阈值通常保留更多重合框。仔细区分“分数排序”和“重叠判定”这两个不同规则。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "定义 IoU 并稳定排序",
+        "code": "def iou(a, b):\n    left, top = np.maximum(a[:2], b[:2])\n    right, bottom = np.minimum(a[2:], b[2:])\n    intersection = max(0., right - left) * max(0., bottom - top)\n    area_a = np.prod(np.maximum(0, np.asarray(a[2:]) - a[:2]))\n    area_b = np.prod(np.maximum(0, np.asarray(b[2:]) - b[:2]))\n    union = area_a + area_b - intersection\n    return float(intersection / union) if union > 0 else 0.\nboxes = np.asarray(params[\"boxes\"], dtype=np.float64)\nscores = np.asarray(params[\"scores\"], dtype=np.float64)\norder = np.argsort(-scores, kind=\"stable\").tolist()\nranked = np.column_stack([order, scores[order]])",
+        "value": "ranked",
+        "display": "matrix",
+        "why": "先学会写可复用的普通函数，再把分数最高的候选放在最前面。",
+        "watch": "两列为原始框索引和分数；顺序是 0、1、3、4、2，两个 0.75 按原索引排序。",
+        "failure": "不要把框坐标直接排序；需要保存排序索引以同时读取框与分数。",
+        "question": "为什么对 -scores 排序？",
+        "answer": "argsort 默认升序，取负号后就等价于按原分数降序。",
+        "lines": [
+          "iou 是本文件内的普通函数，可独立复制运行，内部约定与 A04 一致。",
+          "stable 让分数相同的框保留输入先后顺序。",
+          "排序结果是索引，分数和框仍使用原始数组。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "查看两两框的重合程度",
+        "code": "pairwise = np.array([[iou(a, b) for b in boxes] for a in boxes], dtype=np.float64)",
+        "value": "pairwise",
+        "display": "matrix",
+        "why": "小样例先看全表，分清高分与高重叠并不是一回事。",
+        "watch": "行列都是原始索引；对角线为 1，框 3 和 4 完全相同，跨左右两组的 IoU 为 0。",
+        "failure": "NMS 不必在大输入上预先计算完整矩阵；这里仅用于学习观察。",
+        "question": "框 3 分数比框 1 低，为什么仍可能被保留？",
+        "answer": "它位于不同位置，与已保留框不重叠，因此不应该因低分被一并删掉。",
+        "lines": [
+          "双层列表推导计算每一对 IoU。",
+          "矩阵对称，因为交集和并集与两个框的先后顺序无关。"
+        ],
+        "before": "step1"
+      },
+      {
+        "id": "step3",
+        "title": "记录每轮贪心抑制",
+        "code": "remaining = order.copy()\nkept = []\ntrace = []\nround_index = 0\nthreshold = params[\"iou_percent\"] / 100\nwhile remaining:\n    best = remaining.pop(0)\n    kept.append(best)\n    survivors = []\n    for candidate in remaining:\n        overlap = iou(boxes[best], boxes[candidate])\n        keep = overlap <= threshold\n        trace.append([round_index, best, candidate, overlap, int(keep)])\n        if keep:\n            survivors.append(candidate)\n    remaining = survivors\n    round_index += 1\ntrace_table = np.asarray(trace, dtype=np.float64).reshape(-1, 5)",
+        "value": "trace_table",
+        "display": "matrix",
+        "why": "每轮先保留当前最高分，再只删除与它过度重叠的候选，剩余候选继续下一轮。",
+        "watch": "五列：轮次、当前保留索引、被比较索引、IoU、是否进入下一轮。默认最终 kept 为 [0,3,2]。",
+        "failure": "标记“进入下一轮”不是保证最终保留；后面仍可能被另一个高分框抑制。",
+        "question": "IoU 恰好等于阈值时保留吗？",
+        "answer": "本例保留，因为只抑制严格大于阈值的框；不同库或题目须先确认约定。",
+        "lines": [
+          "while 处理候选列表为空的终止条件。",
+          "pop(0) 取出本轮最高分；仅比较其余仍存活的框。",
+          "<= 保留等于阈值的情况；使用新列表避免边遍历边删除。",
+          "trace 只记录实际发生的比较，不虚构已被抑制框的后续处理。"
+        ],
+        "before": "step2",
+        "before_label": "对照：两两 IoU（循环中按需重新计算）"
+      },
+      {
+        "id": "step4",
+        "title": "画出最终保留框",
+        "code": "selected_view = image.copy()\nfor index in kept:\n    box = boxes[index].astype(int)\n    cv2.rectangle(selected_view, tuple(box[:2]), tuple(box[2:]), (0, 150, 0), 2)\n    cv2.putText(selected_view, str(index), (int(box[0]), int(box[1]) - 6), cv2.FONT_HERSHEY_SIMPLEX, .6, (0, 0, 180), 2)\ndetail = \"保留的原始索引：\" + str(kept)",
+        "value": "selected_view",
+        "display": "image",
+        "why": "回到图像检查是否去除了重复，又保留了不同位置的目标。",
+        "watch": "数字是原始索引；阈值 20 保留 [0,3]，50 保留 [0,3,2]，80 保留 [0,1,3,2]。",
+        "failure": "多类别直接混合做 NMS 可能误删其他类别；不能把本例未经调整直接用于所有检测器。",
+        "question": "NMS 能恢复检测器完全漏掉的框吗？",
+        "answer": "不能。NMS 只从已有候选中选择，不会产生新的检测框。",
+        "lines": [
+          "只遍历 kept 中的原始索引。",
+          "绘制与评分无关；返回列表含义可用于原题独立实现。"
+        ],
+        "before": "input"
+      }
+    ],
+    "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
   }
 }

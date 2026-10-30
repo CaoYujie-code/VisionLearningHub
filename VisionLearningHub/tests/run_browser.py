@@ -11,7 +11,7 @@ import time
 import urllib.request
 
 PROJECT=Path(__file__).resolve().parents[1]
-parser=argparse.ArgumentParser();parser.add_argument('--node',default='node');parser.add_argument('--suite',choices=['full','guides','navigation','projects','handbook','quiz','walkthrough','visual-expansion'],default='full');args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--node',default='node');parser.add_argument('--suite',choices=['full','guides','navigation','projects','handbook','quiz','walkthrough','visual-expansion','geometry-visual'],default='full');args=parser.parse_args()
 base=PROJECT/'.test-data';base.mkdir(exist_ok=True)
 root=Path(tempfile.mkdtemp(prefix='browser-v030-',dir=base))
 with socket.socket() as probe:
@@ -37,6 +37,7 @@ with (root/'server.log').open('wb') as log:
         if args.suite in ('full','quiz'):subprocess.run([args.node,'tests/quiz_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
         if args.suite in ('full','walkthrough'):subprocess.run([args.node,'tests/walkthrough_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
         if args.suite in ('full','visual-expansion'):subprocess.run([args.node,'tests/visual_expansion_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
+        if args.suite in ('full','geometry-visual'):subprocess.run([args.node,'tests/geometry_visual_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
     finally:
         process.stdin.close()
         try:process.wait(timeout=8)

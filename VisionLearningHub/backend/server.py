@@ -111,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.10.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.11.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 

@@ -45,7 +45,7 @@ class WalkthroughChecks(unittest.TestCase):
         return self.client.post('/api/lesson/'+key+'/walkthrough/import',files={'file':('results.zip',raw,'application/zip')})
 
     def test_all_courses_and_parameter_variants_are_real(self):
-        self.assertEqual(set(w.CATALOG),{'T01','T02','T03','T04','T05','T06','A01','A02','A03',*[f'V{i:02d}' for i in range(1,15)]})
+        self.assertEqual(set(w.CATALOG),{'P01','P02','T07','T08','T09','T12','A04','A05','T01','T02','T03','T04','T05','T06','A01','A02','A03',*[f'V{i:02d}' for i in range(1,15)]})
         for key,item in w.CATALOG.items():
             for value in item['control']['values']:
                 response=self.client.post('/api/lesson/'+key+'/walkthrough/demo',json={'parameter':value});response.raise_for_status();demo=response.json()

@@ -1,5 +1,7 @@
 # Vision Learning Hub · 视觉学习实验室
 
+**0.11.0：图解覆盖 31 / 44 道基础题，累计 84 步、95 组参数配置。** 新增数组筛选与统计、轮廓中心与角点、旋转平移、拼图覆盖、多帧稳定、IoU 和 NMS 共 8 题。导入自己的中间结果后，可查看数值差异并跳到首个有差异的步骤；支持空结果表格与可记忆的图解题筛选。[学习与操作指南](VisionLearningHub/docs/几何与数组图解指南-0.11.0.md)。
+
 **0.10.0：逐步图解覆盖 23 / 44 道基础题。** 新增 15 题，累计 58 个步骤、71 组可选参数配置，覆盖 T01–T06、A01–A03 和全部 V01–V14。直方图、Gamma 曲线、透视矩阵、连通域标签和距离 / 响应热力图按数据含义展示，支持手敲、真实结果导入与进度记忆。[扩展学习指南](VisionLearningHub/docs/逐步图解扩展指南-0.10.0.md)。
 
 **0.9.0：每一步都看清楚。** 首批 8 道基础题增加 18 个逐步图解：场景、处理前后图、代码与逐行解释、观察方向、错误排查和预测问题。支持同图缩放对照、27 组参数配置、默认参数比较、分步手敲与真实结果导入。观察笔记和学习位置本地记忆，正式题目成绩独立。详见[逐步图解指南](VisionLearningHub/docs/逐步图解学习指南-0.9.0.md)。
@@ -18,9 +20,17 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.10.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.11.0.md)
 
-> 当前源码版本为 **0.10.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.11.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.11.0：看懂几何，也能定位自己的结果差异
+
+![NMS 每轮抑制与数值表](VisionLearningHub/docs/images/nms-trace-0.11.0.png)
+
+建议先学 **P01 → P02**，再学 **T07 → T08 → T09 → T12**，最后学 **A04 → A05**。从基础练习进入“逐步图解”，可筛选有图解的题目。逐步观察、手敲运行、导入结果和正式验收分别保留，原有 23 题的观察笔记与进度兼容。其余 13 道基础题继续使用已有讲解与验收。
+
+[查看数值差异操作](VisionLearningHub/docs/几何与数组图解指南-0.11.0.md#手敲运行定位差异) · [本版验收](VisionLearningHub/docs/验收记录-0.11.0.md)
 
 ## 0.10.0：图像、统计和矩阵都能逐步观察
 
@@ -28,7 +38,7 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 新增高斯、Canny、透视、直方图、自适应阈值、积分图、Otsu、缩放、Gamma、CLAHE、连通域、距离变换、模板匹配、红色环绕与帧差。每题解释处理原因、变量、观察点、失败排查和适用边界；独立脚本使用原生库，模板与上一帧素材随实验包提供。
 
-从 **基础练习 → 对应题目 → 逐步图解** 进入。建议先学 **V01 直方图**，再学 **A03 透视矩阵** 和 **V14 帧差**。原首批八题的进度修订标识保持不变。剩余 21 道基础题尚未制作这一版图解，继续使用原有教学与验收。[操作与完整覆盖列表](VisionLearningHub/docs/逐步图解扩展指南-0.10.0.md)。
+从 **基础练习 → 对应题目 → 逐步图解** 进入。建议先学 **V01 直方图**，再学 **A03 透视矩阵** 和 **V14 帧差**。原首批八题的进度修订标识保持不变。在 0.10.0 发布时剩余 21 道基础题尚未制作这一版图解，继续使用原有教学与验收。[操作与完整覆盖列表](VisionLearningHub/docs/逐步图解扩展指南-0.10.0.md)。
 
 ## 0.9.0：从图像变化理解代码
 

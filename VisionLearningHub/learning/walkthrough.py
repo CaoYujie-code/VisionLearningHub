@@ -84,7 +84,7 @@ def describe(value,mode,folder,name,detail=''):
     if value.size>2_000_000 or not np.isfinite(value).all():raise ValueError('步骤结果必须是有限数值，且不超过 200 万个数值')
     preview,note=display_array(value,mode)
     path=folder/(name+'.png');write_image(path,preview)
-    return dict(output=str(path),shape=list(value.shape),dtype=str(value.dtype),minimum=float(value.min()),maximum=float(value.max()),nonzero=int(np.count_nonzero(value)),display_note=note,detail=detail,spatial=mode in SPATIAL_MODES,kind=mode,cells=value.tolist() if mode=='matrix' else None)
+    return dict(output=str(path),shape=list(value.shape),dtype=str(value.dtype),minimum=float(value.min()) if value.size else None,maximum=float(value.max()) if value.size else None,nonzero=int(np.count_nonzero(value)),display_note=note,detail=detail,spatial=mode in SPATIAL_MODES,kind=mode,cells=value.tolist() if mode=='matrix' else None)
 
 
 def demonstration(root,key,value=None):
@@ -98,6 +98,7 @@ def demonstration(root,key,value=None):
         # Code is shipped authored content. User code is never accepted here.
         exec(s['code'],namespace)
         results[s['id']]=describe(namespace[s['value']],s['display'],folder,s['id'],namespace['detail'])
+        np.save(folder/(s['id']+'.npy'),namespace[s['value']],allow_pickle=False)
     return dict(**item,revision=revision(key),parameter=value,input=describe(image,'image',folder,'input'),results=results,context=signature(key,value,image,params),parameters={k:(dict(shape=list(v.shape),dtype=str(v.dtype)) if isinstance(v,np.ndarray) else v) for k,v in params.items() if k!='image_path'})
 
 
@@ -208,6 +209,29 @@ def imported(root,key):
     return row
 
 
+def numeric_difference(actual, expected):
+    """Explain data differences only; never decide exercise completion."""
+    if actual.shape!=expected.shape or actual.dtype!=expected.dtype:
+        return dict(available=False,reason='尺寸或类型不一致，先核对数组约定，再比较数值。')
+    floating=actual.dtype.kind=='f'
+    atol,rtol=(1e-6,1e-5) if floating else (0.,0.)
+    with np.errstate(over='ignore',invalid='ignore'):
+        same=np.isclose(actual,expected,atol=atol,rtol=rtol) if floating else actual==expected
+        changed=np.flatnonzero(~same)
+        if floating:
+            delta=np.abs(actual.astype(np.float64)-expected.astype(np.float64))
+        else:
+            # Python integers preserve uint64 and signed extremes before float metrics.
+            a,b=actual.ravel(),expected.ravel()
+            delta=np.fromiter((abs(int(a[i])-int(b[i])) for i in changed),dtype=np.float64,count=len(changed))
+        maximum=float(delta.max()) if delta.size else 0.
+        mean=float(np.sum(delta / actual.size)) if actual.size else 0.
+    if not np.isfinite([maximum,mean]).all():
+        return dict(available=False,reason='差值超出统计范围；请检查数值尺度，不能据此判断一致。')
+    return dict(available=True,different=int(len(changed)),total=int(actual.size),mean_abs=mean,max_abs=maximum,
+                first=[int(i) for i in np.unravel_index(changed[0],actual.shape)] if len(changed) else None,atol=atol,rtol=rtol)
+
+
 def import_results(root,key,raw):
     item=definition(key)
     if len(raw)>12*1024*1024:raise ValueError('结果包不能超过 12 MB')
@@ -251,6 +275,8 @@ def import_results(root,key,raw):
         result['output']=Path(result['output']).relative_to(root).as_posix()
         expected=demo['results'][s['id']]
         result['comparison']='尺寸和类型与演示相同；这不代表算法正确' if result['shape']==expected['shape'] and result['dtype']==expected['dtype'] else '尺寸或类型与演示不同，请先核对本步约定'
+        expected_array=np.load(Path(expected['output']).with_suffix('.npy'),allow_pickle=False)
+        result['difference']=numeric_difference(arrays[s['id']],expected_array)
         results[s['id']]=result
     row=dict(revision=revision(key),parameter=value,stamp=time.time(),results=results)
     path=folder.parent/'latest.json';temp=path.with_suffix('.tmp');temp.write_text(json.dumps(row,ensure_ascii=False),encoding='utf-8');temp.replace(path)
