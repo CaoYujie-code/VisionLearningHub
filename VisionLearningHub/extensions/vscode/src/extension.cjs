@@ -207,7 +207,7 @@ class Hub {
         try{if(!inside(rootReal,await fs.realpath(part)))throw new Error('实验目录超出学习工程');}
         catch(error){if(error.code!=='ENOENT')throw error;await fs.mkdir(part);}
       }
-      const names=['practice.py','reference.py','input.npy','input.png','params.json','context.json','README.md'];
+      const names=['practice.py','reference.py','input.npy','input.png','params.json','context.json','README.md','template.npy','previous.npy'];
       for(const item of pack.files){
         if(!names.includes(item.name))throw new Error('未知实验文件');
         const file=path.join(directory,item.name);

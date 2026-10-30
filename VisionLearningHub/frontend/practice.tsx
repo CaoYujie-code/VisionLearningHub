@@ -1,4 +1,4 @@
-import {Walkthrough,visualLessons} from './walkthrough';
+import {Walkthrough} from './walkthrough';
 import './walkthrough.css';
 import {FunctionGuideView} from './function-guide';
 import {beforeLeave,useMemory} from './navigation';
@@ -9,6 +9,7 @@ import {Icon,Tag,Modal,Photo,Empty} from './ui';
 
 type Props={boot:Boot;lessonId:string;open:(id:string)=>void;back:()=>void;backLabel:string;job:Job|null;anyBusy:boolean;setJob:(job:Job)=>void;notify:(s:string)=>void;updatePassed:(v:Record<string,boolean>)=>void;onZoom:(s:string)=>void};
 export function Practice({boot,lessonId,open,back,backLabel,job,anyBusy,setJob,notify,updatePassed,onZoom}:Props) {
+ const visualLessons=boot.walkthroughs||[];
  const lesson=boot.lessons.find(l=>l.id===lessonId)!;
  const [data,setData]=useState<DraftData|null>(null),[code,setCode]=useState(''),[note,setNote]=useState(''),[query,setQuery]=useMemory('practice.query','');
  const [status,setStatus]=useState('正在读取…'),[tab,setTabState]=useMemory(lessonId+'.tab','任务'),[reference,setReference]=useState(''),[report,setReport]=useState<Report|null>(null),[submitting,setSubmitting]=useState(false);
@@ -52,7 +53,7 @@ export function Practice({boot,lessonId,open,back,backLabel,job,anyBusy,setJob,n
  return <><button className="text-button back" onClick={back}>← {backLabel}</button><div className="title-row"><div><div className="eyebrow">LEARN BY WRITING</div><h1>练习工作台</h1></div><Tag tone="blue">手敲实现 · 可重复验收</Tag></div><div className="practice-layout"><aside className="lesson-nav panel"><label className="search"><Icon name="search" size={16}/><input placeholder="搜索练习" aria-label="搜索练习" value={query} onChange={e=>setQuery(e.target.value)}/></label><div className="lesson-scroll">{visible.map(l=><button key={l.id} onClick={()=>open(l.id)} className={l.id===lessonId?'selected':''}><span>{l.id}</span><b>{l.title}</b>{boot.passed[l.id]&&<Icon name="check" size={15}/>}</button>)}</div><p>仅“多样例验收”通过后计入进度。</p></aside><div className="practice-main">{error?<Empty title="读取失败" body={error}/>:!data?<Empty title="正在准备练习" body="载入代码与输入样例…"/>:<>
   <section className="panel task-description"><div className="title-row"><h2><span className="mono">{lessonId}</span> {lesson.title}</h2><Tag tone={boot.passed[lessonId]?'green':''}>{boot.passed[lessonId]?'当前版本已验收':'待验收'}</Tag></div><p>{lesson.goal}</p><div className="tabs">{['任务','逐步图解','函数与场景','知识与提示','笔记','历史'].map(t=><button key={t} onClick={()=>setTab(t)} className={tab===t?'selected':''}>{t}</button>)}</div>
    {tab==='任务'&&<><div className="contract">{visualLessons.includes(lessonId)&&<button className="primary" onClick={()=>setTab('逐步图解')}>先逐步看图理解本题</button>}<b>输入 / 输出约定</b><p>{lesson.contract}</p><button className="secondary" onClick={()=>setTab('函数与场景')}>先学本题函数怎么用</button></div>{lesson.prerequisites.length>0&&<div className="dependency-row"><span>前置练习</span>{lesson.prerequisites.map(id=><button key={id} onClick={()=>open(id)}>{id} {boot.passed[id]?'✓':'待验收'}</button>)}<small>组合题使用你保存的代码。</small></div>}</>}
-   {tab==='逐步图解'&&<Walkthrough key={lessonId} lessonId={lessonId} open={open} independent={()=>setTab('任务')} notify={notify} onPending={task=>trackLearningTask('walkthrough',task)}/>}
+   {tab==='逐步图解'&&<Walkthrough key={lessonId} available={visualLessons} lessonId={lessonId} open={open} independent={()=>setTab('任务')} notify={notify} onPending={task=>trackLearningTask('walkthrough',task)}/>}
    {tab==='函数与场景'&&<FunctionGuideView lesson={lesson} boot={boot} open={open} notes={()=>setTab('笔记')} notify={notify} onPending={task=>trackLearningTask('function',task)}/>}
    {tab==='知识与提示'&&<div className="knowledge"><p>{lesson.knowledge}</p>{lesson.hints.map((h,i)=><details key={h}><summary>提示 {i+1}</summary><p>{h}</p></details>)}<button className="text-button" onClick={async()=>{try{setReference((await api<{code:string}>('/lesson/'+lessonId+'/reference')).code);}catch(e){notify((e as Error).message);}}}>查看参考思路 <Icon name="eye" size={16}/></button><p className="small muted">建议先独立尝试。参考实现只供对照，不会自动填入编辑器。</p></div>}
    {tab==='笔记'&&<textarea aria-label="练习笔记" className="notes" maxLength={32000} value={note} onChange={e=>changeNote(e.target.value)} placeholder="记录这次实现的思路、失败原因与下一次的改进…"/>}

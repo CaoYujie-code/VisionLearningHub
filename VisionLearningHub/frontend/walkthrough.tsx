@@ -2,22 +2,21 @@ import {useEffect,useRef,useState} from 'react';
 import {api,send,download,when} from './api';
 import {ide,isIDE} from './ide';
 
-export const visualLessons=['T01','T02','T03','T04','T05','T06','V03','V04'];
-type Frame={output:string;shape:number[];dtype:string;minimum:number;maximum:number;nonzero:number;display_note:string;detail:string;comparison?:string};
+type Frame={output:string;shape:number[];dtype:string;minimum:number;maximum:number;nonzero:number;display_note:string;detail:string;comparison?:string;spatial:boolean;kind:string;cells:number[][]|null};
 type Progress={revision:string;step:number;mode:'guided'|'write';notes:Record<string,string>;done:number[];parameter:number};
 type Own={revision:string;parameter:number;stamp:number;stale:boolean;results:Record<string,Frame>};
-type Demo={scene:string;target:string;boundary:string;revision:string;parameter:number;input:Frame;results:Record<string,Frame>;control:{name:string;label:string;values:number[];default:number;experiment:string};steps:{id:string;title:string;code:string;value:string;why:string;watch:string;failure:string;question:string;answer:string;lines:string[];before:string}[]};
+type Demo={sample_note?:string;parameters:Record<string,unknown>;scene:string;target:string;boundary:string;revision:string;parameter:number;input:Frame;results:Record<string,Frame>;control:{name:string;label:string;values:number[];default:number;experiment:string};steps:{id:string;title:string;code:string;value:string;why:string;watch:string;failure:string;question:string;answer:string;lines:string[];before:string;before_label?:string}[]};
 type Payload={demo:Demo;progress:Progress;own:Own|null};
 
 function Images({left,right,leftLabel,rightLabel}:{left?:Frame;right?:Frame;leftLabel:string;rightLabel:string}){
  const [zoom,setZoom]=useState(1),[single,setSingle]=useState(false),[after,setAfter]=useState(true);
  const panes=useRef<(HTMLDivElement|null)[]>([]);
- const sync=(index:number)=>{const a=panes.current[index],b=panes.current[1-index];if(a&&b&&left&&right&&left.shape[0]===right.shape[0]&&left.shape[1]===right.shape[1]){b.scrollTop=a.scrollTop;b.scrollLeft=a.scrollLeft;}};
- const frame=(f:Frame|undefined,label:string,index:number)=><figure key={label} className="walk-frame"><figcaption>{label}</figcaption><div className="walk-viewport" ref={el=>{panes.current[index]=el;}} onScroll={()=>sync(index)} tabIndex={0} aria-label={label+'图像区域'}>{f?<img src={f.output} alt={label} style={{width:zoom*100+'%'}}/>:<p>尚未运行 / 尚未保存本步结果</p>}</div>{f&&<><p className="small mono">shape={f.shape.join('×')} · {f.dtype} · 原值 [{f.minimum.toFixed(2)}, {f.maximum.toFixed(2)}]</p><p className="small muted">{f.display_note}</p>{f.detail&&<p>{f.detail}</p>}{f.comparison&&<p className="note-box">{f.comparison}</p>}</>}</figure>;
- return <div className="walk-images"><div className="actions"><label>放大 <select aria-label="步骤图像缩放" value={zoom} onChange={e=>setZoom(Number(e.target.value))}>{[1,2,4].map(v=><option key={v} value={v}>{v} 倍</option>)}</select></label><button className="secondary" onClick={()=>setSingle(!single)}>{single?'并排对照':'单图前后切换'}</button>{single&&<button className="secondary" onClick={()=>setAfter(!after)}>{after?'查看处理前':'查看处理后'}</button>}</div><p className="small muted">相同尺寸的并排图同步滚动；裁剪后的图尺寸不同，请按 ROI 坐标对照。</p><div className={single?'walk-pair single':'walk-pair'}>{single?frame(after?right:left,after?rightLabel:leftLabel,after?1:0):<>{frame(left,leftLabel,0)}{frame(right,rightLabel,1)}</>}</div></div>;
+ const sync=(index:number)=>{const a=panes.current[index],b=panes.current[1-index];if(a&&b&&left&&right&&left.spatial&&right.spatial&&left.shape[0]===right.shape[0]&&left.shape[1]===right.shape[1]){b.scrollTop=a.scrollTop;b.scrollLeft=a.scrollLeft;}};
+ const frame=(f:Frame|undefined,label:string,index:number)=><figure key={label} className="walk-frame"><figcaption>{label}</figcaption><div className="walk-viewport" ref={el=>{panes.current[index]=el;}} onScroll={()=>sync(index)} tabIndex={0} aria-label={label+'图像区域'}>{f?<img src={f.output} alt={label} style={{width:zoom*100+'%',height:zoom===1?'100%':'auto',objectFit:zoom===1?'contain':undefined,imageRendering:f.spatial?'pixelated':'auto'}}/>:<p>尚未运行 / 尚未保存本步结果</p>}</div>{f&&<><p className="small mono">shape={f.shape.join('×')} · {f.dtype} · 原值 [{f.minimum.toFixed(2)}, {f.maximum.toFixed(2)}]</p><p className="small muted">{f.display_note}</p>{f.detail&&<p>{f.detail}</p>}{f.comparison&&<p className="note-box">{f.comparison}</p>}{f.cells&&<details className="walk-values"><summary>查看原始数值表</summary><p className="small muted">保留原始数值；窄屏可横向滚动查看全部列。</p><div><table><caption>原始数组（行 / 列顺序不变）</caption><tbody>{f.cells.map((row,r)=><tr key={r}>{row.map((v,c)=><td key={c}>{String(v)}</td>)}</tr>)}</tbody></table></div></details>}</>}</figure>;
+ return <div className="walk-images"><div className="actions"><label>放大 <select aria-label="步骤图像缩放" value={zoom} onChange={e=>setZoom(Number(e.target.value))}>{[1,2,4].map(v=><option key={v} value={v}>{v} 倍</option>)}</select></label><button className="secondary" onClick={()=>setSingle(!single)}>{single?'并排对照':'单图前后切换'}</button>{single&&<button className="secondary" onClick={()=>setAfter(!after)}>{after?'查看处理前':'查看处理后'}</button>}</div><p className="small muted">相同尺寸的空间图像可同步滚动；直方图、曲线和数值表按坐标轴或表格含义阅读，不与原图像素位置同步。</p><div className={single?'walk-pair single':'walk-pair'}>{single?frame(after?right:left,after?rightLabel:leftLabel,after?1:0):<>{frame(left,leftLabel,0)}{frame(right,rightLabel,1)}</>}</div></div>;
 }
 
-export function Walkthrough({lessonId,open,independent,notify,onPending}:{lessonId:string;open:(id:string)=>void;independent:()=>void;notify:(s:string)=>void;onPending:(p:Promise<unknown>|null)=>void}){
+export function Walkthrough({available:visualLessons,lessonId,open,independent,notify,onPending}:{available:string[];lessonId:string;open:(id:string)=>void;independent:()=>void;notify:(s:string)=>void;onPending:(p:Promise<unknown>|null)=>void}){
  const [baseline,setBaseline]=useState<Demo|null>(null);
  const [payload,setPayload]=useState<Payload|null>(null),[error,setError]=useState(''),[busy,setBusy]=useState(false),[saveStatus,setSaveStatus]=useState('');
  const row=useRef<Progress|null>(null),queue=useRef<Promise<unknown>>(Promise.resolve()),alive=useRef(true);
@@ -28,7 +27,7 @@ export function Walkthrough({lessonId,open,independent,notify,onPending}:{lesson
   const task=queue.current.catch(()=>{}).then(()=>send(route+'/progress',next));queue.current=task;onPending(task);
   void task.then(()=>{if(alive.current&&queue.current===task)setSaveStatus('观察与位置已保存');},e=>{if(alive.current&&queue.current===task)setSaveStatus('保存失败：'+e.message);}).finally(()=>{if(queue.current===task)onPending(null);});
  };
- if(!visualLessons.includes(lessonId))return <div className="note-box"><p>本题暂未提供逐步图解。第一批覆盖以下 8 题，可先学习对应的观察方法；本题仍可使用“函数与场景”和原有验收。</p><div className="actions">{visualLessons.map(id=><button key={id} className="secondary" onClick={()=>open(id)}>{id}</button>)}</div></div>;
+ if(!visualLessons.includes(lessonId))return <div className="note-box"><p>本题暂未提供逐步图解。目前已覆盖以下 {visualLessons.length} 题，可先学习对应的观察方法；本题仍可使用“函数与场景”和原有验收。</p><div className="actions">{visualLessons.map(id=><button key={id} className="secondary" onClick={()=>open(id)}>{id}</button>)}</div></div>;
  if(!payload)return <p role="status">{error||'正在生成本题的真实处理结果…'}</p>;
  const {demo,progress,own}=payload;const index=Math.min(progress.step,demo.steps.length-1),s=demo.steps[index];
  const before=s.before==='input'?demo.input:demo.results[s.before];
@@ -37,12 +36,12 @@ export function Walkthrough({lessonId,open,independent,notify,onPending}:{lesson
  const action=async(fn:()=>Promise<unknown>)=>{setBusy(true);setError('');try{await fn();}catch(e){setError((e as Error).message);}finally{setBusy(false);}};
  const upload=async(file:File)=>{if(file.size>12*1024*1024)throw new Error('结果包不能超过 12 MB');const body=new FormData();body.append('file',file);const result=await api<Own>(route+'/import',{method:'POST',body});setPayload(p=>p?{...p,own:result}:p);notify('已导入实际保存的步骤；这不计基础题通关');};
  return <section className="walkthrough" aria-label="逐步图解学习">
-  <div className="walk-intro"><h3>先看懂这道题</h3><p><b>使用场景：</b>{demo.scene}</p><p><b>最终交付：</b>{demo.target}</p><p><b>适用边界：</b>{demo.boundary}</p></div>
+  <div className="walk-intro"><h3>先看懂这道题</h3><p><b>使用场景：</b>{demo.scene}</p><p><b>最终交付：</b>{demo.target}</p><p><b>适用边界：</b>{demo.boundary}</p>{demo.sample_note&&<p className="small muted">{demo.sample_note}</p>}<details><summary>本次实际输入参数</summary><pre className="light-code">{JSON.stringify(demo.parameters,null,2)}</pre></details></div>
   <div className="actions"><button className={progress.mode==='guided'?'primary':'secondary'} disabled={busy} onClick={()=>save({...row.current!,mode:'guided'})}>跟着理解</button><button className={progress.mode==='write'?'primary':'secondary'} disabled={busy} onClick={()=>save({...row.current!,mode:'write'})}>分步手敲</button><button className="secondary" onClick={independent}>独立挑战：回到原题</button></div>
   <p className="small muted">{progress.mode==='guided'?'先预测每一步的变化，再看真实演示和解释。':'先尝试写出本步；参考代码折叠展示，完成后导入自己的中间结果。'} 学习标记由你自评，与代码验收分开。</p>
   <nav className="walk-steps" aria-label="图解步骤">{demo.steps.map((step,i)=><button key={step.id} disabled={busy} className={i===index?'selected':''} aria-current={i===index?'step':undefined} onClick={()=>save({...row.current!,step:i})}>{progress.done.includes(i)?'✓ ':''}{i+1}. {step.title}</button>)}</nav>
   <article className="walk-step"><h3>{index+1}. {s.title}</h3><p><b>为什么做：</b>{s.why}</p><p className="note-box"><b>重点观察：</b>{s.watch}</p>
-   <Images key={s.id+'-'+demo.parameter} left={before} right={demo.results[s.id]} leftLabel={s.before==='input'?'教学输入：原始图像':'教学输入：'+demo.steps.find(v=>v.id===s.before)?.title} rightLabel={'教学演示：'+s.title}/>
+   <Images key={s.id+'-'+demo.parameter} left={before} right={demo.results[s.id]} leftLabel={s.before_label||(s.before==='input'?'教学输入：原始图像':'教学输入：'+demo.steps.find(v=>v.id===s.before)?.title)} rightLabel={'教学演示：'+s.title}/>
    <details key={s.id+'-'+progress.mode} open={progress.mode==='guided'} className="walk-code"><summary>本步代码与逐行解释</summary><pre className="reference-code">{s.code}</pre><ol>{s.lines.map(line=><li key={line}>{line}</li>)}</ol><p className="small">教学演示使用固定样例与下方显示的参数，不代表你的代码执行结果。</p></details>
    <p><b>不符合预期时：</b>{s.failure}</p><p><b>先预测 / 解释：</b>{s.question}</p><details key={s.id+'-answer'}><summary>想过之后查看解释</summary><p>{s.answer}</p></details>
   </article>

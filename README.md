@@ -1,5 +1,7 @@
 # Vision Learning Hub · 视觉学习实验室
 
+**0.10.0：逐步图解覆盖 23 / 44 道基础题。** 新增 15 题，累计 58 个步骤、71 组可选参数配置，覆盖 T01–T06、A01–A03 和全部 V01–V14。直方图、Gamma 曲线、透视矩阵、连通域标签和距离 / 响应热力图按数据含义展示，支持手敲、真实结果导入与进度记忆。[扩展学习指南](VisionLearningHub/docs/逐步图解扩展指南-0.10.0.md)。
+
 **0.9.0：每一步都看清楚。** 首批 8 道基础题增加 18 个逐步图解：场景、处理前后图、代码与逐行解释、观察方向、错误排查和预测问题。支持同图缩放对照、27 组参数配置、默认参数比较、分步手敲与真实结果导入。观察笔记和学习位置本地记忆，正式题目成绩独立。详见[逐步图解指南](VisionLearningHub/docs/逐步图解学习指南-0.9.0.md)。
 
 **0.8.1：把会读函数变成会选方法。** 新增40道场景/参数理解自测，每个选项都有解释；本机保存提交次数和答错次数，支持跨题共享、待巩固筛选、备份恢复和题目更新后的重新判断。自测与代码验收进度分开。详见[使用指南](VisionLearningHub/docs/函数理解自测-0.8.1.md)。
@@ -16,9 +18,17 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.9.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.10.0.md)
 
-> 当前源码版本为 **0.9.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.10.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.10.0：图像、统计和矩阵都能逐步观察
+
+![直方图与原图对照](VisionLearningHub/docs/images/histogram-walkthrough-0.10.0.png)
+
+新增高斯、Canny、透视、直方图、自适应阈值、积分图、Otsu、缩放、Gamma、CLAHE、连通域、距离变换、模板匹配、红色环绕与帧差。每题解释处理原因、变量、观察点、失败排查和适用边界；独立脚本使用原生库，模板与上一帧素材随实验包提供。
+
+从 **基础练习 → 对应题目 → 逐步图解** 进入。建议先学 **V01 直方图**，再学 **A03 透视矩阵** 和 **V14 帧差**。原首批八题的进度修订标识保持不变。剩余 21 道基础题尚未制作这一版图解，继续使用原有教学与验收。[操作与完整覆盖列表](VisionLearningHub/docs/逐步图解扩展指南-0.10.0.md)。
 
 ## 0.9.0：从图像变化理解代码
 
@@ -26,7 +36,7 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 从 **基础练习 → T01–T06 / V03 / V04 → 逐步图解** 进入。先预测，再观察处理前后，读本步原生函数调用与逐行解释；切到分步手敲后在 VS Code 打开普通 Python 文件，运行并导入 `.npy` 中间数组。缺失步骤明确显示未运行，不使用教学图代填。
 
-支持自动保存观察笔记、步骤、模式、参数和自评；备份包含这些记录与导入结果，个人实验代码另行备份。导入结果与自评不计正式通关。**首批只覆盖 8 题，其余题保留原有教学与验收。** [详细操作与边界](VisionLearningHub/docs/逐步图解学习指南-0.9.0.md)。
+支持自动保存观察笔记、步骤、模式、参数和自评；备份包含这些记录与导入结果，个人实验代码另行备份。导入结果与自评不计正式通关。**0.9.0 首批覆盖 8 题；当前 0.10.0 已扩展为 23 题。** [详细操作与边界](VisionLearningHub/docs/逐步图解学习指南-0.9.0.md)。
 
 ## 0.8.1：用场景问题检验理解
 
@@ -46,7 +56,7 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 | --- | --- |
 | 学习路线 | **33 章**，从 Python / NumPy、OpenCV 到经典算法、YOLO 数据处理及 Linux / 嵌入式基础 |
 | 基础练习 | **44 道**，含40组函数讲解、场景选择、独立例子、题目契约、提示、参考实现与每题5组验收样例 |
-| 逐步图解 | **8 题、18 步、27 组参数配置**；真实前后图、代码解释、分步手敲与结果导入 |
+| 逐步图解 | **23 / 44 题、58 步、71 组参数配置**；照片、直方图、曲线、矩阵、标签和热力图，支持原生手敲与结果导入 |
 | 函数理解 | **40道**场景/参数自测，逐项解释、待巩固筛选、本地记忆；与代码成绩分开 |
 | 工程实训 | **9 个多文件工程、50 个任务块**，可独立挑战，也可跟随分块引导 |
 | 工程深入学习 | **37 个专属小任务、9 组方法对比、9 道故障维修**，按输入、实现、验证证据逐步学习 |
@@ -202,7 +212,7 @@ npm --prefix extensions/vscode run package
 .\.venv\Scripts\python.exe tests\test_calibration.py
 ```
 
-0.8.1 本机验收覆盖 **54组Python/API检查、92项浏览器流程、36项隔离VS Code检查、10项Node检查**。40个函数例子在平台外独立运行；53项基础题与工程参考实现覆盖265组完整验收输入。具体环境、证据和验证边界见 [0.8.1验收记录](VisionLearningHub/docs/验收记录-0.9.0.md)。
+0.8.1 本机验收覆盖 **54组Python/API检查、92项浏览器流程、36项隔离VS Code检查、10项Node检查**。40个函数例子在平台外独立运行；53项基础题与工程参考实现覆盖265组完整验收输入。具体环境、证据和验证边界见 [0.8.1验收记录](VisionLearningHub/docs/验收记录-0.10.0.md)。
 
 ## 仓库结构
 

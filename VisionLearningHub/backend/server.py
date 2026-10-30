@@ -111,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.9.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.10.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -148,11 +148,12 @@ def project_cards():
 
 @app.get('/api/bootstrap')
 def bootstrap():
+    from learning.walkthrough import CATALOG as VISUAL_CATALOG
     with LOCK, database() as store:
         settings = dict(store.connection.execute('SELECT key,value FROM settings').fetchall())
         settings = {k: json.loads(v) for k, v in settings.items() if k.startswith('hub.')}
         total = store.connection.execute('SELECT COUNT(*) FROM attempts').fetchone()[0]
-        return {'projects': project_cards(), 'courses': COURSES, 'lessons': [(lesson_outline(x) if WORKSPACE else {k: v for k, v in x.items() if k not in ('reference', 'starter')}) | {'course': LESSON_COURSE[x['id']]} for x in LESSONS],
+        return {'walkthroughs':list(VISUAL_CATALOG), 'projects': project_cards(), 'courses': COURSES, 'lessons': [(lesson_outline(x) if WORKSPACE else {k: v for k, v in x.items() if k not in ('reference', 'starter')}) | {'course': LESSON_COURSE[x['id']]} for x in LESSONS],
                 'resources': json.loads((PROJECT / 'content/resource_catalog.json').read_text(encoding='utf-8'))['resources'],
                 'passed': progress(store), 'settings': settings, 'attempts': total,
                 'active_job': next(({k:v for k,v in j.items() if k != 'process'} for j in JOBS.values() if j['status'] in ('queued','running','stopping')), None)}

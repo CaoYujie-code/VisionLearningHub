@@ -468,5 +468,990 @@
         "before": "step2"
       }
     ]
+  },
+  "A01": {
+    "scene": "低照度相机画面出现细碎随机噪声，需要在后续检测之前适度平滑。",
+    "target": "按指定核、sigma 和边界规则输出高斯滤波图，再检查被改变的细节。",
+    "boundary": "随机噪声可以被平均减弱，但细边缘也会模糊；椒盐点通常应另比较中值滤波。",
+    "control": {
+      "name": "kernel",
+      "label": "核边长（sigma 固定为 1.8）",
+      "values": [
+        3,
+        7,
+        15
+      ],
+      "default": 7,
+      "experiment": "只改变核的截断范围，不改变 sigma；超过足够范围后效果不会一直变强。"
+    },
+    "steps": [
+      {
+        "title": "邻域加权平滑",
+        "code": "k = params[\"kernel\"]\nblurred = cv2.GaussianBlur(image, (k,k), params[\"sigma\"], borderType=cv2.BORDER_REFLECT_101)",
+        "value": "blurred",
+        "why": "中心附近权重较高的邻域平均可以抑制高频噪声。",
+        "watch": "先看均匀背景是否平滑，再看矩形、圆形边界是否变软。",
+        "failure": "若只有边缘数值不一致，先检查 borderType；不要把 sigma 与核边长混为一谈。",
+        "question": "固定 sigma 后把核从 7 改到 15，平滑一定成倍增强吗？",
+        "answer": "不会。高斯权重随距离衰减，新增很远的点可能贡献很小。",
+        "lines": [
+          "(k,k) 是宽高均为 k 的窗口。",
+          "sigma 控制权重扩散；本实验固定 1.8。",
+          "BORDER_REFLECT_101 明确边界外如何取值。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "检查被改动的区域",
+        "code": "difference = cv2.absdiff(image, blurred)",
+        "value": "difference",
+        "why": "差异图帮助区分噪声变化与真实结构损失。",
+        "watch": "背景散点变化通常来自噪声；轮廓附近的变化提示边缘也被修改。",
+        "failure": "差异更大不等于更准确；要结合后续识别任务评价。",
+        "question": "为什么不能直接 image-blurred？",
+        "answer": "uint8 相减可能回绕；absdiff 明确计算双向绝对差。",
+        "lines": [
+          "两幅输入必须同尺寸和类型。",
+          "黑色表示没有变化。",
+          "正式题目返回 blurred，而不是差异图。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "A02": {
+    "scene": "从零件照片中提取细边界，为几何分析提供候选。",
+    "target": "依次灰度、固定高斯平滑、Canny，返回 0/255 边缘图。",
+    "boundary": "边缘图是细线，不是实心区域掩膜；文字、背景纹理和反光也可能产生边缘。",
+    "control": {
+      "name": "high",
+      "label": "Canny 高阈值（低阈值固定 40）",
+      "values": [
+        60,
+        120,
+        240
+      ],
+      "default": 120,
+      "experiment": "仅改变高阈值，观察弱边缘与主轮廓；高阈值不是灰度亮度门限。"
+    },
+    "steps": [
+      {
+        "title": "准备单通道灰度",
+        "code": "gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)",
+        "value": "gray",
+        "why": "统一到亮度通道，再研究局部亮度变化。",
+        "watch": "观察物体与背景之间的明暗跳变，也留意物体内的弱条纹。",
+        "failure": "彩色通道顺序用错会改变灰度和后续梯度。",
+        "question": "灰度图里的亮区域就是最终边缘吗？",
+        "answer": "不是。边缘看相邻位置的亮度变化，均匀亮区域内部通常没有边缘。",
+        "lines": [
+          "COLOR_BGR2GRAY 匹配 BGR 输入。",
+          "输出是二维亮度数组。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "固定平滑，减少不稳定细节",
+        "code": "smooth = cv2.GaussianBlur(gray, (3,3), 1, borderType=cv2.BORDER_REFLECT_101)",
+        "value": "smooth",
+        "why": "降低局部噪声造成的高梯度响应；本题把平滑步骤显式写出来。",
+        "watch": "图像略微变柔和，但主体形状应保留。",
+        "failure": "本关约定 3×3、sigma=1；随意改动会改变验收输出。",
+        "question": "平滑过强对窄缝可能有什么影响？",
+        "answer": "可能削弱或抹去窄缝两侧的梯度，导致漏边。",
+        "lines": [
+          "输入来自 gray。",
+          "固定参数便于只研究 Canny 阈值。"
+        ],
+        "display": "image",
+        "before": "step1",
+        "id": "step2"
+      },
+      {
+        "title": "双阈值连接得到边缘",
+        "code": "edges = cv2.Canny(smooth, params[\"low\"], params[\"high\"], apertureSize=3, L2gradient=True)\ndetail = f\"低阈值={params[\"low\"]}，高阈值={params[\"high\"]}；边缘像素={np.count_nonzero(edges)}\"",
+        "value": "edges",
+        "why": "强边缘提供可靠起点，与强边缘连通的部分弱边缘也能保留。",
+        "watch": "看物体外轮廓是否连贯，弱线是否保留，背景是否杂乱。",
+        "failure": "轮廓断裂不能一律降低阈值；先看原图是否模糊或对比度不足。",
+        "question": "弱边缘只要超过低阈值就一定保留吗？",
+        "answer": "不一定，还取决于是否通过边缘连接规则与强边缘相连。",
+        "lines": [
+          "apertureSize=3 指定梯度孔径。",
+          "L2gradient=True 使用欧氏梯度幅值。",
+          "Canny 内部还包括非极大值抑制和连接，本图是最终边缘。"
+        ],
+        "display": "image",
+        "before": "step2",
+        "id": "step3"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "A03": {
+    "scene": "相机斜拍平面工作区，希望把四边形拉正以便测量或识别。",
+    "target": "检查四点对应，求 3×3 矩阵，再按规定宽高输出矫正图。",
+    "boundary": "适用于同一平面；不能代替镜头去畸变，也不能同时拉正不同深度物体。",
+    "control": {
+      "name": "order_mode",
+      "label": "点序实验：0 正确 / 1 镜像错误 / 2 交叉错误",
+      "values": [
+        0,
+        1,
+        2
+      ],
+      "default": 0,
+      "experiment": "故意改变对应点顺序，观察镜像与扭曲。错误模式仅供对照，不满足原题约定。"
+    },
+    "steps": [
+      {
+        "title": "标出源图的四个对应点",
+        "code": "source = np.asarray(params[\"corners\"], np.float32)\nif params[\"order_mode\"] == 1:\n    source = source[[0,3,2,1]]\nelif params[\"order_mode\"] == 2:\n    source = source[[0,2,1,3]]\nmarked = image.copy()\nfor i, point in enumerate(source):\n    p = tuple(np.rint(point).astype(int))\n    cv2.circle(marked, p, 6, (0,0,255), -1)\n    cv2.putText(marked, str(i), (p[0]+8,p[1]), cv2.FONT_HERSHEY_SIMPLEX, .7, (0,0,255), 2)",
+        "value": "marked",
+        "why": "点的下标定义对应关系，不能只看四个点是否都在角上。",
+        "watch": "正确模式中 0、1、2、3 应依次为左上、右上、右下、左下。",
+        "failure": "图像被镜像或折叠时首先核对点序，而非反复调整输出尺寸。",
+        "question": "四个点集合相同，排序不同，变换是否相同？",
+        "answer": "一般不同。矩阵依据一一对应求解，不只依据点集合。",
+        "lines": [
+          "float32 满足 getPerspectiveTransform 的点类型要求。",
+          "绘图用四舍五入后的整数，求解仍用原浮点坐标。",
+          "模式 1/2 故意构造错误对应。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "建立目标点并求矩阵",
+        "code": "w, h = params[\"size\"]\ntarget = np.array([[0,0],[w-1,0],[w-1,h-1],[0,h-1]], np.float32)\nmatrix = cv2.getPerspectiveTransform(source, target)",
+        "value": "matrix",
+        "why": "矩阵把源平面上的点映射到目标矩形。它是系数表，不是图像。",
+        "watch": "这里按 3×3 表格查看系数；透视映射需要齐次坐标除法。",
+        "failure": "把矩阵截成 2×3 会丢掉透视项；点退化或交叉会造成异常结果。",
+        "question": "为什么目标角点用 w-1 而不是 w？",
+        "answer": "宽为 w 的图像有效横坐标为 0 到 w-1；纵坐标同理。",
+        "lines": [
+          "size 顺序是宽、高。",
+          "source[i] 对应 target[i]。",
+          "矩阵第三行参与透视除法，不能随意删除。"
+        ],
+        "display": "matrix",
+        "before": "step1",
+        "id": "step2",
+        "before_label": "源点位置示意（求解使用坐标数组）"
+      },
+      {
+        "title": "执行变换并检查方向",
+        "code": "rectified = cv2.warpPerspective(image, matrix, (w,h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=0)",
+        "value": "rectified",
+        "why": "按映射关系重采样原图，得到新的矩形画布。",
+        "watch": "正确模式中 TOP 文字方向正常、边界拉直；错误模式可能镜像或严重扭曲。",
+        "failure": "输出 shape 应为 h×w×3；黑区可能来自采样越界或错误对应。",
+        "question": "warpPerspective 的 dsize 与 shape 顺序相同吗？",
+        "answer": "不同。dsize=(宽,高)，shape=(高,宽,通道)。",
+        "lines": [
+          "输入是原始 image，不是标了红点的 marked。",
+          "INTER_LINEAR 用邻近像素插值。",
+          "BORDER_CONSTANT=0 将越界位置填黑。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step3"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V01": {
+    "scene": "分割前先看看画面中哪些亮度出现得多，为阈值选择提供证据。",
+    "target": "返回 256 个灰度计数，并联系空间图理解直方图能说明什么。",
+    "boundary": "直方图只保留频率、不保留位置；双峰不保证能完整分开业务目标。",
+    "control": {
+      "name": "marker",
+      "label": "观察亮于这个灰度的像素",
+      "values": [
+        64,
+        128,
+        192
+      ],
+      "default": 128,
+      "experiment": "改变观察阈值，直方图本身不变，选中的空间区域会变化。"
+    },
+    "steps": [
+      {
+        "title": "统计每个灰度的次数",
+        "code": "histogram = np.bincount(image.ravel(), minlength=256)\nassert histogram.sum() == image.size\ndetail = f\"统计总数={histogram.sum()}，像素总数={image.size}\"",
+        "value": "histogram",
+        "why": "每个像素归入一个亮度区间，256 项计数构成直方图。",
+        "watch": "横轴为灰度 0~255，纵轴为出现次数；尖峰表示大量像素具有相近亮度。",
+        "failure": "少了高亮空区间时检查 minlength；别把灰度值当作像素位置。",
+        "question": "两张不同的照片能有相同直方图吗？",
+        "answer": "能。重新排列像素位置不会改变每个灰度的计数。",
+        "lines": [
+          "ravel 把二维像素展开。",
+          "bincount 统计非负整数出现次数。",
+          "计数总和必须等于 image.size。"
+        ],
+        "display": "histogram",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "回到空间中找出被选像素",
+        "code": "selected = (image > params[\"marker\"]).astype(np.uint8) * 255\ndetail = f\"亮于阈值的像素={np.count_nonzero(selected)}；直方图尾部计数={histogram[params[\"marker\"]+1:].sum()}\"",
+        "value": "selected",
+        "why": "把频率统计与原图位置联系起来，检查选中的区域是不是目标。",
+        "watch": "关注哪些物体和背景同时变白；数量可由直方图尾部求和核对。",
+        "failure": "观察阈值变化不应重新定义直方图本身。",
+        "question": "为什么尾部求和从 marker+1 开始？",
+        "answer": "本步骤判断严格大于阈值，不包含等于阈值的像素。",
+        "lines": [
+          "布尔比较生成 True/False。",
+          "转 uint8 再乘 255 便于显示。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      },
+      {
+        "title": "打乱位置，验证统计的局限",
+        "code": "rearranged = image.reshape(-1)[::-1].reshape(image.shape).copy()\nassert np.array_equal(np.bincount(rearranged.ravel(), minlength=256), histogram)",
+        "value": "rearranged",
+        "why": "通过实际反例理解直方图丢失空间布局。",
+        "watch": "物体位置反转了，但每种亮度的数量完全相同。",
+        "failure": "不要只凭直方图判断目标在哪里或有几个。",
+        "question": "为什么这一步不改变计数总和？",
+        "answer": "只是重排已有像素，没有添加、删除或修改亮度。",
+        "lines": [
+          "[::-1] 反转展平后的顺序。",
+          "reshape 恢复原来的高宽。",
+          "正式题目返回 histogram；这一步是额外理解实验。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step3"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V02": {
+    "scene": "拍摄纸面或零件时一侧偏暗，单一全局阈值难以兼顾所有位置。",
+    "target": "比较全局阈值与局部高斯自适应阈值，返回本题约定的二值图。",
+    "boundary": "局部方法仍会受纹理、窗口大小和前景方向影响，并非任何阴影下都可靠。",
+    "control": {
+      "name": "block_size",
+      "label": "局部窗口边长（C 固定为 4）",
+      "values": [
+        7,
+        21,
+        51
+      ],
+      "default": 21,
+      "experiment": "比较小窗口与大窗口，观察纹理响应和轮廓完整性。"
+    },
+    "steps": [
+      {
+        "title": "建立全局阈值对照",
+        "code": "_, global_mask = cv2.threshold(image, 130, 255, cv2.THRESH_BINARY)",
+        "value": "global_mask",
+        "why": "先用固定规则观察失效现象，才能判断是否需要局部阈值。",
+        "watch": "同样的结构在明暗两侧是否得到相同结果？",
+        "failure": "本图仅是方法对照，不是这道题最终交付。",
+        "question": "降低全局阈值能否同时解决暗侧漏检与亮侧背景混入？",
+        "answer": "不一定，这两个问题可能要求相反的调参方向。",
+        "lines": [
+          "整张图共用阈值 130。",
+          "用固定阈值作为参照，避免同时改变多个变量。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "在每个局部邻域内判断",
+        "code": "adaptive = cv2.adaptiveThreshold(image, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, params[\"block_size\"], params[\"c\"])",
+        "value": "adaptive",
+        "why": "每个像素与附近加权均值减 C 比较，适应缓慢变化的背景亮度。",
+        "watch": "边缘和纹理附近的响应会变化；大片均匀区域可能变白。",
+        "failure": "窗口需为大于 1 的奇数；输入必须是 uint8 单通道。",
+        "question": "均匀区域取 C=4 时为什么常变白？",
+        "answer": "局部均值等于当前值，当前值大于均值减 4，所以 THRESH_BINARY 输出白色。",
+        "lines": [
+          "block_size 是局部窗口边长。",
+          "GAUSSIAN_C 使用高斯加权邻域。",
+          "此题白色代表亮于局部门限，不固定代表黑色文字。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V05": {
+    "scene": "需要反复查询多个区域的平均亮度，避免每次扫描整个区域。",
+    "target": "建立积分图，用四个角求 ROI 总和、均值和像素数。",
+    "boundary": "适合大量矩形区域统计；只查询一次时建立积分图不一定更省时。",
+    "control": {
+      "name": "shift",
+      "label": "ROI 向右平移像素数",
+      "values": [
+        0,
+        40,
+        80
+      ],
+      "default": 0,
+      "experiment": "只移动 ROI，核对四角公式与直接切片求和是否一致。"
+    },
+    "steps": [
+      {
+        "title": "标出要查询的矩形",
+        "code": "x, y, w, h = params[\"roi\"]\nmarked = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)\ncv2.rectangle(marked, (x,y), (x+w-1,y+h-1), (0,0,255), 2)",
+        "value": "marked",
+        "why": "先明确查询区域，避免把坐标错误误判为积分公式错误。",
+        "watch": "框的宽高与 ROI 参数一致；红框只是预览，不改变灰度输入。",
+        "failure": "将 x 与 y 交换会得到不同区域，但仍可能返回看似合理的数字。",
+        "question": "区域面积是否包含右下终点？",
+        "answer": "数组切片右端不包含，像素数仍是 w×h。",
+        "lines": [
+          "绘图使用 (x,y)。",
+          "统计仍使用原始 image。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "累积左上区域，保留额外零边",
+        "code": "integral = cv2.integral(image, sdepth=cv2.CV_64F)",
+        "value": "integral",
+        "why": "一次预处理后，任意矩形可以由四个累计值求出。",
+        "watch": "原数组高宽各增加 1；上边和左边的累计值为零。热力图只帮助观察累积趋势。",
+        "failure": "不要用 uint8 保存累计和；大区域很快超出 255。",
+        "question": "为什么多一行和一列零？",
+        "answer": "方便统一表示贴着上边或左边的半开区间，不必为边界单独分支。",
+        "lines": [
+          "CV_64F 提供足够范围的浮点累计值。",
+          "integral[y,x] 累计 image[:y,:x]。",
+          "显示时归一化，实际计算仍用原值。"
+        ],
+        "display": "heatmap",
+        "before": "input",
+        "id": "step2"
+      },
+      {
+        "title": "四角容斥，核对直接求和",
+        "code": "total = integral[y+h,x+w] - integral[y,x+w] - integral[y+h,x] + integral[y,x]\ncount = w*h\nsummary = np.array([[total, total/count, count]], np.float64)\nassert total == np.sum(image[y:y+h,x:x+w], dtype=np.float64)\ndetail = \"表格三列依次是 total、mean、count\"",
+        "value": "summary",
+        "why": "大矩形减去上方和左方的多余区域，再加回重复减掉的交集。",
+        "watch": "总和应等于直接切片求和，mean=total/count。",
+        "failure": "四角索引都在积分图坐标中；漏加最后一项会多减左上角。",
+        "question": "为什么最后一项是加号？",
+        "answer": "左上角多余区域被减了两次，需要补回一次。",
+        "lines": [
+          "半开区间终点是 x+w、y+h。",
+          "count=w*h，合法 ROI 非空。",
+          "原题返回三个字段的字典，这个表是数值预览。"
+        ],
+        "display": "matrix",
+        "before": "step2",
+        "id": "step3"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V06": {
+    "scene": "目标与背景形成较明显的两组亮度，希望自动提出全局阈值。",
+    "target": "观察直方图，用 Otsu 得到阈值和掩膜，并比较固定阈值。",
+    "boundary": "阴影、多种背景、前景很小或反光都可能误导全局直方图法。",
+    "control": {
+      "name": "comparison_threshold",
+      "label": "固定阈值对照（Otsu 本身不调参）",
+      "values": [
+        80,
+        140,
+        200
+      ],
+      "default": 140,
+      "experiment": "只改变固定阈值参照；同一输入的 Otsu 阈值应保持不变。"
+    },
+    "steps": [
+      {
+        "title": "看亮度群是否分离",
+        "code": "histogram = np.bincount(image.ravel(), minlength=256)",
+        "value": "histogram",
+        "why": "Otsu 使用全局亮度频数，不知道像素的位置和语义。",
+        "watch": "本样例存在分离的亮度群，但仍要回到空间掩膜验证。",
+        "failure": "不要把“有两个峰”当作算法一定正确的保证。",
+        "question": "Otsu 能直接理解哪个区域是工件吗？",
+        "answer": "不能。它优化灰度类别之间的分离，不识别工件语义。",
+        "lines": [
+          "统计 0~255 的所有灰度。",
+          "横轴是亮度，纵轴是像素数。"
+        ],
+        "display": "histogram",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "自动选阈值并生成掩膜",
+        "code": "threshold, otsu = cv2.threshold(image, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)\ndetail = f\"Otsu 自动阈值={threshold}\"",
+        "value": "otsu",
+        "why": "让算法遍历候选分界，选择类间差异较大的阈值。",
+        "watch": "查看实际返回阈值，再检查目标是否完整、背景是否混入。",
+        "failure": "这里的输入阈值 0 不是最终阈值；返回值 threshold 才是自动选择结果。",
+        "question": "改下面的固定对照阈值会改变 Otsu 输出吗？",
+        "answer": "不会，因为输入图像不变，固定对照没有参与 Otsu 计算。",
+        "lines": [
+          "使用按位或组合 BINARY 与 OTSU 标志。",
+          "保留 threshold 和 otsu 两个返回值。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      },
+      {
+        "title": "与固定阈值做空间对照",
+        "code": "_, fixed = cv2.threshold(image, params[\"comparison_threshold\"], 255, cv2.THRESH_BINARY)",
+        "value": "fixed",
+        "why": "用同一输入比较规则，观察自动方法和手动选择各自的效果。",
+        "watch": "左侧是 Otsu 掩膜，右侧是固定阈值；相同并不表示所有场景都相同。",
+        "failure": "真实现场需用独立图片验证，不只看这张教学图。",
+        "question": "如果固定阈值已经很好，必须改成 Otsu 吗？",
+        "answer": "不必。应依据场景稳定性、误检漏检和可维护性选择方法。",
+        "lines": [
+          "此步骤是额外对照。",
+          "原题交付 threshold 与 otsu，而不是 fixed。"
+        ],
+        "display": "image",
+        "before": "step2",
+        "id": "step3",
+        "before_label": "方法对照：Otsu 自动阈值结果"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V07": {
+    "scene": "将相机图像缩小以节省计算，同时理解照片与类别标签的不同要求。",
+    "target": "对相同输出尺寸比较 INTER_AREA 与 INTER_NEAREST；原题根据 mode 返回指定结果。",
+    "boundary": "缩放不是裁剪；非等比尺寸会改变几何比例，标签图不应随意采用平均插值。",
+    "control": {
+      "name": "percent",
+      "label": "缩放到原尺寸的百分比",
+      "values": [
+        25,
+        50,
+        150
+      ],
+      "default": 50,
+      "experiment": "比较细线与纹理，注意放大不会恢复原图未记录的细节。"
+    },
+    "steps": [
+      {
+        "title": "面积插值缩放照片",
+        "code": "area = cv2.resize(image, tuple(params[\"size\"]), interpolation=cv2.INTER_AREA)",
+        "value": "area",
+        "why": "缩小时可通过区域关系综合像素，减少简单抽样产生的锯齿。",
+        "watch": "检查细线和棋盘纹理，打印尺寸而非只看显示窗口大小。",
+        "failure": "dsize 顺序是宽、高；放大时效果和缩小时不同，不要绝对化推荐。",
+        "question": "输出显示得一样大，是否说明没有缩放？",
+        "answer": "不说明。页面可能把不同尺寸图片铺到相同宽度，应看 shape。",
+        "lines": [
+          "params 的 size 已按百分比生成。",
+          "返回数组 shape 是高、宽、通道。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "最近邻保留离散取值",
+        "code": "nearest = cv2.resize(image, tuple(params[\"size\"]), interpolation=cv2.INTER_NEAREST)",
+        "value": "nearest",
+        "why": "最近邻选择已有像素值，适合不能产生新类别编号的标签图。",
+        "watch": "相同尺寸下比较块状边缘；下采样也可能漏掉细线。",
+        "failure": "标签虽不产生新编号，但小区域仍可能丢失，不能认为语义一定保留。",
+        "question": "类别编号 0 和 2 之间能用均值插出类别 1 吗？",
+        "answer": "不能把这种平均当作真实类别；类别标签通常采用最近邻。",
+        "lines": [
+          "与上一步保持相同 dsize。",
+          "本题按 mode 选择一种结果，实验额外并排比较两种方法。"
+        ],
+        "display": "image",
+        "before": "step1",
+        "id": "step2",
+        "before_label": "方法对照：面积插值结果"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V08": {
+    "scene": "希望调整灰度的中间亮度，同时保持黑白端点。",
+    "target": "构建 256 项 Gamma 查找表，再用 cv2.LUT 应用到图像。",
+    "boundary": "不能恢复过曝或欠曝丢失的信息，也不直接消除空间上不均匀的光照。",
+    "control": {
+      "name": "gamma_percent",
+      "label": "Gamma 编码：50=0.5 / 100=1 / 200=2",
+      "values": [
+        50,
+        100,
+        200
+      ],
+      "default": 100,
+      "experiment": "曲线高于恒等线时提亮，低于时压暗；本题使用 gamma 而不是 1/gamma。"
+    },
+    "steps": [
+      {
+        "title": "先画输入到输出的映射曲线",
+        "code": "table = np.floor(255 * (np.arange(256, dtype=np.float64)/255) ** params[\"gamma\"]).astype(np.uint8)\ndetail = f\"gamma={params[\"gamma\"]}；输入[0,64,128,255]映射为 {table[[0,64,128,255]].tolist()}\"",
+        "value": "table",
+        "why": "把公式应用到全部可能的 uint8 输入，之后每个像素只需查表。",
+        "watch": "横轴输入灰度，纵轴输出灰度；灰线是输入=输出的恒等线。",
+        "failure": "Gamma 的两种常见约定方向相反，本课程固定指数 gamma。",
+        "question": "gamma=2 时 128 会更亮还是更暗？",
+        "answer": "更暗。归一化值位于 0~1，平方后变小。",
+        "lines": [
+          "先用 float64 避免整数除法与溢出。",
+          "floor 与直接四舍五入不相同。",
+          "最后转换为 uint8。"
+        ],
+        "display": "curve",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "按表映射每个像素",
+        "code": "adjusted = cv2.LUT(image, table)",
+        "value": "adjusted",
+        "why": "同一个输入灰度在任何位置都使用同一个映射值。",
+        "watch": "看中间灰度和阴影区域；纯黑和纯白端点应保留。",
+        "failure": "不要把公式中 /255 和 *255 省掉，否则数值范围不匹配。",
+        "question": "这一步会自动照顾不同位置的阴影吗？",
+        "answer": "不会，Gamma 是全局逐像素映射，没有估计局部照明。",
+        "lines": [
+          "LUT 接受 256 项查找表。",
+          "本题返回 adjusted 图像。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V09": {
+    "scene": "画面整体偏灰且照明不均，需要比较全局增强和局部增强。",
+    "target": "观察原始直方图、全局均衡对照与 CLAHE 结果。",
+    "boundary": "增强对比度可能同时增强噪声；画面更鲜明不等于检测更准确。",
+    "control": {
+      "name": "clip_limit",
+      "label": "CLAHE 对比度限制（网格固定 8×8）",
+      "values": [
+        1,
+        2,
+        8
+      ],
+      "default": 2,
+      "experiment": "对比低限制与高限制，特别观察暗区噪声和小细节。"
+    },
+    "steps": [
+      {
+        "title": "确认灰度是否集中",
+        "code": "histogram = np.bincount(image.ravel(), minlength=256)",
+        "value": "histogram",
+        "why": "从亮度分布和原图共同判断是否需要对比度处理。",
+        "watch": "灰度范围集中时图像可能显得灰；直方图不能单独证明局部细节可恢复。",
+        "failure": "不是每张窄直方图都应该拉伸，低对比度也可能是场景本身的属性。",
+        "question": "直方图窄就一定是坏图吗？",
+        "answer": "不一定，例如本来就均匀的表面也可能只有较窄亮度范围。",
+        "lines": [
+          "统计原始灰度，不先做显示归一化。",
+          "后续方法比较使用同一输入。"
+        ],
+        "display": "histogram",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "用全局均衡建立参照",
+        "code": "equalized = cv2.equalizeHist(image)",
+        "value": "equalized",
+        "why": "全图使用一个累积分布映射，便于与分块方法比较。",
+        "watch": "明暗区域的细节是否同时改善？噪声是否被放大？",
+        "failure": "equalizeHist 用于单通道；直接分别处理 BGR 通道可能改变颜色。",
+        "question": "全局均衡是否为每个位置建立独立映射？",
+        "answer": "不是，它使用全图统计得到一套灰度映射。",
+        "lines": [
+          "输入必须是 uint8 单通道。",
+          "本步骤是对照，不是原题最终结果。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      },
+      {
+        "title": "限制局部对比度，再融合",
+        "code": "clahe = cv2.createCLAHE(clipLimit=params[\"clip_limit\"], tileGridSize=tuple(params[\"grid\"]))\nlocal = clahe.apply(image)",
+        "value": "local",
+        "why": "分块统计并限制过度集中，然后在块之间融合结果。",
+        "watch": "对照全局结果，观察暗部小目标与噪声；避免只凭整体观感评价。",
+        "failure": "tileGridSize=[8,8] 表示网格数量，不是每块 8×8 像素。",
+        "question": "clipLimit 越大一定越好吗？",
+        "answer": "不一定，限制减弱可能增强更多细节，也可能放大噪声。",
+        "lines": [
+          "先创建 CLAHE 对象，再 apply。",
+          "运算仍使用原始 image，不是 equalized。",
+          "原题交付 local。"
+        ],
+        "display": "image",
+        "before": "step2",
+        "id": "step3",
+        "before_label": "方法对照：全局均衡结果"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V10": {
+    "scene": "掩膜中两个小块仅在角上接触，连接规则会影响计数。",
+    "target": "显示标签、筛选区域和返回的几何统计，区分像素面积与外接框面积。",
+    "boundary": "连通域不理解物体身份；粘连或断裂都会改变区域数量。",
+    "control": {
+      "name": "connectivity",
+      "label": "连接方式：4 邻接 / 8 邻接",
+      "values": [
+        4,
+        8
+      ],
+      "default": 4,
+      "experiment": "切换连接方式，观察角接触的两个小块是否合并。"
+    },
+    "steps": [
+      {
+        "title": "给每个连通区域编号",
+        "code": "count, labels, stats, centers = cv2.connectedComponentsWithStats(image, connectivity=params[\"connectivity\"])\ndetail = f\"前景连通域={count-1}；背景标签固定为0\"",
+        "value": "labels",
+        "why": "相邻的前景像素被归入同一个标签，颜色只是编号的可视化。",
+        "watch": "左上角两个方块在 4 连通下分开、8 连通下合并；孔洞仍为背景。",
+        "failure": "count 包含背景，直接当物体数量会多算 1。",
+        "question": "标签颜色是否代表类别或跨帧身份？",
+        "answer": "都不是。只是本次编号，不保证跨帧稳定。",
+        "lines": [
+          "0 号 stats 对应背景。",
+          "labels 是 int32 的区域编号图。",
+          "彩色预览不修改原始编号。"
+        ],
+        "display": "labels",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "按真实前景像素数过滤",
+        "code": "kept = [i for i in range(1,count) if stats[i,cv2.CC_STAT_AREA] >= params[\"min_area\"]]\nfiltered = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)\nfor i in kept:\n    x,y,w,h,area = stats[i].tolist()\n    cv2.rectangle(filtered, (x,y), (x+w-1,y+h-1), (0,0,255), 1)\ndetail = f\"面积下限={params[\"min_area\"]}；保留区域={len(kept)}\"",
+        "value": "filtered",
+        "why": "按像素面积排除小噪点，再画框核对保留了谁。",
+        "watch": "左上小点应被排除，带孔区域的框仍包含孔，但面积不含孔。",
+        "failure": "不要用 w*h 代替 CC_STAT_AREA，也不要从背景标签 0 开始筛选。",
+        "question": "矩形框内有黑孔时，像素面积等于 w*h 吗？",
+        "answer": "小于。孔洞不是前景，而外接框面积把它包含在内。",
+        "lines": [
+          "range(1,count) 排除背景。",
+          "标注只在副本上绘制。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      },
+      {
+        "title": "按位置整理统计结果",
+        "code": "rows = sorted([stats[i].tolist() for i in kept], key=lambda row:(row[1],row[0]))\nsummary = np.asarray(rows, np.int32).reshape(-1,5)\ndetail = \"每行依次为 x、y、width、height、area；教学样例保留至少一个区域\"",
+        "value": "summary",
+        "why": "用位置排序形成可复现输出，而不是依赖区域编号顺序。",
+        "watch": "表中 area 是实际前景像素数；比较不同连接规则对行数与外接框的影响。",
+        "failure": "真实空场景应返回 []；此表仅预览当前非空教学样例。",
+        "question": "为什么不能把 label 数值当作返回排序规则？",
+        "answer": "标签生成顺序不表达业务身份；本题明确按 y、x 排序。",
+        "lines": [
+          "排序键先 y 再 x。",
+          "原题返回 rows 列表，summary 数组仅用于显示。"
+        ],
+        "display": "matrix",
+        "before": "step2",
+        "id": "step3",
+        "before_label": "筛选区域示意（统计来自 stats）"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V11": {
+    "scene": "希望知道目标内部离边界有多远，为种子点或尺寸分析做准备。",
+    "target": "得到精确欧氏距离图，再观察不同距离下保留的内部区域。",
+    "boundary": "距离峰不总等于一个独立物体，细长区域、粘连和噪声会影响种子。",
+    "control": {
+      "name": "distance_level",
+      "label": "观察距离大于该值的内部区域（像素）",
+      "values": [
+        2,
+        5,
+        9
+      ],
+      "default": 5,
+      "experiment": "改变内部距离门限，不改变原始距离变换。"
+    },
+    "steps": [
+      {
+        "title": "计算到最近零像素的距离",
+        "code": "distance = cv2.distanceTransform(image, cv2.DIST_L2, cv2.DIST_MASK_PRECISE)",
+        "value": "distance",
+        "why": "前景内部越远离背景，距离通常越大；背景距离为零。",
+        "watch": "热力图显示内高外低，同时查看原值的单位是像素。",
+        "failure": "距离不是到图像中心，也不要把归一化预览作为返回值。",
+        "question": "换一个物体位置，距离一定改变吗？",
+        "answer": "平移且不受边界影响时内部距离形状可保持不变，因为它取决于最近背景。",
+        "lines": [
+          "DIST_L2 是欧氏距离。",
+          "DIST_MASK_PRECISE 使用精确算法。",
+          "distance 保留 float32 原值。"
+        ],
+        "display": "heatmap",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "提出内部候选区域",
+        "code": "core = (distance > params[\"distance_level\"]).astype(np.uint8)*255",
+        "value": "core",
+        "why": "先观察距离门限如何收缩内部区域，再考虑是否适合作为分水岭种子。",
+        "watch": "门限升高时内部白区缩小，窄区域可能完全消失。",
+        "failure": "没有白区不一定是算法坏了，也可能门限超过了最大距离。",
+        "question": "门限越高就一定能把粘连目标分开吗？",
+        "answer": "不能保证，几何形状可能没有合适的独立峰值。",
+        "lines": [
+          "比较使用原始像素距离。",
+          "本题最终交付 distance；core 是理解实验。"
+        ],
+        "display": "image",
+        "before": "step1",
+        "id": "step2"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V12": {
+    "scene": "在固定尺度画面中寻找与给定小模板相同的标签。",
+    "target": "看模板、计算差平方响应图，再画出最小值位置。",
+    "boundary": "不自动适应大幅旋转、缩放和透视；无目标时也有最小值，需额外验证阈值。",
+    "control": {
+      "name": "trim",
+      "label": "从模板四边各裁去的像素数",
+      "values": [
+        0,
+        2,
+        4
+      ],
+      "default": 0,
+      "experiment": "缩小模板时上下文减少，定位对应的左上角也会改变。原题验收仍使用它实际提供的模板。"
+    },
+    "steps": [
+      {
+        "title": "先核对模板内容与尺寸",
+        "code": "template = np.asarray(params[\"template\"], np.uint8)",
+        "value": "template",
+        "why": "只有明确要匹配的局部外观，响应图才有可解释的意义。",
+        "watch": "模板尺寸必须小于或等于原图；这张模板不应是均匀空白。",
+        "failure": "模板改小并不总能提高准确性，可能失去区分相似目标的细节。",
+        "question": "模板左上角坐标与物体中心坐标一样吗？",
+        "answer": "不一样，需要结合模板宽高换算中心。",
+        "lines": [
+          "导出包提供 template.npy，脚本用 NumPy 原生加载。",
+          "裁边实验使用同一原图，避免改变整个场景。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "每个候选位置计算差平方",
+        "code": "response = cv2.matchTemplate(image, template, cv2.TM_SQDIFF)\ndetail = f\"响应尺寸={response.shape}，应为 H-h+1 行、W-w+1 列\"",
+        "value": "response",
+        "why": "模板在每个有效位置滑动，差越小越接近。响应图的坐标就是模板左上角候选。",
+        "watch": "低响应区域更相似；热力图颜色只是相对显示，结合最小值判断。",
+        "failure": "不能对 TM_SQDIFF 取最大值；响应图也不是原图的同尺寸分割掩膜。",
+        "question": "为什么响应图比原图小？",
+        "answer": "模板必须完整落在原图内，有效左上角位置只有 W-w+1、H-h+1。",
+        "lines": [
+          "TM_SQDIFF 越小越匹配。",
+          "计算仍使用原始 image 与 template。"
+        ],
+        "display": "heatmap",
+        "before": "input",
+        "id": "step2"
+      },
+      {
+        "title": "取最小值并画出定位框",
+        "code": "minimum, maximum, location, _ = cv2.minMaxLoc(response)\nx,y = location\nh,w = template.shape\nlocated = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)\ncv2.rectangle(located, (x,y), (x+w-1,y+h-1), (0,0,255), 2)\ndetail = f\"最小分数={minimum:.4g}；左上角={location}；模板宽高=({w},{h})\"",
+        "value": "located",
+        "why": "把响应坐标映射回原图，验证定位是否符合目标。",
+        "watch": "框应覆盖与模板相同的局部；裁掉模板边缘后，框也应内缩。",
+        "failure": "仅有最小值不能证明目标存在；本课样例包含一个真实对应。",
+        "question": "如果原图没有目标，还会返回 location 吗？",
+        "answer": "会。任何非空响应图都有最小值，因此工程上还要判断分数与几何条件。",
+        "lines": [
+          "minMaxLoc 第三个返回值是最小值位置。",
+          "原题返回 top_left；画框是辅助观察。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step3"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V13": {
+    "scene": "识别红色物体时发现色相跨越 0 和 179，单一普通范围会漏检。",
+    "target": "分别选择高 H 段和低 H 段，合并红色掩膜并检查 S/V 条件。",
+    "boundary": "标准 uint8 HSV 才使用 0~179 范围；灰白区域与暗区还需 S/V 约束。",
+    "control": {
+      "name": "s_min",
+      "label": "最低饱和度（V 下限固定 100）",
+      "values": [
+        0,
+        100,
+        200
+      ],
+      "default": 100,
+      "experiment": "降低饱和度门限，观察灰白色区域是否混入红色掩膜。"
+    },
+    "steps": [
+      {
+        "title": "选择红色高 H 一侧",
+        "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)\nhigh_band = cv2.inRange(hsv, (170,params[\"s_min\"],params[\"v_min\"]), (179,255,255))",
+        "value": "high_band",
+        "why": "红色色相区间被数组端点切成两段，先取靠近 179 的一侧。",
+        "watch": "色相条右端被选中；低饱和和太暗的行可能被排除。",
+        "failure": "一次 inRange((170,...),(10,...)) 不是环绕区间，会选不到正确范围。",
+        "question": "H=175、S/V 足够时属于哪一段？",
+        "answer": "属于高 H 段 [170,179]。",
+        "lines": [
+          "两端都包含。",
+          "输入来自真实 BGR 转 HSV，不直接假设原始合成 H 完全保留。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1"
+      },
+      {
+        "title": "选择红色低 H 一侧",
+        "code": "low_band = cv2.inRange(hsv, (0,params[\"s_min\"],params[\"v_min\"]), (10,255,255))",
+        "value": "low_band",
+        "why": "补上靠近零点的一侧，并使用同一组 S/V 门限。",
+        "watch": "色相条左端被选中；s_min=0 时白灰像素可能因 H=0 被误选。",
+        "failure": "灰度像素 H=0 不代表它真的有红色外观，必须检查饱和度。",
+        "question": "为什么两个区间都需要 S/V 条件？",
+        "answer": "否则其中一个区间可能把灰白或暗像素重新引入。",
+        "lines": [
+          "这一段与上一段独立从 hsv 计算。",
+          "不要把 high_band 作为 inRange 的输入。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      },
+      {
+        "title": "用或运算合并两段",
+        "code": "red = cv2.bitwise_or(high_band, low_band)",
+        "value": "red",
+        "why": "属于任意一个红色区间即可保留，所以使用 OR。",
+        "watch": "两个端点区域同时出现，中间色相仍为黑。",
+        "failure": "AND 要求同时属于两个不相交区间，通常会得到空掩膜。",
+        "question": "合并后是否就不受光照影响？",
+        "answer": "不是。S/V、白平衡和材质仍可能变化，需要独立采集验证。",
+        "lines": [
+          "bitwise_or 对 0/255 掩膜逐像素取并集。",
+          "原题还包含普通不环绕分支；本图解专门观察环绕场景。"
+        ],
+        "display": "image",
+        "before": "step2",
+        "id": "step3"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
+  },
+  "V14": {
+    "scene": "固定相机拍摄移动方块，想找出两帧之间变化的区域。",
+    "target": "对照前后帧，做绝对差，再二值化变化区域。",
+    "boundary": "光照变化与相机抖动也会触发帧差；它不直接提供身份或速度。",
+    "control": {
+      "name": "threshold",
+      "label": "变化幅度门限",
+      "values": [
+        10,
+        40,
+        160
+      ],
+      "default": 40,
+      "experiment": "低门限会响应轻微整体照明变化，高门限可能漏掉低对比度运动。"
+    },
+    "steps": [
+      {
+        "title": "核对上一帧与当前帧",
+        "code": "previous = np.asarray(params[\"previous\"], np.uint8)",
+        "value": "previous",
+        "why": "帧差要求同一坐标对应同一场景位置，先确认两帧来源和尺寸。",
+        "watch": "左侧当前帧，右侧上一帧；方块位置改变，背景亮度也有小变化。",
+        "failure": "如果尺寸不同、相机大幅移动或时间间隔不明，先处理输入条件。",
+        "question": "只移动相机而物体静止，会出现帧差吗？",
+        "answer": "会。像素位置发生变化就可能产生差异。",
+        "lines": [
+          "previous.npy 保存原始上一帧。",
+          "两帧都是单通道 uint8。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step1",
+        "before_label": "当前帧 image"
+      },
+      {
+        "title": "同时保留变亮与变暗的变化",
+        "code": "delta = cv2.absdiff(image, previous)",
+        "value": "delta",
+        "why": "绝对差既检测新位置变亮，也检测旧位置变暗。",
+        "watch": "运动方块的新旧位置都可能出现响应，背景还能有弱变化。",
+        "failure": "直接 uint8 相减会回绕，不能可靠表达变暗幅度。",
+        "question": "为什么帧差可能出现两个方块区域？",
+        "answer": "一个来自旧位置离开，一个来自新位置进入；不代表有两个目标。",
+        "lines": [
+          "image 是当前帧。",
+          "absdiff 不提供运动方向，只提供变化大小。"
+        ],
+        "display": "image",
+        "before": "input",
+        "id": "step2"
+      },
+      {
+        "title": "按变化大小分割",
+        "code": "_, motion = cv2.threshold(delta, params[\"threshold\"], 255, cv2.THRESH_BINARY)",
+        "value": "motion",
+        "why": "将变化幅度转成候选区域，供后续去噪、连通域或跟踪使用。",
+        "watch": "观察背景整体亮度变化是否被过滤，目标新旧位置是否仍被保留。",
+        "failure": "全屏变白可能是照明变化或抖动；并不一定是物体遍布全屏。",
+        "question": "值恰好等于 threshold 会保留吗？",
+        "answer": "不会，THRESH_BINARY 使用严格大于。",
+        "lines": [
+          "这里阈值作用于差值，不是原图亮度。",
+          "结果只是变化掩膜，不能直接作为身份和速度。"
+        ],
+        "display": "image",
+        "before": "step2",
+        "id": "step3"
+      }
+    ],
+    "sample_note": "教学样例为可重复的合成图或原题样例，用于观察算法行为；不代表实物场景的全部变化。"
   }
 }

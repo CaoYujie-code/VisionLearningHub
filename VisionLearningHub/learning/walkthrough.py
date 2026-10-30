@@ -12,6 +12,8 @@ import cv2
 import numpy as np
 
 from .engine import fixture, write_image
+from .walkthrough_display import validate_shape, data_preview, SPATIAL_MODES
+from .walkthrough_samples import supplement
 
 CATALOG = json.loads((Path(__file__).resolve().parents[1]/'content/walkthroughs.json').read_text(encoding='utf-8'))
 SETTING = 'hub.walkthrough'
@@ -38,7 +40,7 @@ def sample(key, value, folder):
     value=parameter(key,value)
     image,raw,_=fixture(key,17,folder)
     # Pass only the arguments used by the selected lesson, not unrelated fixture objects.
-    params={}
+    image,params=supplement(key,value,image,raw)
     if key=='T02':
         x,y,w,h=raw['roi'];params['roi']=[min(x+value,image.shape[1]-w),y,w,h]
     if key=='T04':params.update(lower=raw['lower'],upper=[value,255,255])
@@ -48,12 +50,17 @@ def sample(key, value, folder):
     return image,params
 
 
-def signature(key,value,image):
-    return dict(lesson=key,revision=revision(key),parameter=value,input_sha256=hashlib.sha256(image.tobytes()).hexdigest())
+def signature(key,value,image,params=None):
+    result=dict(lesson=key,revision=revision(key),parameter=value,input_sha256=hashlib.sha256(image.tobytes()).hexdigest())
+    arrays={k:dict(sha256=hashlib.sha256(v.tobytes()).hexdigest(),shape=list(v.shape),dtype=str(v.dtype)) for k,v in (params or {}).items() if isinstance(v,np.ndarray)}
+    if arrays:result['additional_inputs']=arrays
+    return result
 
 
 def display_array(value,mode):
     """Display transforms never replace raw values used by the algorithms."""
+    custom=data_preview(value,mode)
+    if custom is not None:return custom
     if mode=='signed':
         value=value.astype(np.float64)
         scale=max(float(np.max(np.abs(value))),1.)
@@ -73,13 +80,11 @@ def display_array(value,mode):
 
 def describe(value,mode,folder,name,detail=''):
     value=np.asarray(value)
-    if (value.dtype.kind not in 'uif' or value.dtype.hasobject or value.size==0 or value.size>2_000_000
-        or value.ndim not in (2,3) or (value.ndim==3 and value.shape[2]!=3)
-        or not np.isfinite(value).all()):raise ValueError('步骤结果必须是有限数值的二维或三通道图像，且不超过 200 万个数值')
-    if mode in ('signed','magnitude') and value.ndim!=2:raise ValueError('梯度步骤必须为二维数组')
+    validate_shape(value.shape,value.dtype,mode)
+    if value.size>2_000_000 or not np.isfinite(value).all():raise ValueError('步骤结果必须是有限数值，且不超过 200 万个数值')
     preview,note=display_array(value,mode)
     path=folder/(name+'.png');write_image(path,preview)
-    return dict(output=str(path),shape=list(value.shape),dtype=str(value.dtype),minimum=float(value.min()),maximum=float(value.max()),nonzero=int(np.count_nonzero(value)),display_note=note,detail=detail)
+    return dict(output=str(path),shape=list(value.shape),dtype=str(value.dtype),minimum=float(value.min()),maximum=float(value.max()),nonzero=int(np.count_nonzero(value)),display_note=note,detail=detail,spatial=mode in SPATIAL_MODES,kind=mode,cells=value.tolist() if mode=='matrix' else None)
 
 
 def demonstration(root,key,value=None):
@@ -93,7 +98,7 @@ def demonstration(root,key,value=None):
         # Code is shipped authored content. User code is never accepted here.
         exec(s['code'],namespace)
         results[s['id']]=describe(namespace[s['value']],s['display'],folder,s['id'],namespace['detail'])
-    return dict(**item,revision=revision(key),parameter=value,input=describe(image,'image',folder,'input'),results=results,context=signature(key,value,image))
+    return dict(**item,revision=revision(key),parameter=value,input=describe(image,'image',folder,'input'),results=results,context=signature(key,value,image,params),parameters={k:(dict(shape=list(v.shape),dtype=str(v.dtype)) if isinstance(v,np.ndarray) else v) for k,v in params.items() if k!='image_path'})
 
 
 def state(store,key):
@@ -127,11 +132,17 @@ def bundle(root,key,value=None):
     """Portable lesson: same input, scaffold and opt-in reference; no platform imports."""
     item=definition(key);value=parameter(key,value)
     folder=Path(root)/'previews'/'walkthrough'/key/(revision(key)+'-'+str(value));folder.mkdir(parents=True,exist_ok=True)
-    image,params=sample(key,value,folder);params['image_path']='input.png'
+    image,params=sample(key,value,folder);context=signature(key,value,image,params);params['image_path']='input.png'
+    array_files={}
+    for name in ('template','previous'):
+        if isinstance(params.get(name),np.ndarray):
+            raw=io.BytesIO();np.save(raw,params[name],allow_pickle=False)
+            array_files[name+'.npy']=raw.getvalue();params[name]={'npy':name+'.npy'}
     buffer=io.BytesIO();np.save(buffer,image,allow_pickle=False)
     files={'input.npy':buffer.getvalue(),'input.png':(folder/'input.png').read_bytes(),
            'params.json':json.dumps(params,ensure_ascii=False,indent=2).encode('utf-8'),
-           'context.json':json.dumps(signature(key,value,image),ensure_ascii=False).encode('utf-8')}
+           'context.json':json.dumps(context,ensure_ascii=False).encode('utf-8')}
+    files.update(array_files)
     prelude='''from pathlib import Path
 import io
 import json
@@ -143,6 +154,9 @@ ROOT = Path(__file__).resolve().parent
 params = json.loads((ROOT / "params.json").read_text(encoding="utf-8"))
 params["image_path"] = str(ROOT / "input.png")
 image = np.load(ROOT / "input.npy", allow_pickle=False)
+for name in ("template", "previous"):
+    if name in params:
+        params[name] = np.load(ROOT / params[name]["npy"], allow_pickle=False)
 # 每次从头生成结果包，避免混入上次运行的旧步骤。
 # 如中途报错，已写入的步骤仍可导入；未写入的步骤显示“尚未运行”。
 '''
@@ -164,7 +178,8 @@ image = np.load(ROOT / "input.npy", allow_pickle=False)
            '参考脚本需主动运行 python reference.py，会重新生成 results.zip。它是教学参考，不代表你独立完成。',
            '结果包是数据快照，平台不执行上传代码，也不据此授予题目通关。',
            '修改参数请在平台重新选择并下载另一份实验包，避免 context 与实际参数不一致。',
-           '原始数组保存在结果 ZIP 的 .npy 中；显示图的归一化不改变原数据。',
+           '原始数组保存在结果 ZIP 的 .npy 中；图表、伪彩色和显示归一化不改变原数据。',
+           'template.npy / previous.npy（若存在）分别为模板与上一帧，脚本使用 np.load 原生读取。',
            '个人代码请用 Git 或另行备份。平台学习备份不包含外部手敲脚本。','']
     for s in item['steps']:
         lines += ['## '+s['title'],'',s['why'],'','观察：'+s['watch'],'','排查：'+s['failure'],'','```python',s['code'],'```','']
@@ -218,7 +233,7 @@ def import_results(root,key,raw):
                 if ver==(1,0):shape,_,dtype=np.lib.format.read_array_header_1_0(stream)
                 elif ver==(2,0):shape,_,dtype=np.lib.format.read_array_header_2_0(stream)
                 else:raise ValueError('仅支持标准 NPY 1/2 格式')
-                if len(shape) not in (2,3) or any(type(n) is not int or n<=0 or n>2000 for n in shape) or (len(shape)==3 and shape[2]!=3) or dtype.kind not in 'uif':raise ValueError('步骤数组形状或类型无效')
+                validate_shape(shape,dtype,s['display'])
                 size=1
                 for n in shape:size*=n
                 if size>2_000_000 or size*dtype.itemsize>16*1024*1024 or stream.tell()+size*dtype.itemsize!=len(stream.getvalue()):raise ValueError('步骤数组大小无效')

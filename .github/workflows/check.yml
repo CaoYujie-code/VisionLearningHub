@@ -35,6 +35,7 @@ jobs:
       - run: python tests/test_feature_steps.py
       - run: python tests/test_function_review.py
       - run: python tests/test_walkthrough.py
+      - run: python tests/test_visual_expansion.py
       - run: npm ci --prefix extensions/vscode
       - run: npm --prefix extensions/vscode run check
       - run: npm --prefix extensions/vscode test
