@@ -79,4 +79,46 @@ def supplement(key,value,image,raw):
     elif key=='A05':
         image=np.full((220,360,3),245,np.uint8)
         params.update(boxes=[[40,40,140,140],[50,50,150,150],[60,60,160,160],[230,70,300,140],[230,70,300,140]],scores=[.9,.8,.7,.75,.75])
+    elif key=='Y02':
+        original=np.full((160,240,3),235,np.uint8)
+        cv2.rectangle(original,(20,30),(120,100),(50,160,210),-1)
+        cv2.circle(original,(200,125),22,(180,120,50),-1)
+        scale=value/100;px,py=20,30
+        resized=cv2.resize(original,None,fx=scale,fy=scale,interpolation=cv2.INTER_NEAREST)
+        image=cv2.copyMakeBorder(resized,py,py,px,px,cv2.BORDER_CONSTANT,value=(50,50,50))
+        boxes=np.array([[20,30,120,100],[-15,20,60,90],[180,100,270,180]],float)
+        params.update(original=original,boxes=(boxes*scale+[px,py,px,py]).tolist(),scale=scale,pad=[px,py],original_size=[240,160])
+    elif key=='Y03':
+        image=np.full((160,360,3),245,np.uint8)
+        params.update(truth=[1,1,1,1,0,0,0,0],scores=[.95,.8,.4,.2,.7,.6,.3,.1])
+        for i,(truth,score) in enumerate(zip(params['truth'],params['scores'])):
+            x=20+i*43;cv2.circle(image,(x,55),12,(40,140,220) if truth else (160,160,160),-1)
+            cv2.putText(image,str(i),(x-5,25),0,.4,(30,30,30),1)
+            cv2.putText(image,str(score),(x-12,105),0,.4,(30,30,30),1)
+    elif key=='Y04':
+        image=np.full((200,360,3),245,np.uint8)
+        samples=[dict(group=g,split=split) for g,split in enumerate(['train','val','test']) for _ in range(2)]
+        for g in range(value):samples.append(dict(group=g,split=['val','test'][g]))
+        params['samples']=samples
+        for i,sample in enumerate(samples):
+            x=15+(i%4)*85;y=20+(i//4)*85
+            cv2.rectangle(image,(x,y),(x+65,y+55),[(100,180,240),(150,210,130),(220,160,120)][sample['group']],-1)
+            cv2.putText(image,f"G{sample['group']} {sample['split']}",(x,y+73),0,.35,(40,40,40),1)
+    elif key=='Y05':
+        image=np.full((220,380,3),245,np.uint8)
+        params.update(predictions=[[40,40,90,140,.95,0],[40,40,140,140,.9,0],[210,60,310,160,.8,0],[215,60,315,160,.7,1]],truth=[[40,40,140,140,0],[210,60,310,160,1]])
+    elif key=='L02':
+        image=np.array([[[20,40,220],[20,200,40],[220,40,20]],[[40,60,230],[40,210,60],[230,60,40]],[[60,80,240],[60,220,80],[240,80,60]],[[80,100,250],[80,230,100],[250,100,80]]],dtype=np.uint8)
+        height,width=image.shape[:2];stride=width*3+value
+        buffer=np.full((height,stride),227,np.uint8);buffer[:,:width*3]=image.reshape(height,width*3)
+        params.update(buffer=buffer.ravel().tolist(),height=height,width=width,stride=stride)
+    elif key=='L03':
+        image=np.full((240,380,3),245,np.uint8)
+        frames=[[5,3,12,2],[5,3,13,2],[5,3,14,2],[5,3,14,2],[5,3,12,2],[5,3,13,2],[5,3,15,2],[5,3,15+value,2]]
+        params['frames']=frames
+        for i,frame in enumerate(frames):
+            x=45
+            for duration,color in zip(frame,[(210,170,90),(100,190,100),(80,120,230),(170,110,160)]):
+                cv2.rectangle(image,(x,15+i*27),(x+duration,32+i*27),color,-1);x+=duration
+            cv2.putText(image,str(i),(15,30+i*27),0,.4,(40,40,40),1)
     return image,params

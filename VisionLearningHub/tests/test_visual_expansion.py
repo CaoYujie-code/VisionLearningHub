@@ -30,9 +30,9 @@ class ExpandedVisualChecks(unittest.TestCase):
 
     def test_catalog_and_first_batch_revision_compatibility(self):
         self.assertEqual(self.client.get('/api/bootstrap').json()['walkthroughs'],list(w.CATALOG))
-        self.assertEqual(len(w.CATALOG),31)
-        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),84)
-        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),95)
+        self.assertEqual(len(w.CATALOG),37)
+        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),103)
+        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),113)
         snapshot=json.loads((Path(__file__).parent/'data/visual-v090-revisions.json').read_text(encoding='utf-8'))
         for key,expected in snapshot.items():
             self.assertEqual(w.revision(key),expected)

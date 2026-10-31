@@ -78,13 +78,13 @@ def display_array(value,mode):
     return value,'原值显示；三通道按 BGR 编码为 PNG，单通道以灰度显示。'
 
 
-def describe(value,mode,folder,name,detail=''):
+def describe(value,mode,folder,name,detail='',columns=None):
     value=np.asarray(value)
     validate_shape(value.shape,value.dtype,mode)
     if value.size>2_000_000 or not np.isfinite(value).all():raise ValueError('步骤结果必须是有限数值，且不超过 200 万个数值')
     preview,note=display_array(value,mode)
     path=folder/(name+'.png');write_image(path,preview)
-    return dict(output=str(path),shape=list(value.shape),dtype=str(value.dtype),minimum=float(value.min()) if value.size else None,maximum=float(value.max()) if value.size else None,nonzero=int(np.count_nonzero(value)),display_note=note,detail=detail,spatial=mode in SPATIAL_MODES,kind=mode,cells=value.tolist() if mode=='matrix' else None)
+    return dict(output=str(path),shape=list(value.shape),dtype=str(value.dtype),minimum=float(value.min()) if value.size else None,maximum=float(value.max()) if value.size else None,nonzero=int(np.count_nonzero(value)),display_note=note,detail=detail,spatial=mode in SPATIAL_MODES,kind=mode,columns=columns if mode=='matrix' and columns and len(columns)==value.shape[1] else None,cells=value.tolist() if mode=='matrix' else None)
 
 
 def demonstration(root,key,value=None):
@@ -97,7 +97,7 @@ def demonstration(root,key,value=None):
         namespace['detail']=''
         # Code is shipped authored content. User code is never accepted here.
         exec(s['code'],namespace)
-        results[s['id']]=describe(namespace[s['value']],s['display'],folder,s['id'],namespace['detail'])
+        results[s['id']]=describe(namespace[s['value']],s['display'],folder,s['id'],namespace['detail'],s.get('columns'))
         np.save(folder/(s['id']+'.npy'),namespace[s['value']],allow_pickle=False)
     return dict(**item,revision=revision(key),parameter=value,input=describe(image,'image',folder,'input'),results=results,context=signature(key,value,image,params),parameters={k:(dict(shape=list(v.shape),dtype=str(v.dtype)) if isinstance(v,np.ndarray) else v) for k,v in params.items() if k!='image_path'})
 
@@ -135,7 +135,7 @@ def bundle(root,key,value=None):
     folder=Path(root)/'previews'/'walkthrough'/key/(revision(key)+'-'+str(value));folder.mkdir(parents=True,exist_ok=True)
     image,params=sample(key,value,folder);context=signature(key,value,image,params);params['image_path']='input.png'
     array_files={}
-    for name in ('template','previous'):
+    for name in ('template','previous','original'):
         if isinstance(params.get(name),np.ndarray):
             raw=io.BytesIO();np.save(raw,params[name],allow_pickle=False)
             array_files[name+'.npy']=raw.getvalue();params[name]={'npy':name+'.npy'}
@@ -155,7 +155,7 @@ ROOT = Path(__file__).resolve().parent
 params = json.loads((ROOT / "params.json").read_text(encoding="utf-8"))
 params["image_path"] = str(ROOT / "input.png")
 image = np.load(ROOT / "input.npy", allow_pickle=False)
-for name in ("template", "previous"):
+for name in ("template", "previous", "original"):
     if name in params:
         params[name] = np.load(ROOT / params[name]["npy"], allow_pickle=False)
 # 每次从头生成结果包，避免混入上次运行的旧步骤。
@@ -180,7 +180,7 @@ for name in ("template", "previous"):
            '结果包是数据快照，平台不执行上传代码，也不据此授予题目通关。',
            '修改参数请在平台重新选择并下载另一份实验包，避免 context 与实际参数不一致。',
            '原始数组保存在结果 ZIP 的 .npy 中；图表、伪彩色和显示归一化不改变原数据。',
-           'template.npy / previous.npy（若存在）分别为模板与上一帧，脚本使用 np.load 原生读取。',
+           'template.npy / previous.npy / original.npy（若存在）分别为模板、上一帧与原图，脚本使用 np.load 原生读取。',
            '个人代码请用 Git 或另行备份。平台学习备份不包含外部手敲脚本。','']
     for s in item['steps']:
         lines += ['## '+s['title'],'',s['why'],'','观察：'+s['watch'],'','排查：'+s['failure'],'','```python',s['code'],'```','']
@@ -269,7 +269,7 @@ def import_results(root,key,raw):
     results={}
     for s in item['steps']:
         if s['id'] not in arrays:continue
-        result=describe(arrays[s['id']],s['display'],folder,s['id'])
+        result=describe(arrays[s['id']],s['display'],folder,s['id'],columns=s.get('columns'))
         # Preserve raw learner data for inspection/export, not just the PNG rendering.
         np.save(folder/(s['id']+'.npy'),arrays[s['id']],allow_pickle=False)
         result['output']=Path(result['output']).relative_to(root).as_posix()

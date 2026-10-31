@@ -1,5 +1,7 @@
 # Vision Learning Hub · 视觉学习
 
+**0.12.0：图解覆盖 37 / 44 道基础题，累计 103 步、113 组参数配置。** 新增 Y02–Y05、L02–L03 六题：检测框坐标还原、Precision/Recall、分组泄漏、检测框匹配、图像行步幅与延迟统计。新题原始数值表带中文列名，支持独立手敲、真实结果导入和差异定位；Y02 随包提供原图素材。[学习指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/检测评价与部署图解指南-0.12.0.md)。
+
 **0.11.0：图解覆盖 31 / 44 道基础题，累计 84 步、95 组参数配置。** 新增数组筛选与统计、轮廓中心与角点、旋转平移、拼图覆盖、多帧稳定、IoU 和 NMS 共 8 题。导入自己的中间结果后，可查看数值差异并跳到首个有差异的步骤；支持空结果表格与可记忆的图解题筛选。[学习与操作指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/几何与数组图解指南-0.11.0.md)。
 
 **0.10.0：逐步图解覆盖 23 / 44 道基础题。** 新增 15 题，累计 58 个步骤、71 组可选参数配置，覆盖 T01–T06、A01–A03 和全部 V01–V14。直方图、Gamma 曲线、透视矩阵、连通域标签和距离 / 响应热力图按数据含义展示，支持手敲、真实结果导入与进度记忆。[扩展学习指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/逐步图解扩展指南-0.10.0.md)。

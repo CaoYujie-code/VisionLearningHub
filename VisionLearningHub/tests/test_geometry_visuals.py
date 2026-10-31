@@ -17,9 +17,9 @@ class GeometryVisualChecks(unittest.TestCase):
         old=json.loads((Path(__file__).parent/'data/visual-v0100-revisions.json').read_text())
         self.assertEqual(len(old),23)
         for key,revision in old.items():self.assertEqual(w.revision(key),revision)
-        self.assertEqual(len(w.CATALOG),31)
-        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),84)
-        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),95)
+        self.assertEqual(len(w.CATALOG),37)
+        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),103)
+        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),113)
 
     def test_filters_empty_output_and_roi_statistics(self):
         for threshold,expected in [(0,[0,1,2,3,4,5]),(80,[3,4,5]),(150,[])]:

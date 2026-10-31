@@ -1,5 +1,7 @@
 # Vision Learning Hub · 视觉学习实验室
 
+**0.12.0：图解覆盖 37 / 44 道基础题，累计 103 步、113 组参数配置。** 新增 Y02–Y05、L02–L03 六题：检测框坐标还原、Precision/Recall、分组泄漏、检测框匹配、图像行步幅与延迟统计。新题原始数值表带中文列名，支持独立手敲、真实结果导入和差异定位；Y02 随包提供原图素材。[学习指南](VisionLearningHub/docs/检测评价与部署图解指南-0.12.0.md)。
+
 **0.11.0：图解覆盖 31 / 44 道基础题，累计 84 步、95 组参数配置。** 新增数组筛选与统计、轮廓中心与角点、旋转平移、拼图覆盖、多帧稳定、IoU 和 NMS 共 8 题。导入自己的中间结果后，可查看数值差异并跳到首个有差异的步骤；支持空结果表格与可记忆的图解题筛选。[学习与操作指南](VisionLearningHub/docs/几何与数组图解指南-0.11.0.md)。
 
 **0.10.0：逐步图解覆盖 23 / 44 道基础题。** 新增 15 题，累计 58 个步骤、71 组可选参数配置，覆盖 T01–T06、A01–A03 和全部 V01–V14。直方图、Gamma 曲线、透视矩阵、连通域标签和距离 / 响应热力图按数据含义展示，支持手敲、真实结果导入与进度记忆。[扩展学习指南](VisionLearningHub/docs/逐步图解扩展指南-0.10.0.md)。
@@ -20,15 +22,23 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.11.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.12.0.md)
 
-> 当前源码版本为 **0.11.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.12.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.12.0：检测评价与部署基础逐步看懂
+
+![检测框从模型输入还原到原图](VisionLearningHub/docs/images/letterbox-restore-0.12.0.png)
+
+从 **基础练习 → 逐步图解** 进入。建议先学 **Y02 → Y03 → Y05**，理解坐标、漏报与匹配，再用 **Y04** 检查数据划分，用 **L02 → L03** 理解内存布局和性能记录。原有 31 题学习状态兼容，剩余 7 题保留已有讲解与验收。该批使用离线教学数据，不代表真实 YOLO 训练或板端联调完成。
+
+[操作指南](VisionLearningHub/docs/检测评价与部署图解指南-0.12.0.md) · [本版验收](VisionLearningHub/docs/验收记录-0.12.0.md)
 
 ## 0.11.0：看懂几何，也能定位自己的结果差异
 
 ![NMS 每轮抑制与数值表](VisionLearningHub/docs/images/nms-trace-0.11.0.png)
 
-建议先学 **P01 → P02**，再学 **T07 → T08 → T09 → T12**，最后学 **A04 → A05**。从基础练习进入“逐步图解”，可筛选有图解的题目。逐步观察、手敲运行、导入结果和正式验收分别保留，原有 23 题的观察笔记与进度兼容。其余 13 道基础题继续使用已有讲解与验收。
+建议先学 **P01 → P02**，再学 **T07 → T08 → T09 → T12**，最后学 **A04 → A05**。从基础练习进入“逐步图解”，可筛选有图解的题目。逐步观察、手敲运行、导入结果和正式验收分别保留，原有 23 题的观察笔记与进度兼容。在 0.11.0 发布时，其余 13 道基础题继续使用已有讲解与验收。
 
 [查看数值差异操作](VisionLearningHub/docs/几何与数组图解指南-0.11.0.md#手敲运行定位差异) · [本版验收](VisionLearningHub/docs/验收记录-0.11.0.md)
 

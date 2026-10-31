@@ -21,7 +21,7 @@ async function imported(key,value,mutation=''){
 }
 try{
  await mkdir('validation',{recursive:true});await page.goto(process.env.VLH_TEST_URL);await page.getByRole('button',{name:'从基础开始',exact:true}).click();const before=(await api('/bootstrap')).passed;
- const filter=page.getByRole('checkbox',{name:'只看有逐步图解的题（31/44）'});await filter.check();assert.equal(await page.locator('.lesson-scroll button').count(),31);await page.reload();await filter.waitFor();assert.equal(await filter.isChecked(),true);assert.equal(await page.locator('.lesson-scroll button').count(),31);await filter.uncheck();assert.equal(await page.locator('.lesson-scroll button').count(),44);ok('visual-only lesson filter persists and can return to all foundations');
+ const filter=page.getByRole('checkbox',{name:'只看有逐步图解的题（37/44）'});await filter.check();assert.equal(await page.locator('.lesson-scroll button').count(),37);await page.reload();await filter.waitFor();assert.equal(await filter.isChecked(),true);assert.equal(await page.locator('.lesson-scroll button').count(),37);await filter.uncheck();assert.equal(await page.locator('.lesson-scroll button').count(),44);ok('visual-only lesson filter persists and can return to all foundations');
  for(const key of ['P01','P02','T07','T08','T09','T12','A04','A05']){
   await open(key);const demo=(await api('/lesson/'+key+'/walkthrough')).demo;assert.equal(await region.locator('.walk-steps button').count(),demo.steps.length);
   for(let i=0;i<demo.steps.length;i++){await step(i);await page.waitForFunction(()=>[...document.querySelectorAll('.walk-step img')].every(img=>img.complete&&img.naturalWidth>0));assert.equal(await region.locator('.walk-step img').count(),2);}

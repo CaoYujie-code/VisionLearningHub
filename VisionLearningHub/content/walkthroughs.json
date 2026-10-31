@@ -2056,5 +2056,525 @@
       }
     ],
     "sample_note": "本题使用固定教学样例。表格保留原始数值；叠加图中的文字、颜色和取整仅用于解释。"
+  },
+  "Y02": {
+    "scene": "模型在补边后的输入图上给出框，画回相机原图之前必须还原坐标。",
+    "target": "观察补边坐标、减补边后的坐标、还原并截断后的框。",
+    "boundary": "本例统一缩放、两侧对称补边；连续 xyxy 边界允许等于宽高。实际模型须记录预处理产生的比例与补边，不能凭图猜。",
+    "control": {
+      "name": "scale_percent",
+      "label": "预处理缩放比例（百分数）",
+      "values": [
+        50,
+        100,
+        150
+      ],
+      "default": 50,
+      "experiment": "原图固定为 240×160，补边固定为 x=20、y=30。改变缩放比例后，模型坐标变化，但正确还原后的框应相同。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "查看模型输入坐标中的框",
+        "code": "boxes = np.asarray(params[\"boxes\"], dtype=np.float64).reshape(-1, 4)\nmodel_view = image.copy()\nfor i, box in enumerate(boxes):\n    cv2.rectangle(model_view, tuple(np.rint(box[:2]).astype(int)), tuple(np.rint(box[2:]).astype(int)), (0, 0, 220), 2)\n    cv2.putText(model_view, str(i), tuple(np.rint(box[:2]).astype(int)), cv2.FONT_HERSHEY_SIMPLEX, .5, (0, 0, 160), 1)",
+        "value": "model_view",
+        "display": "image",
+        "why": "先明确框属于哪一个坐标系，不能直接画到尺寸不同的原图。",
+        "watch": "暗色区域是补边；红框来自 params[\"boxes\"]。部分框超出内容区是特意保留的边界例子。",
+        "failure": "框位置成比例偏移时先核对输入尺寸和坐标系，而不是修改检测阈值。",
+        "question": "模型框里的 x=20 一定对应原图 x=20 吗？",
+        "answer": "不一定。本例 x=20 正好是左补边结束，减去补边后对应原图 x=0。",
+        "lines": [
+          "asarray 转成浮点 Nx4，避免后续除法丢失小数。",
+          "rectangle 只做示意；真实计算始终使用浮点 boxes。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "先减补边，再除缩放",
+        "code": "px, py = params[\"pad\"]\nwithout_padding = boxes - np.array([px, py, px, py])\nrestored = without_padding / params[\"scale\"]",
+        "value": "restored",
+        "display": "matrix",
+        "why": "补边是在缩放之后加上的，所以逆变换先撤销补边，再撤销缩放。",
+        "watch": "三行分别为三个框；还原后应为 [20,30,120,100]、[-15,20,60,90]、[180,100,270,180]。",
+        "failure": "boxes/scale-pad 是错误顺序，除非比例恰好为 1 才可能蒙混过去。",
+        "question": "负坐标一定说明逆变换错了吗？",
+        "answer": "不一定。预测框可以越界，先保留还原结果，下一步再按原图范围截断。",
+        "lines": [
+          "位移向量重复为 [px,py,px,py]，同时处理两组角点。",
+          "使用原始 scale 做除法；不使用当前显示图尺寸反推比例。"
+        ],
+        "before": "step1",
+        "columns": [
+          "x1（原图）",
+          "y1（原图）",
+          "x2（原图）",
+          "y2（原图）"
+        ],
+        "before_label": "对照：模型输入框（计算使用 boxes 原始坐标）"
+      },
+      {
+        "id": "step3",
+        "title": "截断边界并画回原图",
+        "code": "width, height = params[\"original_size\"]\nclipped = restored.copy()\nclipped[:, [0, 2]] = np.clip(clipped[:, [0, 2]], 0, width)\nclipped[:, [1, 3]] = np.clip(clipped[:, [1, 3]], 0, height)\noriginal = np.asarray(params[\"original\"], dtype=np.uint8)\noutput = original.copy()\nfor box in clipped:\n    cv2.rectangle(output, tuple(np.rint(box[:2]).astype(int)), tuple(np.rint(box[2:]).astype(int)), (0, 150, 0), 2)\ndetail = \"截断后的连续坐标：\" + str(clipped.tolist())",
+        "value": "output",
+        "display": "image",
+        "why": "保证最终交付的框位于原图边界，方便裁剪、标注和后续控制。",
+        "watch": "输出恢复 240×160；左侧越界框 x1 变为 0，右下越界框 x2/y2 变为 240/160。",
+        "failure": "不要把所有列都按 width 截断；x 对应宽，y 对应高。",
+        "question": "为什么数据能等于 240，但最后一个像素下标是 239？",
+        "answer": "这是连续框边界约定。绘图会裁到画布内，数组像素下标与连续边界不是同一个概念。",
+        "lines": [
+          "copy 保留未截断结果供对照。",
+          "分别选择 x 列和 y 列做 clip。",
+          "教学原图从 original.npy 读取，独立脚本无需平台函数；只在绘图阶段取整。"
+        ],
+        "before": "step1",
+        "before_label": "对照：模型输入坐标系（右侧为还原后的原图）"
+      }
+    ],
+    "sample_note": "使用小型确定性教学数据，不执行模型训练或真实板端采集。预览与原始数组分开保存；中文列名见可展开数值表。"
+  },
+  "Y03": {
+    "scene": "缺陷识别时，误报会增加人工复检，漏报会放走缺陷；先用小样本理解两种代价。",
+    "target": "从置信度阈值到逐样本预测，再到混淆矩阵、Precision 与 Recall。",
+    "boundary": "这是二分类样本统计，不是检测框 mAP。检测任务还需要类别与 IoU 匹配，见 Y05。",
+    "control": {
+      "name": "score_percent",
+      "label": "判为正例的分数阈值（百分数）",
+      "values": [
+        25,
+        50,
+        90
+      ],
+      "default": 50,
+      "experiment": "8 个样本及分数固定。提高阈值通常减少报出的正例；本例阈值 90 时 Precision=1，但 Recall=0.25。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "给每个样本作出预测",
+        "code": "truth = np.asarray(params[\"truth\"], dtype=np.int32)\nscores = np.asarray(params[\"scores\"], dtype=np.float64)\npredicted = (scores >= params[\"score_percent\"] / 100).astype(np.int32)\npairs = np.column_stack([np.arange(len(truth)), truth, scores, predicted])",
+        "value": "pairs",
+        "display": "matrix",
+        "why": "把预测决定逐行列出来，先确定哪一次判断正确，再谈整体指标。",
+        "watch": "四列依次为样本索引、真实标签、分数、预测标签；0 表示无缺陷，1 表示有缺陷。",
+        "failure": "不要把分数 0.7 直接当标签 1；必须先明确阈值和 >= 规则。",
+        "question": "分数正好等于阈值会怎样？",
+        "answer": "本例判为正例，因为使用 >=；这与具体任务约定有关。",
+        "lines": [
+          "truth 与 scores 等长并按同一索引对应。",
+          "比较生成布尔结果，再转为 0/1；column_stack 仅用于展示。"
+        ],
+        "before": "input",
+        "columns": [
+          "样本索引",
+          "真实标签",
+          "分数",
+          "预测标签"
+        ]
+      },
+      {
+        "id": "step2",
+        "title": "按真实与预测分类计数",
+        "code": "confusion = np.zeros((2, 2), dtype=np.int32)\nfor actual, guess in zip(truth, predicted):\n    confusion[actual, guess] += 1\ntn, fp = confusion[0]\nfn, tp = confusion[1]",
+        "value": "confusion",
+        "display": "matrix",
+        "why": "两种标签各有两个值，四个组合分别对应 TN、FP、FN、TP。",
+        "watch": "行 0/1 是真实标签；列 0/1 是预测标签。左上 TN，右上 FP，左下 FN，右下 TP。",
+        "failure": "把行列含义颠倒会交换 FP/FN，进而把 Precision 与 Recall 算反。",
+        "question": "预测成有缺陷但实际正常，应该放在哪里？",
+        "answer": "真实 0、预测 1，即第 0 行第 1 列 FP。",
+        "lines": [
+          "创建 2×2 整数计数表。",
+          "zip 按样本对应遍历；每个样本只给一个格子加 1。",
+          "解包取出四个计数，避免之后靠记数组下标计算。"
+        ],
+        "before": "step1",
+        "columns": [
+          "预测 0",
+          "预测 1"
+        ]
+      },
+      {
+        "id": "step3",
+        "title": "用不同分母回答不同问题",
+        "code": "precision = tp / (tp + fp) if tp + fp else 0.\nrecall = tp / (tp + fn) if tp + fn else 0.\nmetrics = np.array([[tp, fp, fn, precision, recall]], dtype=np.float64)",
+        "value": "metrics",
+        "display": "matrix",
+        "why": "Precision 看报出的正例有多少正确；Recall 看实际正例找回多少。",
+        "watch": "阈值 50 时 TP=2、FP=2、FN=2，两指标均 0.5；阈值 90 时只报出一个正确正例。",
+        "failure": "不要用全部样本数作这两个指标的分母，那是在计算其他指标。",
+        "question": "Precision=1 是否代表模型完美？",
+        "answer": "不代表。本例阈值 90 漏掉 3 个正例，Recall 只有 0.25。应按误报和漏报代价综合判断。",
+        "lines": [
+          "除法前处理分母为零；本练习约定该指标为 0。",
+          "表格统一 float64 以同时容纳计数与比例，计数含义仍为整数。"
+        ],
+        "before": "step2",
+        "columns": [
+          "TP",
+          "FP",
+          "FN",
+          "Precision",
+          "Recall"
+        ]
+      }
+    ],
+    "sample_note": "使用小型确定性教学数据，不执行模型训练或真实板端采集。预览与原始数组分开保存；中文列名见可展开数值表。"
+  },
+  "Y04": {
+    "scene": "同一工件或同一段视频的相关图片落入训练集和验证集，可能让评估过于乐观。",
+    "target": "从样本分组表到各划分计数，再找到跨划分的组。",
+    "boundary": "只检查给定 group 元数据；未发现重复组不代表没有近重复图片或其他数据泄漏。不是模型训练实验。",
+    "control": {
+      "name": "leaks",
+      "label": "人为加入跨划分的组数",
+      "values": [
+        0,
+        1,
+        2
+      ],
+      "default": 1,
+      "experiment": "组编号 0、1、2 固定。参数 0 无跨划分；1 把组 0 加入验证集；2 再把组 1 加入测试集。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "把图片来源与划分对应起来",
+        "code": "samples = params[\"samples\"]\nsplit_codes = {\"train\": 0, \"val\": 1, \"test\": 2}\nrows = [[i, sample[\"group\"], split_codes[sample[\"split\"]]] for i, sample in enumerate(samples)]\nsample_table = np.asarray(rows, dtype=np.int32).reshape(-1, 3)",
+        "value": "sample_table",
+        "display": "matrix",
+        "why": "文件名不同不保证来源独立，因此需要同一工件或采集序列的组标识。",
+        "watch": "每行一张样本；split 编码 0=train、1=val、2=test，同一组内重复出现在同一划分是允许的。",
+        "failure": "不要只比较文件名；连续视频帧可以文件名完全不同但内容高度相关。",
+        "question": "同一组有两张训练图就一定泄漏吗？",
+        "answer": "不是。这里检查跨划分出现，而不是组内样本数量大于 1。",
+        "lines": [
+          "enumerate 保留样本原索引。",
+          "字符串划分编码为小整数，仅为了表格显示，实际判断仍使用原字符串。"
+        ],
+        "before": "input",
+        "columns": [
+          "样本索引",
+          "来源组",
+          "划分编码"
+        ]
+      },
+      {
+        "id": "step2",
+        "title": "按组统计各划分中的数量",
+        "code": "groups = sorted({sample[\"group\"] for sample in samples})\ncounts = np.zeros((len(groups), 3), dtype=np.int32)\nfor sample in samples:\n    counts[groups.index(sample[\"group\"]), split_codes[sample[\"split\"]]] += 1\ngroup_table = np.column_stack([groups, counts]).astype(np.int32)",
+        "value": "group_table",
+        "display": "matrix",
+        "why": "将相关样本聚合后，一行就能看出一个来源是否跨过数据边界。",
+        "watch": "四列为组编号、训练数、验证数、测试数。非零划分数超过 1 才是本题问题。",
+        "failure": "把总样本数 >1 当作泄漏会误报正常的组内多图。",
+        "question": "组 0 的 train=2、val=1、test=0 有什么风险？",
+        "answer": "同一来源同时出现在训练和验证，验证不再充分检验对新来源的泛化。",
+        "lines": [
+          "set 收集组号，sorted 让结果顺序稳定。",
+          "每张样本给所属组、所属划分的格子加 1。"
+        ],
+        "before": "step1",
+        "columns": [
+          "来源组",
+          "train 数量",
+          "val 数量",
+          "test 数量"
+        ]
+      },
+      {
+        "id": "step3",
+        "title": "定位需要重新划分的来源组",
+        "code": "leaked = []\nfor group, row in zip(groups, counts):\n    if np.count_nonzero(row) > 1:\n        leaked.append(group)\nleak_table = np.asarray(leaked, dtype=np.int32).reshape(-1, 1)",
+        "value": "leak_table",
+        "display": "matrix",
+        "why": "输出问题组供重新按组划分；不是简单删掉验证集中几张图片就自动完成质量控制。",
+        "watch": "参数 0 输出空表；1 输出组 0；2 输出组 0 和 1。",
+        "failure": "检查通过只说明 group 没跨集合，仍需检查重复内容、标签处理与时间边界。",
+        "question": "为什么要在训练前划分，再拟合数据处理步骤？",
+        "answer": "验证或测试的信息参与拟合会影响评估。分组检查只是数据泄漏防范的一部分。",
+        "lines": [
+          "count_nonzero 统计该组出现过多少种划分。",
+          "保存组号并保持排序；空输出保留 (0,1) 形状。"
+        ],
+        "before": "step2",
+        "columns": [
+          "跨划分的组"
+        ]
+      }
+    ],
+    "sample_note": "使用小型确定性教学数据，不执行模型训练或真实板端采集。预览与原始数组分开保存；中文列名见可展开数值表。"
+  },
+  "Y05": {
+    "scene": "检测评价不能只数框数量：重复框、错类别和位置偏差都需要分别处理。",
+    "target": "观察预测框与真值，再按分数执行同类别的一对一 IoU 匹配，统计 TP/FP/FN。",
+    "boundary": "本例只在一个 IoU 阈值上做贪心匹配，不计算 AP/mAP；评价规则须与实际评测协议一致。",
+    "control": {
+      "name": "iou_percent",
+      "label": "匹配 IoU 下限（百分数）",
+      "values": [
+        50,
+        60,
+        95
+      ],
+      "default": 50,
+      "experiment": "第 0 个预测与真值 0 的 IoU 恰好为 0.5。阈值 50 接受它，60 则由后面的完整框匹配；95 还会让另一个轻微偏移框失配。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "先看类别和空间位置",
+        "code": "predictions = np.asarray(params[\"predictions\"], dtype=np.float64).reshape(-1, 6)\ntargets = np.asarray(params[\"truth\"], dtype=np.float64).reshape(-1, 5)\noverlay = image.copy()\nfor i, box in enumerate(targets):\n    cv2.rectangle(overlay, tuple(box[:2].astype(int)), tuple(box[2:4].astype(int)), (0, 150, 0), 3)\n    cv2.putText(overlay, f\"G{i}:c{int(box[4])}\", (int(box[0]), int(box[1])-8), 0, .5, (0, 120, 0), 1)\nfor i, box in enumerate(predictions):\n    cv2.rectangle(overlay, tuple(box[:2].astype(int)), tuple(box[2:4].astype(int)), (0, 0, 220), 1)\n    cv2.putText(overlay, f\"P{i}:c{int(box[5])}\", (int(box[0]), int(box[1])+16+i*13), 0, .45, (0, 0, 180), 1)",
+        "value": "overlay",
+        "display": "image",
+        "why": "真值标注与模型输出是两个集合，必须比较位置和类别，不能按列表行号直接对应。",
+        "watch": "绿 G 表示真值，红 P 表示预测；框相同但类别不同仍不能匹配。",
+        "failure": "同一真值被多个预测覆盖时，不能都算 TP，否则 Recall 可能超过 1。",
+        "question": "为什么预测框画得很准仍可能是 FP？",
+        "answer": "类别不对或对应真值已被更高分预测匹配，都可能使该预测成为 FP。",
+        "lines": [
+          "预测行是 xyxy、分数、类别；真值行是 xyxy、类别。",
+          "标签标出原始索引和类别，绘图仅用于解释。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "建立预测与真值的 IoU 表",
+        "code": "def iou(a, b):\n    lo = np.maximum(a[:2], b[:2])\n    hi = np.minimum(a[2:4], b[2:4])\n    intersection = float(np.prod(np.maximum(hi-lo, 0)))\n    union = float(np.prod(np.maximum(a[2:4]-a[:2], 0)) + np.prod(np.maximum(b[2:4]-b[:2], 0)) - intersection)\n    return intersection / union if union > 0 else 0.\nious = np.array([[iou(pred, target) for target in targets] for pred in predictions], dtype=np.float64).reshape(len(predictions), len(targets))",
+        "value": "ious",
+        "display": "matrix",
+        "why": "先独立观察几何重叠程度，再施加类别和一对一约束。",
+        "watch": "4 行对应 P0~P3，2 列对应 G0/G1；P2 与 G1 完全重合但类别不同。",
+        "failure": "不能把每行的最大 IoU 直接记成 TP，需要检查类别和真值是否已使用。",
+        "question": "P0 与 G0 的 IoU 是多少？",
+        "answer": "宽为真值一半，高相同，交集 5000、并集 10000，IoU=0.5。",
+        "lines": [
+          "普通 iou 函数使用连续面积，不加 1。",
+          "双层循环形成预测×真值矩阵，保留浮点值供下一步比较。"
+        ],
+        "before": "step1",
+        "columns": [
+          "G0 的 IoU",
+          "G1 的 IoU"
+        ]
+      },
+      {
+        "id": "step3",
+        "title": "按分数做一对一匹配",
+        "code": "order = np.argsort(-predictions[:, 4], kind=\"stable\")\nused = set()\ntrace = []\nfor index in order:\n    candidates = [j for j in range(len(targets)) if j not in used and targets[j, 4] == predictions[index, 5]]\n    best = max(candidates, key=lambda j: ious[index, j]) if candidates else -1\n    overlap = float(ious[index, best]) if best >= 0 else 0.\n    matched = best >= 0 and overlap >= params[\"iou_percent\"] / 100\n    if matched:\n        used.add(best)\n    trace.append([index, predictions[index, 4], best, overlap, int(matched)])\nmatch_table = np.asarray(trace, dtype=np.float64).reshape(-1, 5)",
+        "value": "match_table",
+        "display": "matrix",
+        "why": "先处理高分框；每个预测最多匹配一个同类真值，每个真值最多用一次。",
+        "watch": "表中候选 -1 表示没有可用同类真值，不表示 IoU 是 -1。匹配标志 1=TP，0=FP。",
+        "failure": "把被用过的真值继续放入 candidates，会把重复预测误算成多个 TP。",
+        "question": "阈值从 50 调到 60，哪一个预测成为 G0 的匹配？",
+        "answer": "50 时 P0 的 IoU 恰好达标；60 时 P0 不匹配，随后 P1 与 G0 完全重合而匹配。",
+        "lines": [
+          "stable 保证相同分数的原始顺序。",
+          "先过滤类别与已用真值，再取最大 IoU；相同 IoU 按候选原索引先后取第一个。",
+          ">= 接受恰好等于匹配阈值的情况；仅成功匹配才更新 used。"
+        ],
+        "before": "step2",
+        "columns": [
+          "预测索引",
+          "分数",
+          "可用最佳真值",
+          "IoU",
+          "匹配标志"
+        ]
+      },
+      {
+        "id": "step4",
+        "title": "统计误报与未匹配真值",
+        "code": "tp = len(used)\nfp = len(predictions) - tp\nfn = len(targets) - tp\ncounts = np.array([[tp, fp, fn]], dtype=np.int32)",
+        "value": "counts",
+        "display": "matrix",
+        "why": "预测侧剩余框是 FP，真值侧剩余目标是 FN；两种遗漏不能混为一谈。",
+        "watch": "阈值 50/60 均为 TP=2、FP=2、FN=0，但匹配过程不同；95 为 1、3、1。",
+        "failure": "不要用预测总数减真值总数当 FP；它忽略错类、重复和漏检。",
+        "question": "两个实现得到相同 TP/FP/FN，内部匹配就一定相同吗？",
+        "answer": "不一定。50 与 60 的本例统计相同，但 G0 匹配到不同预测，因此要保留过程记录。",
+        "lines": [
+          "一对一匹配保证 used 长度就是 TP 数。",
+          "分别从预测数、真值数扣除 TP，得到 FP 和 FN。"
+        ],
+        "before": "step3",
+        "columns": [
+          "TP",
+          "FP",
+          "FN"
+        ]
+      }
+    ],
+    "sample_note": "使用小型确定性教学数据，不执行模型训练或真实板端采集。预览与原始数组分开保存；中文列名见可展开数值表。"
+  },
+  "L02": {
+    "scene": "相机缓冲区每行末尾可能有对齐字节，直接 reshape 会让图像错行或颜色异常。",
+    "target": "对照错误的紧密重排、正确的逐行去补齐，以及独立连续输出。",
+    "boundary": "使用离线 uint8 BGR 小图解释内存布局，不代表真实相机驱动、DMA 或 Linux 采集已经联通。stride 单位为字节。",
+    "control": {
+      "name": "padding",
+      "label": "每行额外补齐字节数",
+      "values": [
+        0,
+        1,
+        4
+      ],
+      "default": 1,
+      "experiment": "固定 4×3 的 BGR 图，每行有效 9 字节；添加 0/1/4 字节补齐。正确恢复图应始终相同，错误重排会随补齐变化。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "故意忽略行步幅观察错位",
+        "code": "height, width, stride = params[\"height\"], params[\"width\"], params[\"stride\"]\nbuffer = np.asarray(params[\"buffer\"], dtype=np.uint8)\nwrong = buffer[:height * width * 3].reshape(height, width, 3)",
+        "value": "wrong",
+        "display": "image",
+        "why": "先运行常见错误，理解为什么总字节数足够也不意味着图像布局正确。",
+        "watch": "左图为教学原图，右图按紧密存储错误解释；padding=0 时两者一致，有补齐时后续行逐渐错位。",
+        "failure": "这种错误不一定抛异常，只会把补齐字节当颜色，所以必须核对 stride。",
+        "question": "为什么第一行可能看起来正常？",
+        "answer": "第一行之前没有补齐；从第二行起，实际行起点与紧密解释的起点不同。",
+        "lines": [
+          "buffer 来自 JSON 字节列表，独立运行不需要设备。",
+          "截取足够字节再 reshape 是故意的错误示范，不应作为实际采集恢复代码。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "按真实行起点剔除补齐",
+        "code": "rows = buffer.reshape(height, stride)\npacked = rows[:, :width * 3]\nrestored = packed.reshape(height, width, 3).copy()",
+        "value": "restored",
+        "display": "image",
+        "why": "每一行先按 stride 定位，再只提取有效像素字节，最后恢复通道维。",
+        "watch": "恢复图应与左侧原图逐像素相同；只改变 padding 不应改变任何有效颜色。",
+        "failure": "如果通道顺序其实是 RGB，stride 修正后仍可能红蓝互换；布局与颜色顺序要分别确认。",
+        "question": "为什么 width 必须乘 3？",
+        "answer": "本题每像素有 B、G、R 三个 uint8 通道，每通道 1 字节，所以有效行字节数为 width×3。",
+        "lines": [
+          "先恢复 height×stride 的行缓冲视图。",
+          "按行切掉尾部补齐，再 reshape 成 H×W×3。",
+          "copy 确保输出拥有独立连续内存，不依赖可复用的采集缓冲区。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step3",
+        "title": "核对形状、步幅与内存归属",
+        "code": "layout = np.array([[restored.shape[0], restored.shape[1], restored.shape[2], restored.strides[0], int(restored.flags.c_contiguous), int(np.shares_memory(restored, buffer))]], dtype=np.int64)",
+        "value": "layout",
+        "display": "matrix",
+        "why": "图像看起来正确还不够；后续程序可能要求连续内存，也不能被下一帧覆盖。",
+        "watch": "六列应为 4、3、3、9、1、0：独立输出行步幅为 9，而输入 stride 可以更大。",
+        "failure": "仅看 C_CONTIGUOUS 不能证明独立所有权；padding=0 的视图也可能连续但共享内存。",
+        "question": "为什么不用 ascontiguousarray 代替 copy 来保证独立？",
+        "answer": "输入已连续时 ascontiguousarray 可能返回共享数据；本题明确要求独立副本。",
+        "lines": [
+          "shape 说明高、宽、通道；strides[0] 是跳到下一行的字节数。",
+          "连续标志检查布局；shares_memory 检查与输入是否共享存储。"
+        ],
+        "before": "step2",
+        "columns": [
+          "高",
+          "宽",
+          "通道",
+          "输出行字节数",
+          "连续(1是)",
+          "共享输入(1是)"
+        ]
+      }
+    ],
+    "sample_note": "使用小型确定性教学数据，不执行模型训练或真实板端采集。预览与原始数组分开保存；中文列名见可展开数值表。"
+  },
+  "L03": {
+    "scene": "平均运行速度不错却偶发卡顿：需要同时看各阶段耗时和延迟尾部。",
+    "target": "查看逐帧阶段耗时、端到端总和、均值、P95 与串行 FPS 估算。",
+    "boundary": "本例是离线毫秒记录。串行 FPS 不代表异步流水线吞吐；真实设备需要预热、正确计时并同步异步任务。",
+    "control": {
+      "name": "spike",
+      "label": "最后一帧推理额外耗时（毫秒）",
+      "values": [
+        0,
+        50,
+        200
+      ],
+      "default": 50,
+      "experiment": "保持采集、预处理、后处理不变，只给最后一帧推理增加耗时。比较均值与 P95 对单帧卡顿的反应。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "先确认阶段与计时单位",
+        "code": "timings = np.asarray(params[\"frames\"], dtype=np.float64)",
+        "value": "timings",
+        "display": "matrix",
+        "why": "不同阶段代表不同优化方向；先区分采集等待、预处理、推理和后处理。",
+        "watch": "每行一帧，四列单位都是毫秒；最后一帧推理耗时包含当前 spike。",
+        "failure": "不要把秒与毫秒混用；GPU 异步启动耗时也不等于执行完成耗时。",
+        "question": "推理只占一半耗时，把推理提速一倍会让总延迟减半吗？",
+        "answer": "不会，其他阶段没有变。端到端收益需要把所有阶段一起计算。",
+        "lines": [
+          "用 float64 接收时序数值，保留小数精度。",
+          "不从这张示意图推断真实硬件性能；输入是明确给出的教学记录。"
+        ],
+        "before": "input",
+        "columns": [
+          "采集 ms",
+          "预处理 ms",
+          "推理 ms",
+          "后处理 ms"
+        ]
+      },
+      {
+        "id": "step2",
+        "title": "对每帧沿阶段方向求和",
+        "code": "totals = timings.sum(axis=1)\nper_frame = np.column_stack([np.arange(len(totals)), totals])",
+        "value": "per_frame",
+        "display": "matrix",
+        "why": "端到端串行耗时是同一帧各阶段之和，不是同一阶段跨帧相加。",
+        "watch": "两列为帧索引与总毫秒数；默认最后一帧为 75 ms，其他帧为 22~25 ms。",
+        "failure": "axis=0 会得到各阶段在全部帧上的累计耗时，含义不同。",
+        "question": "为什么不能把每帧 FPS 求平均当整体 FPS？",
+        "answer": "倒数是非线性的。处理这批帧的平均吞吐应由总帧数除以总时间推导。",
+        "lines": [
+          "axis=1 沿一行的四阶段求和。",
+          "保留原帧索引定位卡顿，不能只看排序后的统计。"
+        ],
+        "before": "step1",
+        "columns": [
+          "帧索引",
+          "总耗时 ms"
+        ]
+      },
+      {
+        "id": "step3",
+        "title": "同时看平均、尾部与串行估算",
+        "code": "mean_ms = float(totals.mean())\np95_ms = float(np.percentile(totals, 95, method=\"linear\"))\nserial_fps = 1000. / mean_ms\nsummary = np.array([[mean_ms, p95_ms, serial_fps]], dtype=np.float64)",
+        "value": "summary",
+        "display": "matrix",
+        "why": "平均值描述总体成本，P95 描述尾部位置；两个数一起才能看出偶发卡顿。",
+        "watch": "默认均值 29.75 ms，P95=57.5 ms，串行估算约 33.61 FPS。P95 使用线性插值，不一定等于某一帧。",
+        "failure": "少量样本的分位数波动很大；这里用于理解计算，不能当真实实时性保证。",
+        "question": "P95 为什么不是简单取排序后第 95% 个样本？",
+        "answer": "本例按 NumPy linear 规则：位置为 0.95×(n−1)，在相邻排序值之间插值。",
+        "lines": [
+          "mean 先求平均延迟；1000 将毫秒换算为秒。",
+          "percentile 显式固定 method，避免与其他分位数约定混淆。",
+          "串行估算仅适用于无并行、无额外等待的本例假设。"
+        ],
+        "before": "step2",
+        "columns": [
+          "平均 ms",
+          "P95 ms",
+          "串行 FPS"
+        ]
+      }
+    ],
+    "sample_note": "使用小型确定性教学数据，不执行模型训练或真实板端采集。预览与原始数组分开保存；中文列名见可展开数值表。"
   }
 }
