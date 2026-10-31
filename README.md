@@ -1,5 +1,7 @@
 # Vision Learning Hub · 视觉学习实验室
 
+**0.13.0：更容易迈出第一步。** 首页增加首轮八题推荐；P01、P02、T01–T06 增加“拿到什么 / 交出什么 / 先试哪一步”起步卡。基础练习提供 18 个术语小例子与 4 类排查指引，图解页聚焦分步实验，返回原题再验收。修复快速切标签时草稿尚未保存的问题，T01 示例改用原生 NumPy/OpenCV 读图。[新手使用指南](VisionLearningHub/docs/新手起步与排查指南-0.13.0.md)。
+
 **0.12.0：图解覆盖 37 / 44 道基础题，累计 103 步、113 组参数配置。** 新增 Y02–Y05、L02–L03 六题：检测框坐标还原、Precision/Recall、分组泄漏、检测框匹配、图像行步幅与延迟统计。新题原始数值表带中文列名，支持独立手敲、真实结果导入和差异定位；Y02 随包提供原图素材。[学习指南](VisionLearningHub/docs/检测评价与部署图解指南-0.12.0.md)。
 
 **0.11.0：图解覆盖 31 / 44 道基础题，累计 84 步、95 组参数配置。** 新增数组筛选与统计、轮廓中心与角点、旋转平移、拼图覆盖、多帧稳定、IoU 和 NMS 共 8 题。导入自己的中间结果后，可查看数值差异并跳到首个有差异的步骤；支持空结果表格与可记忆的图解题筛选。[学习与操作指南](VisionLearningHub/docs/几何与数组图解指南-0.11.0.md)。
@@ -22,9 +24,17 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.12.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.13.0.md)
 
-> 当前源码版本为 **0.12.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.13.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.13.0：明确起点、术语和下一步
+
+![新手首轮学习指引](VisionLearningHub/docs/images/beginner-route-0.13.0.png)
+
+从首页的新手推荐进入，先读本题输入、输出和第一次尝试，再打开图解。查术语、按现象排查、手敲并导入中间结果，最后返回原题验收。原题代码与学习记录在标签切换前保存；图解页仍可停止正在后台运行的原题任务。
+
+本版保持 **44 道基础题、37 道图解、103 个步骤**。起步卡覆盖首轮八题，术语与排查入口覆盖基础练习。[改进理由与操作指南](VisionLearningHub/docs/新手起步与排查指南-0.13.0.md) · [本版验收](VisionLearningHub/docs/验收记录-0.13.0.md)
 
 ## 0.12.0：检测评价与部署基础逐步看懂
 

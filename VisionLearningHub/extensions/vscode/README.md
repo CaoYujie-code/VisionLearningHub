@@ -1,5 +1,7 @@
 # Vision Learning Hub · 视觉学习
 
+**0.13.0：更容易迈出第一步。** 首页增加首轮八题推荐；P01、P02、T01–T06 增加“拿到什么 / 交出什么 / 先试哪一步”起步卡。基础练习提供 18 个术语小例子与 4 类排查指引，图解页聚焦分步实验，返回原题再验收。修复快速切标签时草稿尚未保存的问题，T01 示例改用原生 NumPy/OpenCV 读图。[新手使用指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/新手起步与排查指南-0.13.0.md)。
+
 **0.12.0：图解覆盖 37 / 44 道基础题，累计 103 步、113 组参数配置。** 新增 Y02–Y05、L02–L03 六题：检测框坐标还原、Precision/Recall、分组泄漏、检测框匹配、图像行步幅与延迟统计。新题原始数值表带中文列名，支持独立手敲、真实结果导入和差异定位；Y02 随包提供原图素材。[学习指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/检测评价与部署图解指南-0.12.0.md)。
 
 **0.11.0：图解覆盖 31 / 44 道基础题，累计 84 步、95 组参数配置。** 新增数组筛选与统计、轮廓中心与角点、旋转平移、拼图覆盖、多帧稳定、IoU 和 NMS 共 8 题。导入自己的中间结果后，可查看数值差异并跳到首个有差异的步骤；支持空结果表格与可记忆的图解题筛选。[学习与操作指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/几何与数组图解指南-0.11.0.md)。

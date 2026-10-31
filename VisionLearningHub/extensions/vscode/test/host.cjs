@@ -9,7 +9,7 @@ exports.run=async()=>{
   const extension=vscode.extensions.all.find(e=>e.id.toLowerCase()==='caoyujie-code.vision-learning-hub');assert.ok(extension);
   hub=await extension.activate();await hub.ensure();passed.push('isolated VS Code extension starts packaged Python runtime');
   const boot=await hub.request('/bootstrap');assert.equal(boot.lessons.length,53);assert.equal(boot.courses.length,33);assert.equal(hub.test.items.size,53);passed.push('44 exercises + 9 native projects, 33 courses and Test Explorer items');
-  for(const key of ['V13','Y05','L02']){
+  for(const key of ['T01','V13','Y05','L02']){
    const source=(await hub.request('/lesson/'+key+'/reference')).code;
    await fs.writeFile(hub.file(key),source,'utf8');
    const checked=await hub.run(key,true);assert.ok(checked.result?.passed,JSON.stringify(checked));

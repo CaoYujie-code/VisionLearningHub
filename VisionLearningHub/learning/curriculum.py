@@ -14,14 +14,17 @@ def lesson(key, title, goal, contract, knowledge, hints, reference, todos, prere
 LESSONS = [
 lesson("T01", "读图与像素", "读入照片，理解图像的宽、高、通道与像素坐标。",
        "输入：BGR 图像 image；params['image_path'] 为图片路径。返回字典：width、height、channels、pixel（左上角的 BGR 列表）。",
-       "图像是 NumPy 数组，shape 的顺序是高、宽、通道。image[y, x] 先写行再写列。read_image(path) 是平台提供的中文路径读图函数，内部用 np.fromfile 和 cv2.imdecode。正常图片为 uint8，每个通道通常在 0～255。读图失败应抛出明确错误。",
-       ["用 image = read_image(params['image_path']) 读图。", "h, w, c = image.shape；像素用 image[0, 0].tolist()。"],
+       "图像是 NumPy 数组，shape 的顺序是高、宽、通道。image[y, x] 先写行再写列。用 np.fromfile(path, dtype=np.uint8) 读取文件字节，再用 cv2.imdecode(data, cv2.IMREAD_COLOR) 解码成 BGR 图像。这两个是原生库函数，示例可在平台外运行。正常图片为 uint8，每个通道通常在 0～255。读图失败应抛出明确错误。",
+       ["先用 np.fromfile 读字节，再用 cv2.imdecode 解码；解码后检查 image is None。", "h, w, c = image.shape；像素用 image[0, 0].tolist()。"],
        """
        import cv2
        import numpy as np
 
        def solve(image, params):
-           image = read_image(params["image_path"])
+           data = np.fromfile(params["image_path"], dtype=np.uint8)
+           image = cv2.imdecode(data, cv2.IMREAD_COLOR)
+           if image is None:
+               raise ValueError("图片解码失败，请检查文件内容")
            h, w, c = image.shape
            return {"width": w, "height": h, "channels": c,
                    "pixel": image[0, 0].tolist()}
