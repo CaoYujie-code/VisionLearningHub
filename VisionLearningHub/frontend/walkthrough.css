@@ -3,3 +3,5 @@
 .walk-values>div{overflow:auto;max-width:100%}.walk-values table{border-collapse:collapse}.walk-values th,.walk-values td{border:1px solid #dce3ec;padding:7px 10px;font-variant-numeric:tabular-nums}.walk-values caption{font-size:12px;text-align:left;padding:8px 0}
 
 .walk-values th{background:var(--surface,#f5f8fc);text-align:left;min-width:70px;font-size:12px}
+
+.walk-source{min-width:0;border:1px solid var(--border,#dce3ec);border-radius:12px;padding:16px}.walk-source-scroll{overflow:auto;max-width:100%;max-height:320px}.walk-source table{border-collapse:collapse;width:100%}.walk-source th,.walk-source td{padding:8px 10px;border:1px solid #dce3ec;text-align:left}.walk-source th{white-space:nowrap}.walk-source code{white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px}

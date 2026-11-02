@@ -1,5 +1,7 @@
 # Vision Learning Hub · 视觉学习
 
+**0.16.0：从原文定位标签与日志错误。** Y01、L01 新增 7 步：标签解析与边界检查、坏行定位、日志级别与累计状态，以及 None/空正文的区别。新增原始文本下标表，累计 **41 / 44 道基础题、119 步、125 组参数配置**。[学习指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/标签与日志排错图解指南-0.16.0.md)。
+
 **0.15.0：图案怎样匹配、坐标怎样标定。** T11、T13 新增 9 个步骤：旋转对照、误差表、差异图、仿射设计矩阵、拟合系数与独立检查误差。累计 **39 / 44 道基础题、112 步、119 组参数配置**，支持原生手敲、真实结果导入和差异定位。[学习指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/图案匹配与坐标标定图解指南-0.15.0.md)。
 
 **0.14.0：首轮之后，围绕一个目标继续学。** 新增碎片检测、拼图几何、YOLO 数据与后处理、嵌入式数据准备四条路线，记住目标并按当前代码验收进度推荐下一题。T07–T14 补齐起步卡，累计 16 张；术语解释增至 24 个。练习支持路线内前后题跳转与保存保护。[目标路线指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/目标路线与进阶起步指南-0.14.0.md)。

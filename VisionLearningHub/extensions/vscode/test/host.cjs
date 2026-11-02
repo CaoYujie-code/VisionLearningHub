@@ -121,9 +121,9 @@ exports.run=async()=>{
   const visualOwn=await hub.message('readWalkthrough',{key:'T03',parameter:130});assert.equal(Object.keys(visualOwn.results).length,2);assert.ok(visualOwn.results.step2.output);assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
   const visualState={...visual.json.progress,step:1,notes:{step2:'host visual note'},done:[0]};await hub.message('api',{path:'/lesson/T03/walkthrough/progress',method:'POST',body:visualState});
   await hub.stop();await hub.ensure();assert.equal((await hub.request('/lesson/T03/walkthrough')).progress.notes.step2,'host visual note');passed.push('native result imports and step progress survive service restart without granting grades');
-  const expandedBoot=await hub.request('/bootstrap');assert.equal(expandedBoot.walkthroughs.length,39);
+  const expandedBoot=await hub.request('/bootstrap');assert.equal(expandedBoot.walkthroughs.length,41);
   const matrixDemo=(await hub.message('api',{path:'/lesson/A03/walkthrough',method:'GET'})).json.demo;
-  assert.equal(matrixDemo.results.step2.cells.length,3);assert.equal(matrixDemo.results.step2.spatial,false);passed.push('native course catalog discovers 39 lessons and renders perspective matrix data');
+  assert.equal(matrixDemo.results.step2.cells.length,3);assert.equal(matrixDemo.results.step2.spatial,false);passed.push('native course catalog discovers 41 lessons and renders perspective matrix data');
   for(const [key,value,sidecar] of [['V12',0,'template.npy'],['V14',40,'previous.npy']]){
     await hub.message('openWalkthrough',{key,parameter:value});const file=vscode.window.activeTextEditor.document.fileName;const directory=path.dirname(file);
     assert.ok((await fs.stat(path.join(directory,sidecar))).size>100);
@@ -144,7 +144,7 @@ exports.run=async()=>{
     assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
     passed.push(key+' native standalone geometry results import with numeric diagnostics and unchanged grades');
   }
-  for(const [key,value] of [['Y02',50],['Y05',60],['L02',4],['L03',50],['T11',3],['T13',8]]){
+  for(const [key,value] of [['Y02',50],['Y05',60],['L02',4],['L03',50],['T11',3],['T13',8],['Y01',2],['L01',1]]){
     await hub.message('openWalkthrough',{key,parameter:value});const directory=path.dirname(vscode.window.activeTextEditor.document.fileName);
     if(key==='Y02')assert.ok((await fs.stat(path.join(directory,'original.npy'))).size>100);
     await new Promise((resolve,reject)=>require('node:child_process').execFile(hub.pythonExe,[path.join(directory,'reference.py')],{env:{...process.env,PYTHONUTF8:'1'}},error=>error?reject(error):resolve()));
@@ -152,10 +152,12 @@ exports.run=async()=>{
     for(const frame of Object.values(own.results)){assert.equal(frame.difference.available,true);assert.equal(frame.difference.different,0);}
     if(key==='L02')assert.deepEqual(own.results.step3.cells,[[4,3,3,9,1,0]]);
     if(key==='T11')assert.deepEqual(own.results.step4.cells.map(row=>row[1]),[2,0,3,1]);
+    if(key==='Y01'){assert.deepEqual(own.results.step3.shape,[0,1]);assert.equal(own.results.step3.minimum,null);}
+    if(key==='L01'){assert.deepEqual(own.results.step3.cells,[[2,2,7]]);assert.equal((await hub.request('/lesson/L01/walkthrough')).demo.source_text.lines[7],'ERROR ');}
     if(key==='T13'){assert.deepEqual(own.results.step4.shape,[4,7]);assert.ok(own.results.step4.cells.some(row=>row[6]>.1));}
     if(key==='L03')assert.deepEqual(own.results.step3.columns,['平均 ms','P95 ms','串行 FPS']);
     assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
-    passed.push(key+' packaged detection/deployment script imports genuine results with preserved grades');
+    passed.push(key+' packaged walkthrough script imports genuine results with preserved grades');
   }
   const featureRef=JSON.parse((await hub.request('/lesson/E07/reference')).code);
   const featureRoot=path.join(hub.root,'projects','E07');for(const [name,content] of Object.entries(featureRef))await fs.writeFile(path.join(featureRoot,name),content);

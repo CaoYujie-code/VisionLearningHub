@@ -2810,5 +2810,210 @@
         "before": "step4"
       }
     ]
+  },
+  "Y01": {
+    "scene": "开始训练之前，逐行检查标签；原始下标必须保留，才能回到文件中定位坏行。",
+    "target": "区分语法解析与几何检查，返回非法标签行的原始下标；空白行忽略。",
+    "boundary": "按本题约定检查 class cx cy width height，要求框完全位于 [0,1]。不检查图片与标签对应、类别名称、标注是否真的包住目标，也不代表完整数据集校验。",
+    "sample_note": "坐标画布只用于展示通过检查的框，不是实拍图或标注质量证明。原始标签文本见下方表格。",
+    "text_input": {
+      "parameter": "labels",
+      "title": "原始标签与下标"
+    },
+    "control": {
+      "name": "repair",
+      "label": "样例修复阶段：0 原始错误 / 1 修复格式 / 2 修复全部",
+      "values": [
+        0,
+        1,
+        2
+      ],
+      "default": 0,
+      "experiment": "每次只切换到下一组已准备的文本，观察坏行减少在哪里。切换不自动修改你的原题代码。"
+    },
+    "steps": [
+      {
+        "title": "先解析字段，保留原始下标",
+        "code": "parsed = {}\nreasons = {}\nparse_rows = []\nfor i, line in enumerate(params['labels']):\n    fields = line.split()\n    status = 0\n    if fields:\n        if len(fields) != 5:\n            status = 1\n            reasons[i] = '字段数不是 5'\n        else:\n            try:\n                values = list(map(float, fields))\n                if not np.isfinite(values).all():\n                    status = 3\n                    reasons[i] = '包含 NaN 或无穷'\n                else:\n                    status = 4\n                    parsed[i] = values\n            except (ValueError, OverflowError):\n                status = 2\n                reasons[i] = '字段无法转为数值'\n    parse_rows.append([i, len(fields), status])\nparse_table = np.asarray(parse_rows, dtype=np.int32).reshape(-1, 3)\ndetail = '状态：0 空白忽略，1 字段数错误，2 非数值，3 非有限值，4 解析通过；解析通过还不等于标签合法。'",
+        "value": "parse_table",
+        "display": "matrix",
+        "why": "先让原始字符串安全变成数值，再做类别和坐标判断。",
+        "watch": "对照原文第 2、3、4 行，分别观察字段不足、非数值和 NaN；下标从 0 开始，空白行也占一个位置。",
+        "failure": "不能先删空白行再编号，否则报告的下标与原文件不一致；NaN 不等于有效坐标。",
+        "question": "float 能解析 nan，为什么还要检查有限性？",
+        "answer": "可转成浮点不代表可以用于坐标判断；NaN、正负无穷都违反本题有限数值约定。",
+        "lines": [
+          "enumerate 保留每行原始下标，split 将空白分隔的字段拆开。",
+          "只有 5 个有限数值才放进 parsed；坏行原因另存 reasons。",
+          "表中只保存状态码，不把 NaN 或文本伪装成有效坐标数组。"
+        ],
+        "columns": [
+          "原下标",
+          "字段数",
+          "解析状态"
+        ],
+        "id": "step1",
+        "before": "input",
+        "before_label": "辅助预览：原始文本见上方下标表"
+      },
+      {
+        "title": "分别检查类别、尺寸与整个框",
+        "code": "checks = []\nfor i, values in parsed.items():\n    cls, cx, cy, width, height = values\n    class_ok = cls.is_integer() and 0 <= cls < params['classes']\n    size_ok = width > 0 and height > 0\n    bounds_ok = (cx-width/2 >= -1e-9 and cy-height/2 >= -1e-9\n                 and cx+width/2 <= 1+1e-9 and cy+height/2 <= 1+1e-9)\n    failures = []\n    if not class_ok:\n        failures.append('类别非法')\n    if not size_ok:\n        failures.append('宽高必须为正')\n    if not bounds_ok:\n        failures.append('框超出边界')\n    if failures:\n        reasons[i] = '；'.join(failures)\n    checks.append([i, int(class_ok), int(size_ok), int(bounds_ok)])\ncheck_table = np.asarray(checks, dtype=np.int32).reshape(-1, 4)\ndetail = '1=该项通过，0=该项失败；只检查已成功解析的行。中心在图内不代表整个框在图内。'",
+        "value": "check_table",
+        "display": "matrix",
+        "why": "把不同原因分开，比只给一个 True/False 更容易定位。",
+        "watch": "原始第 7 行中心为 0.95、宽度为 0.2，右边界为 1.05；第 9 行类别 0.5 虽能解析，却不是整数类别。",
+        "failure": "不要只检查中心；类别范围上限不包含 classes；负宽高即使某个边界条件通过也不能接受。",
+        "question": "cx=0.95 合法，为什么本行仍越界？",
+        "answer": "框右边界 cx+width/2=1.05 超过 1。检查的是整个框，不只是中心。",
+        "lines": [
+          "分别生成类别、正宽高和边界三个布尔结果。",
+          "每个标志独立展示，只有三项都通过才接受。",
+          "本题使用 1e-9 的边界容差，不是放宽真实标注要求。"
+        ],
+        "columns": [
+          "原下标",
+          "类别通过",
+          "尺寸通过",
+          "边界通过"
+        ],
+        "id": "step2",
+        "before": "step1"
+      },
+      {
+        "title": "汇总坏行，回到原文定位",
+        "code": "invalid = sorted(reasons)\ninvalid_rows = np.asarray(invalid, dtype=np.int32).reshape(-1, 1)\ndetail = '非法行原因：' + ('；'.join(f'{i}: {reasons[i]}' for i in invalid) if invalid else '没有非法行；空白行已忽略')",
+        "value": "invalid_rows",
+        "display": "matrix",
+        "why": "原题需要的是可用于定位的坏行下标列表，不是修复后的标签。",
+        "watch": "阶段 0 坏行为 [2,3,4,5,6,7,9]；阶段 1 剩 [5,6,7,9]；阶段 2 为真正的空列表。",
+        "failure": "没有坏行时返回 []，不能造一个 [0] 代表没有错误；教学表为 0×1，原题直接返回 invalid。",
+        "question": "全部通过说明标签对应物体正确吗？",
+        "answer": "不说明。这里只验证字段、类别和坐标范围，是否标对物体需要图像检查。",
+        "lines": [
+          "reasons 的键就是坏行下标，sorted 保持原始顺序。",
+          "reshape(-1,1) 让空结果仍有一列，不伪造零行数据。",
+          "原因来自实际检查分支，回到上方同一下标的原文修复。"
+        ],
+        "columns": [
+          "非法行原下标"
+        ],
+        "id": "step3",
+        "before": "step2"
+      },
+      {
+        "title": "只把通过检查的框画出来",
+        "code": "output = image.copy()\nheight_px, width_px = output.shape[:2]\nfor i, values in parsed.items():\n    if i in reasons:\n        continue\n    cls, cx, cy, width, height = values\n    x1 = int(round((cx-width/2) * width_px))\n    y1 = int(round((cy-height/2) * height_px))\n    x2 = int(round((cx+width/2) * width_px))\n    y2 = int(round((cy+height/2) * height_px))\n    cv2.rectangle(output, (x1, y1), (min(x2,width_px-1), min(y2,height_px-1)), (30,150,40), 2)\n    cv2.putText(output, f'{i}: class {int(cls)}', (max(2,x1), max(16,y1)), 0, .45, (30,100,30), 1)\ndetail = '只画通过本题规则的框；标号是原下标与类别。绘图截到最后一个像素不改变归一化边界的判断。'",
+        "value": "output",
+        "display": "image",
+        "why": "把数值坐标与画布联系起来，同时避免让非法坐标进入绘图。",
+        "watch": "阶段 0 只画下标 0、8；阶段 2 中多个框重叠，这是准备好的文本内容，不代表算法漏画。",
+        "failure": "画得出来不等于标签正确；不能先裁掉越界部分再宣称原标签通过。",
+        "question": "为什么右边界 1.0 合法，但绘图端点最多 width-1？",
+        "answer": "归一化几何边界和像素索引不同；绘图调整用于显示，不用于改写原始标签。",
+        "lines": [
+          "只遍历成功解析且没有错误原因的行。",
+          "用中心与宽高换算四边，再按画布尺寸缩放。",
+          "copy 保留输入；画图只帮助理解坐标，不参与合法性判定。"
+        ],
+        "id": "step4",
+        "before": "input",
+        "before_label": "辅助坐标画布（不用于判断标注质量）"
+      }
+    ]
+  },
+  "L01": {
+    "scene": "视觉程序留下多行日志。先辨认级别字段，再累计警告与错误，避免把正文中的 ERROR 误当错误级别。",
+    "target": "逐行解析日志，返回 error_count、warning_count 和 last_error；没有错误时 last_error 为 None。",
+    "boundary": "这是离线字符串解析，可在 Windows 运行；不连接 Linux 终端，不读取真实系统日志，也不依据最后一行直接判定设备故障。",
+    "sample_note": "预览图是日志的排版副本，计算输入为下方原始文本。此题只把第一个普通空格作为级别分隔符。",
+    "text_input": {
+      "parameter": "lines",
+      "title": "原始日志与下标"
+    },
+    "control": {
+      "name": "case",
+      "label": "日志样例：0 没有错误 / 1 空正文错误 / 2 新增一条错误",
+      "values": [
+        0,
+        1,
+        2
+      ],
+      "default": 1,
+      "experiment": "比较 None、空字符串和有内容的最后错误。正文提到 ERROR、未知级别或没有分隔空格的行都不算 ERROR 记录。"
+    },
+    "steps": [
+      {
+        "title": "拆出级别，别搜索整行关键词",
+        "code": "parts = []\nparsed_rows = []\nfor i, line in enumerate(params['lines']):\n    level, separator, message = line.partition(' ')\n    code = {'INFO':1, 'WARN':2, 'ERROR':3}.get(level, 0) if separator else 0\n    parts.append((i, code, message))\n    parsed_rows.append([i, int(bool(separator)), code])\nparsed_table = np.asarray(parsed_rows, dtype=np.int32).reshape(-1, 3)\ndetail = '级别码：0 忽略，1 INFO，2 WARN，3 ERROR。先确认分隔空格存在，再识别级别；正文里的 ERROR 不改变级别。'",
+        "value": "parsed_table",
+        "display": "matrix",
+        "why": "级别是结构化字段，正文可以包含任意单词。",
+        "watch": "INFO previous ERROR recovered 仍是 INFO；单独 ERROR 没有空格而被忽略，ERROR 后带空格则是一条空正文错误。",
+        "failure": "不要先 strip 整行，否则会把有效的 ERROR 加尾空格变成没有分隔符；大小写和分隔符按本题约定处理。",
+        "question": "为什么两行看起来都只有 ERROR，结果却不同？",
+        "answer": "一行没有分隔符，另一行有一个尾部空格且正文为空。partition 可以保留这个区别。",
+        "lines": [
+          "partition 只在第一个普通空格处分割，返回级别、分隔符与剩余全文。",
+          "code 只由级别字段和分隔符决定，不扫描 message 里的词。",
+          "原文用带引号记法展示，方便看清尾空格。"
+        ],
+        "columns": [
+          "原下标",
+          "存在空格",
+          "级别码"
+        ],
+        "id": "step1",
+        "before": "input",
+        "before_label": "辅助预览：原始文本见上方下标表"
+      },
+      {
+        "title": "跟着每一行累计状态",
+        "code": "errors = 0\nwarnings = 0\nlast_index = -1\nlast_error = None\ntrace = []\nfor i, code, message in parts:\n    if code == 3:\n        errors += 1\n        last_index = i\n        last_error = message\n    elif code == 2:\n        warnings += 1\n    trace.append([i, errors, warnings, last_index])\ntrace_rows = np.asarray(trace, dtype=np.int32).reshape(-1, 4)\ndetail = '每行是处理该条日志后的状态；最后错误下标 -1 表示尚无 ERROR，不能当作 Python 的最后一行索引使用。'",
+        "value": "trace_rows",
+        "display": "matrix",
+        "why": "把最终计数展开成状态变化，看到哪一行真正导致递增。",
+        "watch": "普通 INFO、空行和未知级别不改变错误数；遇到空正文 ERROR，错误数仍增加，最后错误下标仍更新。",
+        "failure": "不能用 if message 判断是否算错误，空正文也是有效错误记录；最后错误跟随记录顺序，不是按内容排序。",
+        "question": "最后一行是 WARN，会不会覆盖 last_error？",
+        "answer": "不会。只有级别为 ERROR 的行更新最后错误；WARN 只增加警告计数。",
+        "lines": [
+          "初始化计数为 0、last_error 为 None。",
+          "ERROR 和 WARN 分开处理，INFO 与忽略行只留下状态快照。",
+          "trace 的每一行都与原下标对应，方便逐行排查。"
+        ],
+        "columns": [
+          "处理至下标",
+          "累计 ERROR",
+          "累计 WARN",
+          "最后 ERROR 下标"
+        ],
+        "id": "step2",
+        "before": "step1"
+      },
+      {
+        "title": "区分无错误、空正文和真实文本",
+        "code": "result = {'error_count':errors, 'warning_count':warnings, 'last_error':last_error}\nsummary = np.array([[errors, warnings, last_index]], dtype=np.int32)\ndetail = f'原题返回字典：{result!r}。下标只用于辅助回查；原题 last_error 是正文字符串或 None。'",
+        "value": "summary",
+        "display": "matrix",
+        "why": "计数正确还不够，返回值的类型与空值含义也必须正确。",
+        "watch": "样例 0：last_error=None；样例 1：last_error=空字符串；样例 2：last_error=codec failed。用原文最后一条真正 ERROR 核对。",
+        "failure": "不要把 -1 当 last_error 返回；不要把空字符串转换为 None；也不要把 ERROR 级别前缀拼进正文。",
+        "question": "None 与空字符串各表示什么？",
+        "answer": "None 表示没有遇到错误记录；空字符串表示遇到了一条错误记录，但它没有正文。",
+        "lines": [
+          "result 按原题约定保存计数与原始正文，包含正文中的其余空格。",
+          "summary 是可视化辅助数值表，不是原题返回值。",
+          "repr 让 None 与空字符串在教学说明中明确可见。"
+        ],
+        "columns": [
+          "ERROR 总数",
+          "WARN 总数",
+          "最后 ERROR 下标"
+        ],
+        "id": "step3",
+        "before": "step2"
+      }
+    ]
   }
 }

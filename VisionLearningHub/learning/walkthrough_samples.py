@@ -105,6 +105,24 @@ def supplement(key,value,image,raw):
     elif key=='A05':
         image=np.full((220,360,3),245,np.uint8)
         params.update(boxes=[[40,40,140,140],[50,50,150,150],[60,60,160,160],[230,70,300,140],[230,70,300,140]],scores=[.9,.8,.7,.75,.75])
+    elif key=='Y01':
+        labels=['0 0.5 0.5 0.4 0.2','','1 0.5 0.5 0.2','a 0.5 0.5 0.2 0.2','0 nan 0.5 0.2 0.2','2 0.5 0.5 0.2 0.2','1 0.5 0.5 -0.2 0.2','1 0.95 0.5 0.2 0.2','1 0.1 0.1 0.2 0.2','0.5 0.5 0.5 0.2 0.2']
+        if value>=1:
+            for i in [2,3,4]:labels[i]='0 0.5 0.5 0.2 0.2'
+        if value>=2:
+            for i in [5,6,9]:labels[i]='1 0.5 0.5 0.2 0.2'
+            labels[7]='1 0.9 0.5 0.2 0.2'
+        params.update(labels=labels,classes=2)
+        image=np.full((240,400,3),245,np.uint8)
+        for x in range(0,400,40):cv2.line(image,(x,0),(x,239),(220,220,220),1)
+        for y in range(0,240,40):cv2.line(image,(0,y),(399,y),(220,220,220),1)
+    elif key=='L01':
+        lines=['INFO camera ready','WARN dropped frame','INFO previous ERROR recovered','ERROR cannot open /dev/video0','','DEBUG ERROR diagnostic','ERROR','ERROR ','WARN slow frame']
+        if value==0:lines=['INFO camera ready','WARN dropped frame','INFO previous ERROR recovered','','DEBUG ERROR diagnostic','ERROR','INFO stream OK']
+        if value==2:lines.append('ERROR codec failed')
+        params['lines']=lines
+        image=np.full((30+len(lines)*30,650,3),245,np.uint8)
+        for i,line in enumerate(lines):cv2.putText(image,f'{i}: {line!r}',(12,25+i*30),0,.5,(50,50,50),1,cv2.LINE_AA)
     elif key=='Y02':
         original=np.full((160,240,3),235,np.uint8)
         cv2.rectangle(original,(20,30),(120,100),(50,160,210),-1)

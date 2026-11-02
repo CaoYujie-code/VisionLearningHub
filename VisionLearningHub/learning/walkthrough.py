@@ -99,7 +99,9 @@ def demonstration(root,key,value=None):
         exec(s['code'],namespace)
         results[s['id']]=describe(namespace[s['value']],s['display'],folder,s['id'],namespace['detail'],s.get('columns'))
         np.save(folder/(s['id']+'.npy'),namespace[s['value']],allow_pickle=False)
-    return dict(**item,revision=revision(key),parameter=value,input=describe(image,'image',folder,'input'),results=results,context=signature(key,value,image,params),parameters={k:(dict(shape=list(v.shape),dtype=str(v.dtype)) if isinstance(v,np.ndarray) else v) for k,v in params.items() if k!='image_path'})
+    text_input=item.get('text_input')
+    source_text=dict(title=text_input['title'],lines=list(params[text_input['parameter']])) if text_input else None
+    return dict(**item,revision=revision(key),parameter=value,input=describe(image,'image',folder,'input'),results=results,source_text=source_text,context=signature(key,value,image,params),parameters={k:(dict(shape=list(v.shape),dtype=str(v.dtype)) if isinstance(v,np.ndarray) else v) for k,v in params.items() if k!='image_path'})
 
 
 def state(store,key):
