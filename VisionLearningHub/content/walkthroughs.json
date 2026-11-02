@@ -2576,5 +2576,239 @@
       }
     ],
     "sample_note": "使用小型确定性教学数据，不执行模型训练或真实板端采集。预览与原始数组分开保存；中文列名见可展开数值表。"
+  },
+  "T11": {
+    "scene": "四块外形相同的纸片带有不同图案。上排为模板，下排为打乱身份并旋转后的图块；小图旁的数字是位置编号。",
+    "target": "先观察一个候选的四种旋转，再计算第一块图的完整误差表，最后匹配全部图块。",
+    "boundary": "素材等尺寸、无噪声，只含 0/90/180/270 度旋转。最小误差不是置信度；重复或对称模板可能无法唯一判定身份或朝向。",
+    "control": {
+      "name": "turns",
+      "label": "额外逆时针旋转次数：0 / 1 / 3（每次 90 度）",
+      "values": [
+        0,
+        1,
+        3
+      ],
+      "default": 0,
+      "experiment": "保持模板和图块身份不变，只旋转图块。预测身份下标是否不变、最佳旋转列怎样变化。"
+    },
+    "steps": [
+      {
+        "title": "先看模板的四种朝向",
+        "code": "templates = np.asarray(params['templates'], dtype=np.uint8)\npatches = np.asarray(params['patches'], dtype=np.uint8)\nrotations = np.hstack([np.rot90(templates[2], k) for k in range(4)])\ndetail = '候选模板 2；从左到右 k=0、1、2、3，分别逆时针旋转 0、90、180、270 度。'",
+        "value": "rotations",
+        "display": "image",
+        "why": "先理解旋转怎样改变像素位置，再讨论怎样判断谁更像。",
+        "watch": "对照输入下排第 0 块与输出四格，先预测哪个朝向相同；这里只展示候选 2，不预先认定它就是答案。",
+        "failure": "np.rot90 的 k 是旋转次数，不是度数；默认逆时针，勿与 T08 图像坐标旋转矩阵混淆。",
+        "question": "四格里的像素值有没有插值变化？",
+        "answer": "直角旋转重排数组位置，不对本例像素做插值；尺寸为正方形，所以四格形状一致。",
+        "lines": [
+          "asarray 把实验包中的列表变为 uint8 数组。",
+          "np.rot90(template,k) 使用原生数组旋转，hstack 仅拼成观察图。",
+          "模板编号 2 只用于这个观察步骤，下一步会比较全部模板。"
+        ],
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "逐一计算模板与旋转误差",
+        "code": "patch = patches[0].astype(np.float64)\nscores = np.zeros((len(templates), 4), dtype=np.float64)\nfor j, template in enumerate(templates):\n    for k in range(4):\n        candidate = np.rot90(template, k).astype(np.float64)\n        scores[j, k] = np.mean((patch - candidate) ** 2)\ndetail = '行号是模板下标，列是旋转次数；每格为均方误差，越小越相似。只匹配输入的第 0 块。'",
+        "value": "scores",
+        "display": "matrix",
+        "why": "把“看起来相同”变成每种候选都能比较的数值。",
+        "watch": "找到最低的一格，读出模板行号和旋转列；默认样例在第 2 行有一个零误差。",
+        "failure": "先转 float 再相减与平方，避免 uint8 回绕；不要把最高分当最佳匹配。",
+        "question": "零误差是否证明真实相机里一定能正确识别？",
+        "answer": "只能说明这组对齐像素完全相同。光照、噪声、遮挡或重复模板会改变结果与可判定性。",
+        "lines": [
+          "两层循环穷举模板编号和四种朝向。",
+          "平方让正负差都成为非负误差，mean 对所有像素取平均。",
+          "分数保留 float64 原值；表格显示不会改变计算。"
+        ],
+        "columns": [
+          "k=0",
+          "k=1",
+          "k=2",
+          "k=3"
+        ],
+        "id": "step2",
+        "before": "step1"
+      },
+      {
+        "title": "对齐最佳候选，观察差异",
+        "code": "best_template, best_k = np.unravel_index(np.argmin(scores), scores.shape)\naligned = np.rot90(templates[best_template], int(best_k)).astype(np.float64)\ndifference = np.abs(patch - aligned)\ndetail = f'模板={best_template}，逆时针旋转次数={best_k}，平均绝对差={difference.mean():.6g}。黑色表示没有像素差异。'",
+        "value": "difference",
+        "display": "magnitude",
+        "why": "检查被选中的候选是否真的与输入对齐；全黑差异图在这里是正确结果。",
+        "watch": "本组无噪声样例应全黑，最大差与非零数量均为 0；若导入自己的结果有亮点，回查旋转方向与数据类型。",
+        "failure": "argmin 返回扁平下标，需要 unravel_index 还原行列。若有并列最小值，这段代码只选择第一个，不解决歧义。",
+        "question": "为什么差异图全黑不等于读图失败？",
+        "answer": "本步输出是两张有效图像的绝对差，而非原图；原始数值均为 0 意味着逐像素一致。",
+        "lines": [
+          "argmin 选出最低误差的位置，unravel_index 分解为模板行与旋转列。",
+          "重新旋转最佳模板，与输入按 float64 求绝对差。",
+          "显示按幅值映射；判断是否一致请同时看原始数值。"
+        ],
+        "id": "step3",
+        "before": "step2"
+      },
+      {
+        "title": "匹配全部图块并核对返回顺序",
+        "code": "matches = []\nfor i, tile in enumerate(patches):\n    all_scores = np.zeros((len(templates), 4), dtype=np.float64)\n    for j, template in enumerate(templates):\n        for k in range(4):\n            candidate = np.rot90(template, k).astype(np.float64)\n            all_scores[j, k] = np.mean((tile.astype(np.float64) - candidate) ** 2)\n    j, k = np.unravel_index(np.argmin(all_scores), all_scores.shape)\n    matches.append([i, j, k, all_scores[j, k]])\nmatch_rows = np.asarray(matches, dtype=np.float64).reshape(-1, 4)\nidentities = [int(row[1]) for row in match_rows]\ndetail = f'原题需要的模板下标列表：{identities}；表格中的旋转和误差是辅助解释。'",
+        "value": "match_rows",
+        "display": "matrix",
+        "why": "第一个图块理解后，将相同方法扩展到整个输入列表。",
+        "watch": "每一行依次对应输入图块 0、1、2、3；改旋转参数后模板下标应保持 [2,0,3,1]。",
+        "failure": "返回顺序跟随 patches，不要按识别出的身份重新排序；原题返回身份列表，不是整张辅助表。",
+        "question": "模板下标与旋转次数哪个回答“它是谁”？",
+        "answer": "模板下标回答身份；旋转次数描述该模板怎样与当前图块对齐，二者不要混为一个编号。",
+        "lines": [
+          "对每块重新生成误差表，不能复用第一块的 scores。",
+          "reshape(-1,4) 明确表格列数，也支持空图块列表。",
+          "提取第二列并转 int 才得到原题身份列表。"
+        ],
+        "columns": [
+          "图块下标",
+          "模板下标",
+          "逆时针次数",
+          "最小均方误差"
+        ],
+        "id": "step4",
+        "before": "input"
+      }
+    ]
+  },
+  "T13": {
+    "scene": "同一组标定点分别有视觉坐标和平台坐标。输入图左边显示视觉点，右边显示平台测量点；C 编号表示已知对应。",
+    "target": "构造 [u,v,1] 设计矩阵、检查秩、拟合视觉到平台的仿射映射，再用未参与拟合的 Q 检查点测误差。",
+    "boundary": "假设两个平面坐标之间可由仿射模型描述。这里的检查点真值来自已知合成映射；真实设备需独立测量，训练点残差小不等于新位置准确。",
+    "control": {
+      "name": "noise",
+      "label": "平台标定点测量扰动幅度（平台单位）：0 / 2 / 8",
+      "values": [
+        0,
+        2,
+        8
+      ],
+      "default": 0,
+      "experiment": "固定视觉点、检查点和扰动方向，只放大标定点测量误差。观察系数与独立检查误差，不凭拟合图看起来接近就认定准确。"
+    },
+    "steps": [
+      {
+        "title": "先把对应点排在同一行",
+        "code": "visual = np.asarray(params['visual'], dtype=np.float64)\nplatform = np.asarray(params['platform'], dtype=np.float64)\npairs = np.column_stack([visual, platform])\ndetail = '每行是一对相同物理点的观测；前两列为视觉 u/v，后两列为平台 X/Y。拟合方向：视觉 → 平台。'",
+        "value": "pairs",
+        "display": "matrix",
+        "why": "对应关系比求解公式更早决定拟合是否有意义。",
+        "watch": "按 C0 到 C5 逐行核对；左右两组数值不同，是因为坐标系和单位不同。",
+        "failure": "不要把两边各自排序后再直接配对；行顺序不同会让正确算法拟合错误对应。",
+        "question": "为什么不能直接把像素 u/v 当成平台 X/Y？",
+        "answer": "坐标原点、方向和尺度可能不同，必须先通过对应点确定映射。",
+        "lines": [
+          "asarray 明确使用浮点坐标。",
+          "column_stack 把两组坐标按行配在一起，仅作观察。",
+          "所有拟合都使用 visual 和 platform，独立检查点此时不参与。"
+        ],
+        "columns": [
+          "视觉 u",
+          "视觉 v",
+          "平台 X",
+          "平台 Y"
+        ],
+        "id": "step1",
+        "before": "input"
+      },
+      {
+        "title": "增加常数列并检查信息是否足够",
+        "code": "design = np.column_stack([visual, np.ones(len(visual))])\nrank = np.linalg.matrix_rank(design)\nif rank < 3:\n    raise ValueError('标定点共线，无法确定二维映射')\ndetail = f'设计矩阵秩={rank}；列依次为 u、v、1。常数列负责平移。'",
+        "value": "design",
+        "display": "matrix",
+        "why": "把 X=a*u+b*v+c 与 Y=d*u+e*v+f 都写成同一个矩阵乘法。",
+        "watch": "第三列全为 1；这组不共线点应使秩为 3。",
+        "failure": "至少三组不共线点。很多点仍可能全在一条直线上；共线时应停止，而不是交付看似正常的坐标。",
+        "question": "为什么增加一列 1？",
+        "answer": "把平移常量也写成待求系数：a*u+b*v+c*1。没有它就只能拟合经过原点的线性变换。",
+        "lines": [
+          "ones 生成常数列，column_stack 保持每行仍对应一个点。",
+          "matrix_rank 检查独立信息，rank<3 拒绝退化输入。",
+          "此处检查只是必要条件；近共线和病态数据也需要更多数值诊断。"
+        ],
+        "columns": [
+          "u",
+          "v",
+          "常数 1"
+        ],
+        "id": "step2",
+        "before": "step1"
+      },
+      {
+        "title": "求出映射系数并看拟合残差",
+        "code": "affine, _, _, _ = np.linalg.lstsq(design, platform, rcond=None)\nfitted = design @ affine\nfit_errors = np.linalg.norm(fitted - platform, axis=1)\ndetail = f'系数三行依次是 u 系数、v 系数、平移；两列对应 X/Y。标定点平均残差={fit_errors.mean():.6g} 平台单位。'",
+        "value": "affine",
+        "display": "matrix",
+        "why": "用所有对应点估计能尽量解释测量值的映射；噪声存在时一般不能每点都完全吻合。",
+        "watch": "无扰动时三行约为 [1.2,-0.1]、[0.25,0.9]、[30,15]；放大扰动后系数改变。",
+        "failure": "lstsq 返回四项，第一项才是系数；不要把拟合残差当独立检查误差。",
+        "question": "六个点有扰动时，为什么不保证每个点误差为零？",
+        "answer": "这里选择使总平方残差最小的仿射映射，带噪观测通常不能由同一仿射模型精确通过。",
+        "lines": [
+          "lstsq 同时求 X 和 Y 两列系数，rcond=None 使用库默认秩阈值。",
+          "design @ affine 返回各标定点的拟合位置。",
+          "norm(...,axis=1) 计算每行二维误差长度；这仍是训练点残差。"
+        ],
+        "columns": [
+          "X 的系数",
+          "Y 的系数"
+        ],
+        "id": "step3",
+        "before": "step2"
+      },
+      {
+        "title": "只在新点上检查预测误差",
+        "code": "checks = np.asarray(params['checks'], dtype=np.float64).reshape(-1, 2)\nexpected = np.asarray(params['expected_checks'], dtype=np.float64).reshape(-1, 2)\npredicted = np.column_stack([checks, np.ones(len(checks))]) @ affine\nerrors = np.linalg.norm(predicted - expected, axis=1)\ncheck_rows = np.column_stack([checks, predicted, expected, errors])\ndetail = 'Q0 到 Q3 均未参与拟合。最后一列为预测与独立真值的距离，单位与平台坐标一致。真值只用于评价，不输入 lstsq。'",
+        "value": "check_rows",
+        "display": "matrix",
+        "why": "把“在已知点上拟合得好”和“在新位置预测得准”分开。",
+        "watch": "无扰动时误差仅有浮点舍入量级；增加测量扰动后关注每个检查点，而不只看平均值。",
+        "failure": "expected_checks 是演示真值，不能拿它重新拟合或直接作为预测返回；原题只要求返回 predicted。",
+        "question": "训练点残差很小，但新点误差大，应先查什么？",
+        "answer": "检查对应关系、点的分布、模型是否适用和测量误差；不要用检查真值替换预测来掩盖问题。",
+        "lines": [
+          "新点同样补一列 1，再乘拟合得到的系数。",
+          "真值来自样例生成器的独立已知映射，代码只在求误差时使用。",
+          "数值表同时保留预测、真值和距离，避免只凭图像判断。"
+        ],
+        "columns": [
+          "检查 u",
+          "检查 v",
+          "预测 X",
+          "预测 Y",
+          "真值 X",
+          "真值 Y",
+          "距离误差"
+        ],
+        "id": "step4",
+        "before": "step3"
+      },
+      {
+        "title": "画出检查点与预测位置",
+        "code": "output = image[:, 360:].copy()\nfor i, (truth, guess) in enumerate(zip(expected, predicted)):\n    target = tuple(np.rint(truth + [20, 40]).astype(int))\n    estimate = tuple(np.rint(guess + [20, 40]).astype(int))\n    cv2.circle(output, target, 6, (40, 150, 40), 2, cv2.LINE_AA)\n    cv2.drawMarker(output, estimate, (30, 30, 220), cv2.MARKER_CROSS, 9, 1, cv2.LINE_AA)\n    cv2.line(output, target, estimate, (30, 30, 220), 1, cv2.LINE_AA)\n    cv2.putText(output, f'Q{i}', (target[0]+8, target[1]), 0, .45, (70, 70, 70), 1, cv2.LINE_AA)\ndetail = '只显示平台坐标区：C 为标定点，Q 为独立检查点；绿圈是真值，红十字是预测，连线显示误差。绘图取整不改变原始浮点预测。'",
+        "value": "output",
+        "display": "image",
+        "why": "用位置对照解释误差方向，再回数值表判断大小。",
+        "watch": "无扰动时红十字位于绿圈中心；有扰动时看偏离方向。图中只显示平台坐标示意区，不是机械平台的实拍图。",
+        "failure": "绘图额外平移仅为排版，不能把 [20,40] 加进原题输出；小误差可能因显示取整看不出来。",
+        "question": "红十字与绿圈看起来重合，能否断言误差精确为零？",
+        "answer": "不能。图像显示取整且有标记尺寸，需要查看上一步保留的原始浮点距离。",
+        "lines": [
+          "先裁出平台坐标示意区并 copy，避免标记过小或污染计算数据。",
+          "rint 和 [20,40] 偏移只用于画图，不参与拟合与误差计算。",
+          "同一 Q 的绿圈、红十字分别对应独立真值和预测；抗锯齿仅改善显示。"
+        ],
+        "id": "step5",
+        "before": "step4"
+      }
+    ]
   }
 }

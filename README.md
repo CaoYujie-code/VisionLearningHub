@@ -1,9 +1,13 @@
 # Vision Learning Hub · 视觉学习实验室
 
-**0.14.0：首轮之后，围绕一个目标继续学。** 新增碎片检测、拼图几何、YOLO 数据与后处理、嵌入式数据准备四条路线，记住目标并按当前代码验收进度推荐下一题。T07–T14 补齐起步卡，累计 16 张；术语解释增至 24 个。练习支持路线内前后题跳转与保存保护。[目标路线指南](VisionLearningHub/docs/目标路线与进阶起步指南-0.14.0.md)。
+**0.15.0：图案怎样匹配、坐标怎样标定。** T11、T13 新增 9 个步骤：旋转对照、误差表、差异图、仿射设计矩阵、拟合系数与独立检查误差。累计 **39 / 44 道基础题、112 步、119 组参数配置**，支持原生手敲、真实结果导入和差异定位。[学习指南](VisionLearningHub/docs/图案匹配与坐标标定图解指南-0.15.0.md)。
 
 <details>
 <summary>历史版本亮点与指南</summary>
+
+**0.14.0：首轮之后，围绕一个目标继续学。** 新增碎片检测、拼图几何、YOLO 数据与后处理、嵌入式数据准备四条路线，记住目标并按当前代码验收进度推荐下一题。T07–T14 补齐起步卡，累计 16 张；术语解释增至 24 个。练习支持路线内前后题跳转与保存保护。[目标路线指南](VisionLearningHub/docs/目标路线与进阶起步指南-0.14.0.md)。
+
+
 
 **0.13.0：更容易迈出第一步。** 首页增加首轮八题推荐；P01、P02、T01–T06 增加“拿到什么 / 交出什么 / 先试哪一步”起步卡。基础练习提供 18 个术语小例子与 4 类排查指引，图解页聚焦分步实验，返回原题再验收。修复快速切标签时草稿尚未保存的问题，T01 示例改用原生 NumPy/OpenCV 读图。[新手使用指南](VisionLearningHub/docs/新手起步与排查指南-0.13.0.md)。
 
@@ -32,9 +36,17 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.14.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.15.0.md)
 
-> 当前源码版本为 **0.14.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.15.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.15.0：从图案身份到独立标定检查
+
+![图案身份匹配](VisionLearningHub/docs/images/pattern-identities-0.15.0.png)
+
+T11 把四种旋转与模板误差逐项列出，再看最佳对齐后的差异图；T13 从对应点到仿射系数，再用未参与拟合的新点检查误差。原始数值与显示图分开，能手敲、改参和导入真实结果。
+
+[分步学习指南](VisionLearningHub/docs/图案匹配与坐标标定图解指南-0.15.0.md) · [本版验收](VisionLearningHub/docs/验收记录-0.15.0.md)
 
 ## 0.14.0：把入门练习连接成目标路线
 

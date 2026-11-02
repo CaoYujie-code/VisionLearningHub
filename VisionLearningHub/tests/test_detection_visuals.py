@@ -11,9 +11,9 @@ class DetectionVisualChecks(unittest.TestCase):
         old=json.loads((Path(__file__).parent/'data/visual-v0110-revisions.json').read_text())
         self.assertEqual(len(old),31)
         for key,revision in old.items():self.assertEqual(w.revision(key),revision)
-        self.assertEqual(len(w.CATALOG),37)
-        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),103)
-        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),113)
+        self.assertEqual(len(w.CATALOG),39)
+        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),112)
+        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),119)
 
     def test_letterbox_inverse_clipping_and_portable_original(self):
         for value in (50,100,150):

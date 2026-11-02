@@ -64,6 +64,32 @@ def supplement(key,value,image,raw):
     elif key=='T09':
         image=np.full((300,400,3),245,np.uint8)
         params.update(target=[80,80,240,160],layout=[[[80,80],[199,80],[199,239],[80,239]],[[200-value,80],[319-value,80],[319-value,239],[200-value,239]]])
+    elif key=='T11':
+        templates=raw['templates'];order=[2,0,3,1]
+        patches=[np.rot90(templates[j],(value+i)%4).copy() for i,j in enumerate(order)]
+        image=np.full((200,360,3),245,np.uint8)
+        for i,(template,patch) in enumerate(zip(templates,patches)):
+            for y,tile in ((30,template),(120,patch)):
+                image[y:y+48,15+i*85:63+i*85]=cv2.cvtColor(tile,cv2.COLOR_GRAY2BGR)
+                cv2.putText(image,str(i),(15+i*85,y-7),0,.5,(50,50,50),1)
+        params.update(templates=[t.tolist() for t in templates],patches=[t.tolist() for t in patches])
+    elif key=='T13':
+        visual=np.array([[20,20],[180,20],[20,140],[180,140],[100,40],[100,120]],float)
+        model=np.array([[1.2,-.1],[.25,.9],[30,15]],float)
+        perturb=np.array([[1,-1],[-1,1],[1,1],[-1,-1],[.5,1],[-.5,-1]],float)
+        platform=np.column_stack([visual,np.ones(len(visual))])@model+value*perturb
+        checks=np.array([[60,60],[140,100],[40,120],[160,40]],float)
+        expected=np.column_stack([checks,np.ones(len(checks))])@model
+        params.update(visual=visual.tolist(),platform=platform.tolist(),checks=checks.tolist(),expected_checks=expected.tolist())
+        image=np.full((240,720,3),245,np.uint8)
+        cv2.putText(image,'VISUAL u/v',(35,22),0,.5,(50,50,50),1)
+        cv2.putText(image,'PLATFORM X/Y',(375,22),0,.5,(50,50,50),1)
+        cv2.line(image,(350,10),(350,220),(180,180,180),1)
+        for i,(source,target) in enumerate(zip(visual,platform)):
+            for point,offset in ((source,[40,40]),(target,[380,40])):
+                x,y=np.rint(point+offset).astype(int)
+                cv2.circle(image,(x,y),3,(100,100,100),-1)
+                cv2.putText(image,f'C{i}',(x+5,y-4),0,.35,(100,100,100),1)
     elif key=='T12':
         image=np.full((250,430,3),245,np.uint8)
         rng=np.random.default_rng(17);centers=np.array([[70,70],[170,90],[270,140]],float)
