@@ -1,9 +1,11 @@
 # Vision Learning Hub · 视觉学习实验室
 
-**0.16.0：从原文定位标签与日志错误。** Y01、L01 新增 7 步：标签解析与边界检查、坏行定位、日志级别与累计状态，以及 None/空正文的区别。新增原始文本下标表，累计 **41 / 44 道基础题、119 步、125 组参数配置**。[学习指南](VisionLearningHub/docs/标签与日志排错图解指南-0.16.0.md)。
+**0.17.0：看懂结果，再定位下一步。** 全部 41 道图解增加数组与预览读法，解释 shape、dtype、原值范围和非零元素；新增分步检查清单，区分漏保存、无法比较、数值差异与本次一致，支持跳转和键盘定位。小数值不再被固定两位小数显示成零。[学习指南](VisionLearningHub/docs/结果阅读与分步排查指南-0.17.0.md)。
 
 <details>
 <summary>历史版本亮点与指南</summary>
+
+**0.16.0：从原文定位标签与日志错误。** Y01、L01 新增 7 步：标签解析与边界检查、坏行定位、日志级别与累计状态，以及 None/空正文的区别。新增原始文本下标表，累计 **41 / 44 道基础题、119 步、125 组参数配置**。[学习指南](VisionLearningHub/docs/标签与日志排错图解指南-0.16.0.md)。
 
 **0.15.0：图案怎样匹配、坐标怎样标定。** T11、T13 新增 9 个步骤：旋转对照、误差表、差异图、仿射设计矩阵、拟合系数与独立检查误差。累计 **39 / 44 道基础题、112 步、119 组参数配置**，支持原生手敲、真实结果导入和差异定位。[学习指南](VisionLearningHub/docs/图案匹配与坐标标定图解指南-0.15.0.md)。
 
@@ -40,9 +42,19 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.16.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.17.0.md)
 
-> 当前源码版本为 **0.16.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.17.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.17.0：知道结果代表什么，也知道下一步查哪里
+
+![分步结果检查清单](VisionLearningHub/docs/images/result-checklist-0.17.0.png)
+
+导入自己的数组后，按步骤查看漏保存、无法比较或数值差异，一键跳到对应讲解。每张结果下可以展开数组与预览读法，避免把通道元素当成像素、把非零数量当成物体数，或把空结果当成全零数组。
+
+清单只描述最近一次导入的样例；修改代码后需要重新运行并导入。完成后仍需返回原题验证返回值和多组输入，既有笔记、位置和成绩继续保留。
+
+[学习指南](VisionLearningHub/docs/结果阅读与分步排查指南-0.17.0.md) · [验收记录](VisionLearningHub/docs/验收记录-0.17.0.md)
 
 ## 0.16.0：看清原始文本，再读检查结果
 
