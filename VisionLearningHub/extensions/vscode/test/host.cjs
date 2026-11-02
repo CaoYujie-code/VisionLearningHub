@@ -77,10 +77,11 @@ exports.run=async()=>{
   hub.panel.dispose();await hub.show();
   for(let i=0;i<100&&(hub.viewState?.page!=='practice'||hub.viewState?.lesson!=='V01');i++)await new Promise(r=>setTimeout(r,100));
   assert.equal(hub.viewState.lesson,'V01');assert.equal(hub.viewState.page,'practice');passed.push('closed learning panel restores persistent page and exercise');
-  await hub.message('viewReady',{page:'project',course:null,lesson:'E09',lastBasic:'V13',lastProject:'E09',lastLearning:'E09',memory:{'E09.tab':'代码与运行','E09.file':'imaging.py'},trail:[{page:'practice',lesson:'T13',course:null}],lessons:53});
+  await hub.message('viewReady',{page:'project',course:null,lesson:'E09',lastBasic:'V13',lastProject:'E09',lastLearning:'E09',memory:{'E09.tab':'代码与运行','E09.file':'imaging.py','beginner.path':'geometry'},trail:[{page:'practice',lesson:'T13',course:null}],lessons:53});
   hub.panel.dispose();await hub.show();
   for(let i=0;i<100&&(hub.viewState?.page!=='project'||hub.viewState?.lesson!=='E09');i++)await new Promise(r=>setTimeout(r,100));
   assert.equal(hub.viewState.page,'project');assert.equal(hub.viewState.lesson,'E09');assert.equal(hub.viewState.memory['E09.file'],'imaging.py');assert.equal(hub.viewState.lastBasic,'V13',JSON.stringify(hub.viewState));passed.push('engineering page and source tab restore in packaged Webview');
+  assert.equal(hub.viewState.memory['beginner.path'],'geometry');passed.push('selected learning goal persists through packaged Webview recreation');
   await hub.show('practice');
   for(let i=0;i<100&&(hub.viewState?.page!=='practice'||hub.viewState?.lesson!=='V13');i++)await new Promise(r=>setTimeout(r,100));
   assert.equal(hub.viewState.page,'practice');assert.equal(hub.viewState.lesson,'V13');passed.push('native basic entry leaves project and restores last basic lesson');

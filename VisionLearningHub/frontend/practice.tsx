@@ -1,3 +1,4 @@
+import {LearningPath} from './learning-path';
 import {Walkthrough} from './walkthrough';
 import {BeginnerCard,BeginnerHelp} from './beginner';
 import './walkthrough.css';
@@ -69,6 +70,7 @@ export function Practice({boot,lessonId,open,back,backLabel,job,anyBusy,setJob,n
   {(job?.stale&&report===job.result||report?.verify&&report.passed&&!boot.passed[lessonId])&&<div className="note-box">代码已发生变化，以下结果属于运行时的代码快照。请重新验收当前版本。</div>}
   {report?<ReportView key={report.lesson+'-'+JSON.stringify(report.reports.map(s=>s.input))} report={report} onZoom={onZoom} onLine={(id,line)=>{if(isIDE)void ide('openExercise',{key:id,line});else if(id===lessonId)jump(line);else open(id);}}/>:<section className="panel"><div className="section-heading"><h3>输入样例</h3><Tag>seed 17</Tag></div><div className="input-preview"><Photo src={data.input} label="原始输入" onZoom={onZoom}/><div><h4>本次参数</h4><pre className="light-code">{JSON.stringify(data.params,null,2)}</pre></div></div><p className="muted small">数据题的图像用于辅助展示；真实输入以 params 与任务约定为准。</p></section>}
  </>}
+  {tab==='任务'&&<LearningPath boot={boot} open={open} current={lessonId}/>}
  </>}</div></div>{reference&&<Modal title={lessonId+' · 参考实现'} wide onClose={()=>setReference('')}><p className="muted">先比较输入、返回值和处理步骤，再回到自己的代码中实现。</p><pre className="reference-code">{reference}</pre></Modal>}</>;
 }
 

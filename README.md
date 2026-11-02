@@ -1,5 +1,10 @@
 # Vision Learning Hub · 视觉学习实验室
 
+**0.14.0：首轮之后，围绕一个目标继续学。** 新增碎片检测、拼图几何、YOLO 数据与后处理、嵌入式数据准备四条路线，记住目标并按当前代码验收进度推荐下一题。T07–T14 补齐起步卡，累计 16 张；术语解释增至 24 个。练习支持路线内前后题跳转与保存保护。[目标路线指南](VisionLearningHub/docs/目标路线与进阶起步指南-0.14.0.md)。
+
+<details>
+<summary>历史版本亮点与指南</summary>
+
 **0.13.0：更容易迈出第一步。** 首页增加首轮八题推荐；P01、P02、T01–T06 增加“拿到什么 / 交出什么 / 先试哪一步”起步卡。基础练习提供 18 个术语小例子与 4 类排查指引，图解页聚焦分步实验，返回原题再验收。修复快速切标签时草稿尚未保存的问题，T01 示例改用原生 NumPy/OpenCV 读图。[新手使用指南](VisionLearningHub/docs/新手起步与排查指南-0.13.0.md)。
 
 **0.12.0：图解覆盖 37 / 44 道基础题，累计 103 步、113 组参数配置。** 新增 Y02–Y05、L02–L03 六题：检测框坐标还原、Precision/Recall、分组泄漏、检测框匹配、图像行步幅与延迟统计。新题原始数值表带中文列名，支持独立手敲、真实结果导入和差异定位；Y02 随包提供原图素材。[学习指南](VisionLearningHub/docs/检测评价与部署图解指南-0.12.0.md)。
@@ -18,15 +23,26 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [函数学习指南与推荐顺序](VisionLearningHub/docs/函数学习指南-0.8.0.md)
 
+
+</details>
+
 **从读懂图像，到独立交付一个能运行、能验证的视觉工程。**
 
 面向视觉初学者的本地学习平台：阅读课程、手敲 Python、观察处理结果，再通过多场景验收检验实现。支持网页版和可选安装的 VS Code 扩展，使用 OpenCV、NumPy 和普通 Python 模块组织代码。
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.13.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.14.0.md)
 
-> 当前源码版本为 **0.13.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.14.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.14.0：把入门练习连接成目标路线
+
+![目标路线与进度](VisionLearningHub/docs/images/goal-paths-0.14.0.png)
+
+首页选择一个想完成的目标，查看每一步的学习目的。当前代码验收后继续下一项；原题工作区下方提供路线内前后题导航。T07–T14 的起步卡从一个点、一条轮廓或一个候选开始，帮助逐步接成完整任务。
+
+路线与题目共用已有验收记录，不另设完成分数；模型训练、实机 Linux 与开发板联调仍需另外实践。[操作指南](VisionLearningHub/docs/目标路线与进阶起步指南-0.14.0.md) · [本版验收](VisionLearningHub/docs/验收记录-0.14.0.md)
 
 ## 0.13.0：明确起点、术语和下一步
 
