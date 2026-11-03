@@ -11,9 +11,9 @@ class MatchingCalibrationChecks(unittest.TestCase):
         old=json.loads((Path(__file__).parent/'data/visual-v0140-revisions.json').read_text())
         self.assertEqual(len(old),37)
         for key,revision in old.items():self.assertEqual(w.revision(key),revision)
-        self.assertEqual(len(w.CATALOG),41)
-        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),119)
-        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),125)
+        self.assertEqual(len(w.CATALOG),42)
+        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),124)
+        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),129)
 
     def test_identity_stays_fixed_while_rotation_changes(self):
         for turns in (0,1,3):

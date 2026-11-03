@@ -1,9 +1,11 @@
 # Vision Learning Hub · 视觉学习实验室
 
-**0.17.0：看懂结果，再定位下一步。** 全部 41 道图解增加数组与预览读法，解释 shape、dtype、原值范围和非零元素；新增分步检查清单，区分漏保存、无法比较、数值差异与本次一致，支持跳转和键盘定位。小数值不再被固定两位小数显示成零。[学习指南](VisionLearningHub/docs/结果阅读与分步排查指南-0.17.0.md)。
+**0.18.0：从评价布局到选择候选。** T10 新增五步图解、四种场景：逐候选计数、覆盖与重叠、双约束筛选、原下标返回和无解展示。通过重排、目标外重叠与多个合法布局理解选择规则；累计 **42 / 44 道图解、124 步、129 组参数配置**。[学习指南](VisionLearningHub/docs/候选筛选与无解处理指南-0.18.0.md)。
 
 <details>
 <summary>历史版本亮点与指南</summary>
+
+**0.17.0：看懂结果，再定位下一步。** 全部 41 道图解增加数组与预览读法，解释 shape、dtype、原值范围和非零元素；新增分步检查清单，区分漏保存、无法比较、数值差异与本次一致，支持跳转和键盘定位。小数值不再被固定两位小数显示成零。[学习指南](VisionLearningHub/docs/结果阅读与分步排查指南-0.17.0.md)。
 
 **0.16.0：从原文定位标签与日志错误。** Y01、L01 新增 7 步：标签解析与边界检查、坏行定位、日志级别与累计状态，以及 None/空正文的区别。新增原始文本下标表，累计 **41 / 44 道基础题、119 步、125 组参数配置**。[学习指南](VisionLearningHub/docs/标签与日志排错图解指南-0.16.0.md)。
 
@@ -42,9 +44,19 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.17.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.18.0.md)
 
-> 当前源码版本为 **0.17.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.18.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.18.0：解释为什么选它，以及没有解时怎么办
+
+![候选布局与覆盖次数](VisionLearningHub/docs/images/candidate-overview-0.18.0.png)
+
+T10 把“评价一个布局”连接到“选择一个方案”。逐项查看缺口、内部或外部重叠，切换候选顺序、无解和多个合法场景；学习同时满足约束、保留原下标，以及避免 `-1` 误取列表末项。
+
+图解使用原生 NumPy/OpenCV，可手敲、导入真实结果和定位错误步骤。正式组合题仍调用你保存的 T09，需要回原题验证前置实现与返回值。
+
+[学习指南](VisionLearningHub/docs/候选筛选与无解处理指南-0.18.0.md) · [验收记录](VisionLearningHub/docs/验收记录-0.18.0.md)
 
 ## 0.17.0：知道结果代表什么，也知道下一步查哪里
 

@@ -64,6 +64,20 @@ def supplement(key,value,image,raw):
     elif key=='T09':
         image=np.full((300,400,3),245,np.uint8)
         params.update(target=[80,80,240,160],layout=[[[80,80],[199,80],[199,239],[80,239]],[[200-value,80],[319-value,80],[319-value,239],[200-value,239]]])
+    elif key=='T10':
+        image=np.full((200,220,3),245,np.uint8)
+        left=[[40,40],[89,40],[89,139],[40,139]]
+        right=[[90,40],[139,40],[139,139],[90,139]]
+        extra=[[60,40],[69,40],[69,139],[60,139]]
+        outside=[[160,40],[169,40],[169,139],[160,139]]
+        valid=[left,right]
+        gap=[left,(np.asarray(right)+[10,0]).tolist()]
+        overlap=[left,right,extra]
+        outer=[left,right,outside,outside]
+        horizontal=[[[40,40],[139,40],[139,89],[40,89]],[[40,90],[139,90],[139,139],[40,139]]]
+        cases={0:[gap,overlap,valid,outer],1:[valid,outer,gap,overlap],2:[gap,overlap,outer],3:[gap,valid,outer,horizontal]}
+        params.update(target=[40,40,100,100],candidates=cases[value])
+        cv2.rectangle(image,(40,40),(139,139),(40,40,40),1)
     elif key=='T11':
         templates=raw['templates'];order=[2,0,3,1]
         patches=[np.rot90(templates[j],(value+i)%4).copy() for i,j in enumerate(order)]

@@ -3015,5 +3015,133 @@
         "before": "step2"
       }
     ]
+  },
+  "T10": {
+    "scene": "已有若干拼图摆放方案，需要挑选一个覆盖足够且重叠不超标的候选。先学 T09 的两个指标，再学如何把评价结果接到选择流程。",
+    "target": "看懂每个候选被接受或拒绝的原因，返回原始候选下标；没有合法候选时返回 -1。",
+    "boundary": "固定离线栅格样例；只筛选已有候选，不生成候选、不求最优，也不检查全部真实装配限制。图解独立使用原生库，正式 T10 需调用你保存的 T09。",
+    "sample_note": "输入图只定义画布与黑色目标框，候选坐标见“本次实际输入参数”。着色后的候选拼图是可视化辅助，不是相机图像；数组计算始终使用原始次数。",
+    "control": {
+      "name": "case",
+      "label": "候选场景：0 原顺序 / 1 重排 / 2 无解 / 3 多个合法",
+      "values": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "default": 0,
+      "experiment": "保持评价阈值不变。1 只重排同一组方案；2 删除合法方案；3 同时放入竖向拼合与横向拼合两种合法布局，比较原下标和合法数量。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "每个候选单独累计覆盖次数",
+        "code": "candidate_counts = []\npanels = []\nx, y, width, height = params['target']\nfor index, layout in enumerate(params['candidates']):\n    counts = np.zeros(image.shape[:2], dtype=np.int32)\n    for polygon in layout:\n        tile = np.zeros(image.shape[:2], dtype=np.uint8)\n        cv2.fillPoly(tile, [np.rint(polygon).astype(np.int32)], 1)\n        counts += tile\n    candidate_counts.append(counts)\n    panel = np.full_like(image, 245)\n    panel[counts == 1] = (220, 170, 70)\n    panel[counts > 1] = (70, 70, 225)\n    cv2.rectangle(panel, (x, y), (x + width - 1, y + height - 1), (40, 40, 40), 1)\n    cv2.putText(panel, f'candidate {index}', (10, 22), 0, 0.55, (40, 40, 40), 2)\n    panels.append(panel)\nif panels:\n    if len(panels) % 2:\n        panels.append(np.full_like(image, 245))\n    overview = np.vstack([np.hstack(panels[i:i + 2]) for i in range(0, len(panels), 2)])\nelse:\n    overview = image.copy()\n    cv2.putText(overview, 'NO CANDIDATES', (10, 22), 0, 0.55, (40, 40, 40), 2)\ndetail = '黑框是目标；蓝色表示覆盖一次，红色表示至少覆盖两次。候选按行排列，末尾空格仅为排版，不是候选。'",
+        "value": "overview",
+        "display": "image",
+        "why": "把候选之间的差别变成可观察的覆盖次数，为后面的数值判断准备数据。",
+        "watch": "默认四个候选依次包含缺口、目标内重叠、合法拼合、目标外重叠。先预测哪一个能同时满足两个条件。",
+        "failure": "counts 必须在每个候选开始时清零。若把所有候选累加到同一张图，就不再是在比较不同方案。",
+        "question": "为什么不能反复在同一张二值 mask 上直接画 1？",
+        "answer": "后画的 1 会覆盖已有的 1，不能留下重叠次数。每片独立画成 0/1，再用 int32 累加。",
+        "lines": [
+          "enumerate 保留候选原始下标；布局中每片多边形都画到独立 tile。",
+          "np.rint 先按约定取整，再转 int32 给 fillPoly。",
+          "candidate_counts 保存各候选的原始次数，后续计算读取它。",
+          "着色、黑框、文字和拼接只生成观察图，不参与覆盖率计算。"
+        ],
+        "before": "input",
+        "before_label": "教学输入：画布与目标框"
+      },
+      {
+        "id": "step2",
+        "title": "用同一规则评价所有候选",
+        "code": "rows = []\nfor index, counts in enumerate(candidate_counts):\n    inside = counts[y:y + height, x:x + width]\n    coverage = np.count_nonzero(inside > 0) / (width * height)\n    overlap = np.count_nonzero(counts > 1) / (width * height)\n    rows.append([index, coverage, overlap])\nscores = np.asarray(rows, dtype=np.float64).reshape(-1, 3)\ndetail = '覆盖只看目标内；重叠按 T09 原题约定统计全画布，再除以目标面积。目标外红色区域也会影响重叠率。'",
+        "value": "scores",
+        "display": "matrix",
+        "why": "把缺口与重叠分开测量，避免仅凭“看上去覆盖很多”选错方案。",
+        "watch": "默认候选 2 为 [2,1,0]；候选 3 虽覆盖率也是 1，却因目标外的重复覆盖得到重叠率 0.1。",
+        "failure": "不要将 overlap 也裁成目标 ROI。这里遵循 T09 原题的全画布重叠约定；两个指标的分母均为目标面积。",
+        "question": "目标外重叠为什么会影响本题的合法性？",
+        "answer": "本关明确把画布内所有重复覆盖计入 overlap。它是课程约定，不是通用拼图或比赛标准；若工程另有限制，需要重新定义指标。",
+        "lines": [
+          "coverage 使用目标切片，右侧和下侧边界不包含。",
+          "overlap 使用完整 counts，不只使用 inside。",
+          "reshape(-1,3) 保留空候选时的零行表，不伪造候选 0。",
+          "独立脚本用 NumPy/OpenCV 展开评价；正式 T10 应通过 student 调用自己已保存的 T09。"
+        ],
+        "before": "step1",
+        "columns": [
+          "候选原下标",
+          "目标内覆盖率",
+          "全画布重叠率"
+        ]
+      },
+      {
+        "id": "step3",
+        "title": "把两个约束分别判断，再同时满足",
+        "code": "coverage_ok = scores[:, 1] >= 0.98\noverlap_ok = scores[:, 2] <= 0.02\naccepted = coverage_ok & overlap_ok\nchecks = np.column_stack([scores[:, 0].astype(np.int32), coverage_ok, overlap_ok, accepted]).astype(np.int32)\ndetail = '1 表示满足，0 表示不满足；最后一列必须是前两项同时为 1。0.98 和 0.02 是本课程阈值。'",
+        "value": "checks",
+        "display": "matrix",
+        "why": "将每个方案被拒绝的原因拆开，理解为什么一个分数好还不够。",
+        "watch": "先按当前场景逐行读两个条件，再看最后一列。场景 0 只有候选 2 同时达标；场景 3 则是候选 1 和 3。切换场景后不要沿用旧下标。",
+        "failure": "数组的逐元素逻辑用 &；不要使用 | 放宽为任一条件满足，也不要把数组直接放进 Python and。",
+        "question": "恰好 coverage=0.98、overlap=0.02 会被接受吗？",
+        "answer": "会，本关使用包含边界的 >= 和 <=。这不意味着 98% 覆盖就满足所有真实工程要求。",
+        "lines": [
+          "两个布尔数组分别记录每行是否达标。",
+          "& 将同一行的两个判断合并。",
+          "转换成 int32 是为了显示 0/1 表，不改变比较阈值。"
+        ],
+        "before": "step2",
+        "columns": [
+          "候选原下标",
+          "覆盖达标",
+          "重叠达标",
+          "同时达标"
+        ]
+      },
+      {
+        "id": "step4",
+        "title": "返回原下标，明确处理无解",
+        "code": "valid_indices = np.flatnonzero(accepted).tolist()\nselected = int(valid_indices[0]) if valid_indices else -1\nselection = np.array([[selected, len(valid_indices)]], dtype=np.int32)\ndetail = f'满足条件的原下标：{valid_indices}；本演示返回 {selected}。正式题允许任一合法下标，演示固定选择第一个。'",
+        "value": "selection",
+        "display": "matrix",
+        "why": "把判断结果变成明确的函数返回值，让后续模块知道能不能继续。",
+        "watch": "场景 0/1/2/3 分别返回 2/0/-1/1；场景 3 有两个合法候选。表格第二列是合法数量，不是置信度。",
+        "failure": "不要对全 False 的 accepted 直接 argmax：它仍会返回 0。也不要返回过滤后列表的位置，丢掉原下标。",
+        "question": "两个候选都合法时，是否必须选择覆盖率更高的？",
+        "answer": "正式 T10 允许任何满足两个约束的候选，不要求最优。本演示选第一个仅为可复现；多个合法候选也不等于唯一解。",
+        "lines": [
+          "flatnonzero 找出 True 所在的原数组位置。",
+          "先判断列表是否为空，再读第一个下标。",
+          "原题返回整数 selected，selection 表只是图解保存的辅助数组。"
+        ],
+        "before": "step3",
+        "columns": [
+          "选择原下标（-1 无解）",
+          "合法候选数量"
+        ]
+      },
+      {
+        "id": "step5",
+        "title": "有解才画选中布局，无解不索引末项",
+        "code": "output = image.copy()\nif selected >= 0:\n    chosen = candidate_counts[selected]\n    output[chosen == 1] = (220, 170, 70)\n    output[chosen > 1] = (70, 70, 225)\n    label = f'SELECTED {selected}'\nelse:\n    label = 'NO VALID CANDIDATE'\ncv2.rectangle(output, (x, y), (x + width - 1, y + height - 1), (40, 40, 40), 1)\ncv2.putText(output, label, (10, 22), 0, 0.5, (40, 40, 40), 1)\ndetail = '只展示被选中的方案；无解时保留目标框并提示，不会误画列表最后一项。图解不运行或验收你的 T09。'",
+        "value": "output",
+        "display": "image",
+        "why": "核对下游使用者是否正确处理无解，避免选择逻辑返回 -1 后仍继续执行动作。",
+        "watch": "切到参数 2 后应只剩目标框和无解提示，不能出现任何蓝色或红色布局。",
+        "failure": "Python 列表的 [-1] 会取最后一项。先用 selected >= 0 判断，再索引；不能把无解当成一种正常下标。",
+        "question": "这道题有没有自己生成候选或搜索最优拼图？",
+        "answer": "没有。候选由输入提供，这里只学习评价、筛选和返回。生成候选与回溯搜索属于后续 A06 等练习。",
+        "lines": [
+          "先复制输入画布，保留清晰的无解展示。",
+          "只有非负下标才读取 candidate_counts。",
+          "显示图不替代正式返回整数，也不验证前置题实现。"
+        ],
+        "before": "step1"
+      }
+    ]
   }
 }
