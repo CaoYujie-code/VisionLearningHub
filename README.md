@@ -1,9 +1,11 @@
 # Vision Learning Hub · 视觉学习实验室
 
-**0.18.0：从评价布局到选择候选。** T10 新增五步图解、四种场景：逐候选计数、覆盖与重叠、双约束筛选、原下标返回和无解展示。通过重排、目标外重叠与多个合法布局理解选择规则；累计 **42 / 44 道图解、124 步、129 组参数配置**。[学习指南](VisionLearningHub/docs/候选筛选与无解处理指南-0.18.0.md)。
+**0.19.0：把处理步骤接成碎片检测器。** T14 新增七步图解、四组场景，连接背景分割、开闭运算、轮廓、几何描述与字典交付。展示相邻纸片误连的失败过程，区分“复现演示”与“场景成功”；累计 **43 / 44 道图解、131 步、133 组参数配置**。[学习指南](VisionLearningHub/docs/碎片检测器分步联调指南-0.19.0.md)。
 
 <details>
 <summary>历史版本亮点与指南</summary>
+
+**0.18.0：从评价布局到选择候选。** T10 新增五步图解、四种场景：逐候选计数、覆盖与重叠、双约束筛选、原下标返回和无解展示。通过重排、目标外重叠与多个合法布局理解选择规则；累计 **42 / 44 道图解、124 步、129 组参数配置**。[学习指南](VisionLearningHub/docs/候选筛选与无解处理指南-0.18.0.md)。
 
 **0.17.0：看懂结果，再定位下一步。** 全部 41 道图解增加数组与预览读法，解释 shape、dtype、原值范围和非零元素；新增分步检查清单，区分漏保存、无法比较、数值差异与本次一致，支持跳转和键盘定位。小数值不再被固定两位小数显示成零。[学习指南](VisionLearningHub/docs/结果阅读与分步排查指南-0.17.0.md)。
 
@@ -44,9 +46,19 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.18.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.19.0.md)
 
-> 当前源码版本为 **0.18.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.19.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.19.0：从中间结果定位整条检测流程的问题
+
+![闭运算前后相邻碎片误连](VisionLearningHub/docs/images/detector-merge-0.19.0.png)
+
+T14 将 T04–T07 的处理过程拆成七步。干净、带噪、空场景和相邻纸片使用相同参数，逐步观察掩膜、轮廓和几何结果；明确展示闭运算可能把两片连成一片，帮助学习者找到首次出错的环节。
+
+独立脚本使用原生 NumPy/OpenCV，支持手敲、导入、差异定位和进度恢复。正式组合仍需验证自己保存的四道前置实现及完整返回字典，图解一致不自动代表工程目标已达成。
+
+[学习指南](VisionLearningHub/docs/碎片检测器分步联调指南-0.19.0.md) · [验收记录](VisionLearningHub/docs/验收记录-0.19.0.md)
 
 ## 0.18.0：解释为什么选它，以及没有解时怎么办
 

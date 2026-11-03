@@ -3143,5 +3143,154 @@
         "before": "step1"
       }
     ]
+  },
+  "T14": {
+    "scene": "在绿色工作台上把纸片图像转换为掩膜、中心、顶点与面积。先学 T04–T07，再逐步检查它们怎样组成完整检测流程。",
+    "target": "得到 result={mask:清理后的二值图,pieces:完整几何描述列表}，能定位错误发生在分割、清理、轮廓还是几何阶段。",
+    "boundary": "固定合成图和固定阈值，尚未覆盖真实相机光照、遮挡或机械闭环。相邻纸片场景特意展示误连失败；正式 T14 仍需调用你保存的 T04、T05、T06、T07 并验收。",
+    "sample_note": "合成场景中的黑字与红图案属于纸片。expected_pieces 是作者已知的独立纸片数量，只供解释，不参与算法；图解使用原生函数，不代替你自己的前置实现。",
+    "control": {
+      "name": "case",
+      "label": "场景：0 干净 / 1 杂点与小孔 / 2 空场景 / 3 相邻误连",
+      "values": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "default": 0,
+      "experiment": "保持颜色阈值、3×3 核和最小面积不变，只切换输入场景。尤其比较场景 3 在开运算与闭运算之后的间隙、轮廓数量变化。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "选出绿色背景，先确认掩膜含义",
+        "code": "hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)\nbackground = cv2.inRange(hsv, np.asarray(params['lower'], dtype=np.uint8), np.asarray(params['upper'], dtype=np.uint8))\ndetail = '本步白色表示绿色背景，不是纸片。BGR 输入先转换为 HSV，再使用背景阈值。'",
+        "value": "background",
+        "display": "image",
+        "why": "组合前先认清接口：T04 内部先找背景，再反转得到前景。",
+        "watch": "绿色工作台在本步应为白色；纸片、黑字和红图案都应为黑色。空场景输入中的浅色杂点在这张背景掩膜里会成为小黑点。",
+        "failure": "把 BGR 当 RGB 或直接用 HSV 阈值筛 BGR，会让第一步就选错区域。此后再调轮廓面积无法修复这个错误。",
+        "question": "为什么这里黑色的文字仍属于纸片？",
+        "answer": "本步只识别绿色背景。纸片上的黑字和红图案都不是绿色，因此仍应在之后取反得到的前景里。",
+        "lines": [
+          "cvtColor 使用 COLOR_BGR2HSV，与输入 BGR 约定一致。",
+          "inRange 返回 uint8、0/255 单通道图；白色表示落入背景阈值。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "取反得到完整纸片前景",
+        "code": "foreground = cv2.bitwise_not(background)\ndetail = '现在白色才表示前景。黑字和红图案应仍在纸片内部；白色噪点也会进入前景，留给后续处理。'",
+        "value": "foreground",
+        "display": "image",
+        "why": "让后续开闭运算和轮廓提取共享“白色是目标”的约定。",
+        "watch": "与上一步黑白互换；纸片内部文字不应变成孔洞。噪声场景里的绿色小孔会成为黑点。",
+        "failure": "不要再次用灰度亮度筛选纸片，否则黑字可能被误删；也不要把 background 直接传给轮廓提取。",
+        "question": "为什么反转后还有小白点，不算这一步必然失败？",
+        "answer": "颜色分割只负责颜色规则；杂点颜色也不是绿色时，它们会成为前景，需要在下一步按尺寸与形状处理。",
+        "lines": [
+          "bitwise_not 对 0/255 掩膜逐位取反。",
+          "foreground 是 T04 正式函数应输出的掩膜。"
+        ],
+        "before": "step1"
+      },
+      {
+        "id": "step3",
+        "title": "开运算移除孤立小白点",
+        "code": "k = params['kernel']\nkernel = np.ones((k, k), dtype=np.uint8)\nopened = cv2.morphologyEx(foreground, cv2.MORPH_OPEN, kernel)\nremoved = int(np.count_nonzero((foreground > 0) & (opened == 0)))\ndetail = f'本步由前景变成背景的像素数：{removed}。开运算也可能改变尖角，减少像素不自动等于改进。'",
+        "value": "opened",
+        "display": "image",
+        "why": "先削掉尺寸小于结构元素的孤立噪点，让空场景能回到没有目标的状态。",
+        "watch": "场景 1、2 的孤立单像素白点应消失；较大纸片保留。注意三角尖端可能变化。",
+        "failure": "核过大可能吃掉真实小目标或细边。不要只看白色面积减少就判断正确。",
+        "question": "开运算能保证只删除噪声吗？",
+        "answer": "不能。它按结构元素与形状处理，不知道哪些像素是真实目标；需要结合场景检查细节。",
+        "lines": [
+          "np.ones 构造本例 3×3 矩形核。",
+          "MORPH_OPEN 是先腐蚀后膨胀；removed 仅作观察统计，不控制后续结果。"
+        ],
+        "before": "step2"
+      },
+      {
+        "id": "step4",
+        "title": "闭运算补小孔，同时检查是否误连",
+        "code": "cleaned = cv2.morphologyEx(opened, cv2.MORPH_CLOSE, kernel)\njoined_before, _ = cv2.findContours(opened, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\njoined_after, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\nadded = int(np.count_nonzero((opened == 0) & (cleaned > 0)))\ndetail = f'本步新增前景像素：{added}；面积过滤前的外轮廓数量：{len(joined_before)} → {len(joined_after)}。这些统计只用于观察。'",
+        "value": "cleaned",
+        "display": "image",
+        "why": "补掉纸片中的绿色小孔，同时观察相邻目标是否被错误连接。",
+        "watch": "场景 1 的小黑孔被补上；场景 3 的两列间隙被填充，两块纸片从 2 个外轮廓变成 1 个。这是特意保留的失败示例。",
+        "failure": "纸片数量变少时先比较开运算与闭运算结果。如果间隙在这里消失，问题不在最后的质心计算。",
+        "question": "闭运算让画面更完整，为什么反而可能让检测变差？",
+        "answer": "它也可能填掉两个独立目标之间的小间隙。视觉上更连贯并不意味着对象分离正确，需要改变清理策略或使用分离方法。",
+        "lines": [
+          "MORPH_CLOSE 是先膨胀后腐蚀；cleaned 对应 T05 的最终输出。",
+          "额外 findContours 只测量处理前后变化，不替换正式提取结果。"
+        ],
+        "before": "step3"
+      },
+      {
+        "id": "step5",
+        "title": "按外轮廓和面积筛出候选碎片",
+        "code": "all_contours, _ = cv2.findContours(cleaned, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)\ncontours = [c for c in all_contours if cv2.contourArea(c) >= params['min_area']]\ncontour_view = image.copy()\ncv2.drawContours(contour_view, contours, -1, (255, 80, 20), 2)\ndetail = f'外轮廓 {len(all_contours)} 个，面积筛选后 {len(contours)} 个。轮廓顺序不表示身份；面积单位是像素坐标的几何面积。'",
+        "value": "contour_view",
+        "display": "image",
+        "why": "把干净掩膜变成独立轮廓列表，明确 T06 传给 T07 的是什么。",
+        "watch": "检查蓝色外轮廓是否围住每片。空场景没有轮廓；相邻失败场景只得到一个大轮廓，面积筛选不会自动拆开它。",
+        "failure": "输入应是 cleaned 单通道掩膜。不要把原 BGR 图传给 findContours，也不要把几何面积与非零像素数当成同一量。",
+        "question": "为什么轮廓面积阈值不能解决两片误连？",
+        "answer": "两片合并后形成一个更大的轮廓，通常更容易超过最小面积阈值；需要回到更早的掩膜阶段处理。",
+        "lines": [
+          "RETR_EXTERNAL 只取外轮廓，避免把孔洞当成新碎片。",
+          "contourArea 按同一阈值过滤，原题使用 >= 包含边界。",
+          "drawContours 只在副本上画解释线，不修改用于计算的掩膜。"
+        ],
+        "before": "step4"
+      },
+      {
+        "id": "step6",
+        "title": "用矩和多边形近似形成几何描述",
+        "code": "pieces = []\nrows = []\nfor index, contour in enumerate(contours):\n    m = cv2.moments(contour)\n    if m['m00'] == 0:\n        continue\n    center = (m['m10'] / m['m00'], m['m01'] / m['m00'])\n    points = cv2.approxPolyDP(contour, 0.018 * cv2.arcLength(contour, True), True).reshape(-1, 2)\n    area = cv2.contourArea(contour)\n    pieces.append({'center': center, 'points': points, 'area': area})\n    rows.append([index, center[0], center[1], area, len(points)])\ngeometry = np.asarray(rows, dtype=np.float64).reshape(-1, 5)\ndetail = f'实际形成 {len(pieces)} 份几何描述；空结果为 0 行、5 列。表格的轮廓编号只对应当前提取顺序，不代表物体身份。'",
+        "value": "geometry",
+        "display": "matrix",
+        "why": "把轮廓转换成后续模块可使用的中心、顶点和面积。",
+        "watch": "读中心 x/y、面积与顶点数量，不要只看画点是否在图内。空场景必须保持空列表和零行表，不能伪造坐标 (0,0)。",
+        "failure": "先检查 m00，避免退化轮廓除以零。几何描述来自已经提取的轮廓，不能挽救上游把两片粘成一片的问题。",
+        "question": "表格里存的是所有顶点坐标吗？",
+        "answer": "不是。这里只列中心、面积和顶点数量以便观察；完整顶点仍保存在 pieces 中，正式题需要返回完整结构。",
+        "lines": [
+          "moments 的 m10/m00、m01/m00 得到 x、y 质心。",
+          "epsilon 按周长的 0.018 取值，与 T07 原题保持一致。",
+          "每项 pieces 保留 center、points、area；辅助表不替代正式返回值。"
+        ],
+        "before": "step5",
+        "columns": [
+          "轮廓下标",
+          "中心 x",
+          "中心 y",
+          "几何面积",
+          "顶点数量"
+        ]
+      },
+      {
+        "id": "step7",
+        "title": "组织交付结果，并核对场景预期",
+        "code": "result = {'mask': cleaned, 'pieces': pieces}\noutput = image.copy()\nfor index, piece in enumerate(pieces):\n    cv2.polylines(output, [piece['points'].astype(np.int32)], True, (255, 80, 20), 2)\n    cx, cy = np.rint(piece['center']).astype(int)\n    cv2.drawMarker(output, (cx, cy), (0, 0, 255), cv2.MARKER_CROSS, 14, 2)\n    cv2.putText(output, str(index), (cx + 7, cy - 7), 0, 0.5, (20, 20, 20), 1)\ndetail = f\"本次检测 {len(pieces)} 片；合成场景预期独立纸片 {params['expected_pieces']} 片。预期数量只用于解释，未参与分割、筛选或几何计算。原题返回 mask 与完整 pieces；此叠加图只是观察。\"",
+        "value": "output",
+        "display": "image",
+        "why": "把可视化与正式返回结构分开，并用已知场景检查整条处理链是否满足目标。",
+        "watch": "场景 0、1 检出 3 片，场景 2 为 0 片；场景 3 本应是 2 片，却检出 1 片。即使与演示数组一致，也不说明这个失败场景已被解决。",
+        "failure": "正式题返回字典，不是这张叠加图或几何表。图解不会执行你保存的前置题，也不会自动验证完整字典；回原题检查真实组合。",
+        "question": "结果与参考演示完全一致，为什么仍可能少了一片？",
+        "answer": "参考演示也采用固定的颜色与形态学流程，场景 3 故意暴露其局限。数组一致只表明复现该流程，工程成功仍需符合真实场景要求。",
+        "lines": [
+          "result 把 cleaned 和 pieces 组成正式接口，绘图在副本上完成。",
+          "标记坐标只在绘图时取整，返回中心继续保留浮点精度。",
+          "expected_pieces 是作者已知的场景说明，不是可以用来猜测实际检测输出的输入。"
+        ],
+        "before": "input"
+      }
+    ]
   }
 }

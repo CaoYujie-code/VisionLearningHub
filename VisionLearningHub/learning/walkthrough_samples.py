@@ -87,6 +87,23 @@ def supplement(key,value,image,raw):
                 image[y:y+48,15+i*85:63+i*85]=cv2.cvtColor(tile,cv2.COLOR_GRAY2BGR)
                 cv2.putText(image,str(i),(15+i*85,y-7),0,.5,(50,50,50),1)
         params.update(templates=[t.tolist() for t in templates],patches=[t.tolist() for t in patches])
+    elif key=='T14':
+        green=(42,145,48)
+        image=np.full((300,360,3),green,np.uint8)
+        if value in (0,1):
+            cv2.rectangle(image,(40,40),(130,130),(239,241,243),-1)
+            cv2.fillPoly(image,[np.array([[210,40],[290,130],[160,130]],np.int32)],(239,241,243))
+            cv2.rectangle(image,(40,170),(130,260),(239,241,243),-1)
+            cv2.putText(image,'A',(65,105),0,1,(15,15,15),2)
+            cv2.circle(image,(108,65),8,(25,30,215),-1)
+        elif value==3:
+            cv2.rectangle(image,(40,80),(139,179),(239,241,243),-1)
+            cv2.rectangle(image,(142,80),(241,179),(239,241,243),-1)
+        if value in (1,2):
+            for x,y in [(15,20),(330,30),(320,245)]:image[y,x]=(239,241,243)
+        if value==1:
+            for x,y in [(80,60),(70,210)]:image[y,x]=green
+        params.update(lower=[30,35,15],upper=[95,255,255],kernel=3,min_area=150,expected_pieces={0:3,1:3,2:0,3:2}[value])
     elif key=='T13':
         visual=np.array([[20,20],[180,20],[20,140],[180,140],[100,40],[100,120]],float)
         model=np.array([[1.2,-.1],[.25,.9],[30,15]],float)
