@@ -111,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.21.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.22.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -164,6 +164,16 @@ def study_desk():
     from learning.study_desk import snapshot
     with LOCK, database() as store:
         return snapshot(ROOT, store, progress(store))
+
+
+@app.post('/api/study-plan/{key}')
+def study_plan_save(key: str, body: dict):
+    from learning.study_plan import save_plan
+    with LOCK, database() as store:
+        try:
+            return {'plan': save_plan(store, key, body)}
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from error
 
 
 @app.get('/api/study-desk/export')

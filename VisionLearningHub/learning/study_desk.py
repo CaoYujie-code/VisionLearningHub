@@ -4,10 +4,12 @@ import re
 from pathlib import Path
 from . import walkthrough as w
 from .curriculum import BY_ID
+from .study_plan import read_plan, LABELS
 
 
 def snapshot(root, store, passed):
     saved = json.loads(store.setting(w.SETTING, '{}'))
+    plans = read_plan(store)
     rows = []
     for key, item in w.CATALOG.items():
         old = saved.get(key)
@@ -49,7 +51,8 @@ def snapshot(root, store, passed):
         rows.append(dict(id=key, title=BY_ID[key]['title'], total=len(steps), step=state['step'],
                          step_title=steps[state['step']]['title'], parameter=state['parameter'],
                          done=len(set(state['done'])), notes=notes, started=started, changed=changed,
-                         verified=verified, attention=attention, result=result))
+                         verified=verified, attention=attention, result=result,
+                         plan=plans.get(key, {'status': 'none', 'note': ''})))
     return dict(rows=rows, counts=dict(total=len(rows), started=sum(r['started'] for r in rows),
                 verified=sum(r['verified'] for r in rows), notes=sum(len(r['notes']) for r in rows),
                 attention=sum(r['attention'] for r in rows)))
@@ -59,10 +62,16 @@ def notebook(data):
     lines = ['# 我的视觉学习笔记', '',
              '以下是导出时的基础题记录。自查、图解导入和正式代码验收分别统计；数值一致不证明独立完成或其他输入正确。', '']
     for row in data['rows']:
-        if not row['started'] and not row['verified']:
+        if not row['started'] and not row['verified'] and row['plan']['status'] == 'none':
             continue
         lines += [f"## {row['id']} · {row['title']}", '',
                   f"当前代码：{'已验收' if row['verified'] else '待验收'}；图解自查 {row['done']}/{row['total']} 步；保存位置第 {row['step'] + 1} 步，参数 {row['parameter']}。", '']
+        plan = row['plan']
+        if plan['status'] != 'none':
+            lines += [f"个人安排：{LABELS[plan['status']]}（不代表代码成绩）", '']
+            if plan['note']:
+                fence = '`' * max(3, max((len(part) for part in re.findall(r'`+', plan['note'])), default=0) + 1)
+                lines += [fence + 'text', plan['note'], fence, '']
         if row['changed']:
             lines += ['课程已更新，此处仅展示当前版本记录；旧版自查不计入当前进度。', '']
         for note in row['notes']:
@@ -71,6 +80,6 @@ def notebook(data):
             lines += [f"### 第 {note['step'] + 1} 步 · {note['title']}", '', fence + 'text', note['text'], fence, '']
         if not row['notes']:
             lines += ['尚未记录本题的逐步观察笔记。', '']
-    if not any(r['started'] or r['verified'] for r in data['rows']):
+    if not any(r['started'] or r['verified'] or r['plan']['status'] != 'none' for r in data['rows']):
         lines += ['还没有图解学习记录。先打开一道题，记录你的观察。', '']
     return '\n'.join(lines)

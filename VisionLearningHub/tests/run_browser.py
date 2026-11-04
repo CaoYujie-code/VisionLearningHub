@@ -11,7 +11,7 @@ import time
 import urllib.request
 
 PROJECT=Path(__file__).resolve().parents[1]
-parser=argparse.ArgumentParser();parser.add_argument('--node',default='node');parser.add_argument('--suite',choices=['full','guides','navigation','projects','handbook','quiz','walkthrough','visual-expansion','geometry-visual','detection-visual','beginner','continuation','matching-calibration','text-diagnostics','result-reading','candidate','detector','backtracking','study-desk'],default='full');args=parser.parse_args()
+parser=argparse.ArgumentParser();parser.add_argument('--node',default='node');parser.add_argument('--suite',choices=['full','guides','navigation','projects','handbook','quiz','walkthrough','visual-expansion','geometry-visual','detection-visual','beginner','continuation','matching-calibration','text-diagnostics','result-reading','candidate','detector','backtracking','study-desk','study-plan'],default='full');args=parser.parse_args()
 base=PROJECT/'.test-data';base.mkdir(exist_ok=True)
 root=Path(tempfile.mkdtemp(prefix='browser-v030-',dir=base))
 with socket.socket() as probe:
@@ -48,6 +48,7 @@ with (root/'server.log').open('wb') as log:
         if args.suite in ('full','detector'):subprocess.run([args.node,'tests/detector_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
         if args.suite in ('full','backtracking'):subprocess.run([args.node,'tests/backtracking_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
         if args.suite in ('full','study-desk'):subprocess.run([args.node,'tests/study_desk_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
+        if args.suite in ('full','study-plan'):subprocess.run([args.node,'tests/study_plan_browser.mjs'],cwd=PROJECT,env=env,check=True,timeout=180)
     finally:
         process.stdin.close()
         try:process.wait(timeout=8)

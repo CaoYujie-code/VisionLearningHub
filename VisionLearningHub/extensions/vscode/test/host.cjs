@@ -125,6 +125,11 @@ exports.run=async()=>{
   assert.equal(desk.counts.total,44);const resumedDesk=desk.rows.find(r=>r.id==='T03');assert.equal(resumedDesk.step,1);assert.equal(resumedDesk.notes[0].text,'host visual note');
   const notesFile=await hub.request('/study-desk/export');assert.ok(Buffer.isBuffer(notesFile));assert.ok(notesFile.toString('utf8').includes('host visual note'));assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
   passed.push('native study desk reads saved position and exports original notes without awarding grades');
+  await hub.message('api',{path:'/study-plan/T03',method:'POST',body:{status:'review',note:'native review plan'}});
+  await hub.stop();await hub.ensure();assert.equal((await hub.request('/study-desk')).rows.find(r=>r.id==='T03').plan.note,'native review plan');
+  assert.ok((await hub.request('/study-desk/export')).toString('utf8').includes('native review plan'));
+  await hub.message('api',{path:'/study-plan/T03',method:'POST',body:{status:'none',note:''}});assert.equal((await hub.request('/study-desk')).rows.find(r=>r.id==='T03').plan.status,'none');
+  assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);passed.push('native manual study plans persist through restart, export and clear without changing grades');
   const expandedBoot=await hub.request('/bootstrap');assert.equal(expandedBoot.walkthroughs.length,44);
   const matrixDemo=(await hub.message('api',{path:'/lesson/A03/walkthrough',method:'GET'})).json.demo;
   assert.equal(matrixDemo.results.step2.cells.length,3);assert.equal(matrixDemo.results.step2.spatial,false);passed.push('native course catalog discovers 44 lessons and renders perspective matrix data');

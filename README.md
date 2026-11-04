@@ -1,9 +1,11 @@
 # Vision Learning Hub · 视觉学习实验室
 
-**0.21.0：把学习记录集中到“我的学习台”。** 首页可检索题目与观察笔记，筛选继续学习、结果待检查和待正式验收的题；一键恢复图解位置或回原题练习，并导出全部图解笔记。自查、导入状态与正式成绩分别显示，覆盖现有 **44 道基础题**。[使用指南](VisionLearningHub/docs/学习台与笔记复习指南-0.21.0.md)。
+**0.22.0：记录下一步与卡点，建立自己的复习清单。** 学习台新增“下一步学 / 暂时卡住 / 待复习”三种个人安排，支持备注、筛选、搜索、局部清除及随笔记导出；保存失败保留输入，未保存编辑有离开保护。安排与正式成绩独立，并纳入完整备份。[使用指南](VisionLearningHub/docs/学习安排与卡点复习指南-0.22.0.md)。
 
 <details>
 <summary>历史版本亮点与指南</summary>
+
+**0.21.0：把学习记录集中到“我的学习台”。** 首页可检索题目与观察笔记，筛选继续学习、结果待检查和待正式验收的题；一键恢复图解位置或回原题练习，并导出全部图解笔记。自查、导入状态与正式成绩分别显示，覆盖现有 **44 道基础题**。[使用指南](VisionLearningHub/docs/学习台与笔记复习指南-0.21.0.md)。
 
 **0.20.0：看清试放、失败和撤销，基础图解全部覆盖。** A06 新增六步回溯图解与四种场景，展示真实搜索事件、棋盘时间线以及 None 与合法空解 [] 的区别。累计 **44 / 44 道基础图解、137 步、137 组参数配置**，支持 VS Code 手敲、结果导入和进度记忆。[学习指南](VisionLearningHub/docs/回溯拼图分步学习指南-0.20.0.md)。
 
@@ -50,9 +52,19 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.21.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.22.0.md)
 
-> 当前源码版本为 **0.21.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.22.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.22.0：安排学习，记下具体卡点
+
+![个人学习安排与复习备注](VisionLearningHub/docs/images/study-plan-0.22.0.png)
+
+基础题卡片新增“安排学习”。选择下一步学、暂时卡住或待复习，写下最多 1000 字的具体问题，再按安排筛选或搜索备注。已验收题目也可以保留复习安排，个人计划不替代代码成绩。
+
+修改需明确保存，失败时保留输入；取消只丢弃本次编辑，清除只移除本题安排。完整备份与 Markdown 导出包含已保存安排，兼容没有该字段的旧备份。
+
+[学习安排使用指南](VisionLearningHub/docs/学习安排与卡点复习指南-0.22.0.md) · [验收记录](VisionLearningHub/docs/验收记录-0.22.0.md)
 
 ## 0.21.0：找到记录，继续学下去
 
