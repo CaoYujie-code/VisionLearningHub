@@ -1,9 +1,11 @@
 # Vision Learning Hub · 视觉学习实验室
 
-**0.19.0：把处理步骤接成碎片检测器。** T14 新增七步图解、四组场景，连接背景分割、开闭运算、轮廓、几何描述与字典交付。展示相邻纸片误连的失败过程，区分“复现演示”与“场景成功”；累计 **43 / 44 道图解、131 步、133 组参数配置**。[学习指南](VisionLearningHub/docs/碎片检测器分步联调指南-0.19.0.md)。
+**0.20.0：看清试放、失败和撤销，基础图解全部覆盖。** A06 新增六步回溯图解与四种场景，展示真实搜索事件、棋盘时间线以及 None 与合法空解 [] 的区别。累计 **44 / 44 道基础图解、137 步、137 组参数配置**，支持 VS Code 手敲、结果导入和进度记忆。[学习指南](VisionLearningHub/docs/回溯拼图分步学习指南-0.20.0.md)。
 
 <details>
 <summary>历史版本亮点与指南</summary>
+
+**0.19.0：把处理步骤接成碎片检测器。** T14 新增七步图解、四组场景，连接背景分割、开闭运算、轮廓、几何描述与字典交付。展示相邻纸片误连的失败过程，区分“复现演示”与“场景成功”；累计 **43 / 44 道图解、131 步、133 组参数配置**。[学习指南](VisionLearningHub/docs/碎片检测器分步联调指南-0.19.0.md)。
 
 **0.18.0：从评价布局到选择候选。** T10 新增五步图解、四种场景：逐候选计数、覆盖与重叠、双约束筛选、原下标返回和无解展示。通过重排、目标外重叠与多个合法布局理解选择规则；累计 **42 / 44 道图解、124 步、129 组参数配置**。[学习指南](VisionLearningHub/docs/候选筛选与无解处理指南-0.18.0.md)。
 
@@ -46,9 +48,19 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.19.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.20.0.md)
 
-> 当前源码版本为 **0.19.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.20.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.20.0：跟着真实状态学会回溯
+
+![回溯拼图实际搜索时间线](VisionLearningHub/docs/images/backtracking-timeline-0.20.0.png)
+
+A06 把棋盘集合、旋转去重、锚点候选、DFS、撤销和正式交付拆成六步。四种场景分别展示撤销后成功、等面积无解、面积拒绝与合法空解；每一帧来自代码实际搜索状态。
+
+现在全部 44 道基础题都有逐步图解。先预测、看中间结果，再在 VS Code 手敲和读取自己的数组，最后回原题验收。不同搜索顺序可以得到不同合法布局，图解数值差异与正式正确性分别判断。
+
+[回溯学习指南](VisionLearningHub/docs/回溯拼图分步学习指南-0.20.0.md) · [验收记录](VisionLearningHub/docs/验收记录-0.20.0.md)
 
 ## 0.19.0：从中间结果定位整条检测流程的问题
 

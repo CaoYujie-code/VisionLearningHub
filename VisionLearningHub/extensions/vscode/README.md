@@ -1,5 +1,7 @@
 # Vision Learning Hub · 视觉学习
 
+**0.20.0：看清试放、失败和撤销，基础图解全部覆盖。** A06 新增六步回溯图解与四种场景，展示真实搜索事件、棋盘时间线以及 None 与合法空解 [] 的区别。累计 **44 / 44 道基础图解、137 步、137 组参数配置**，支持 VS Code 手敲、结果导入和进度记忆。[学习指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/回溯拼图分步学习指南-0.20.0.md)。
+
 **0.19.0：把处理步骤接成碎片检测器。** T14 新增七步图解、四组场景，连接背景分割、开闭运算、轮廓、几何描述与字典交付。展示相邻纸片误连的失败过程，区分“复现演示”与“场景成功”；累计 **43 / 44 道图解、131 步、133 组参数配置**。[学习指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/碎片检测器分步联调指南-0.19.0.md)。
 
 **0.18.0：从评价布局到选择候选。** T10 新增五步图解、四种场景：逐候选计数、覆盖与重叠、双约束筛选、原下标返回和无解展示。通过重排、目标外重叠与多个合法布局理解选择规则；累计 **42 / 44 道图解、124 步、129 组参数配置**。[学习指南](https://github.com/CaoYujie-code/VisionLearningHub/blob/main/VisionLearningHub/docs/候选筛选与无解处理指南-0.18.0.md)。

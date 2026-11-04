@@ -3292,5 +3292,155 @@
         "before": "input"
       }
     ]
+  },
+  "A06": {
+    "scene": "把已经识别成网格的拼块放入目标棋盘。先学 P01 集合与数组、T10 候选筛选，再看没有预先给出完整候选时如何自己搜索。",
+    "target": "手敲旋转去重、锚点候选、DFS 和撤销；能够解释一次失败如何恢复，并返回完整布局、None 或合法空解 []。",
+    "boundary": "离散、无镜像、每块使用一次的微型拼图；不包含图像识别或机器人控制。DFS 最坏情况搜索量很大，这四个小场景用于理解过程，不代表实际复杂棋盘的性能。",
+    "sample_note": "场景 0 故意先遇到合法但走不通的横放；事件由当前代码真实执行并完整保留。原生 Python 负责搜索，NumPy/OpenCV 只用于表格与图像观察。",
+    "control": {
+      "name": "case",
+      "label": "场景：0 撤销后成功 / 1 等面积无解 / 2 面积不符 / 3 合法空解",
+      "values": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "default": 0,
+      "experiment": "先预测每种场景返回 None 还是列表，再看事件表与棋盘时间线。场景 0 对照死路与撤销两帧；场景 1 检验“面积相等就有解”是否成立。"
+    },
+    "steps": [
+      {
+        "id": "step1",
+        "title": "把棋盘变成待覆盖坐标集合",
+        "code": "board = np.asarray(params['board'], dtype=np.int32)\nremaining = {(r, c) for r, row in enumerate(board) for c, value in enumerate(row) if value == 1}\npieces = params['pieces']\narea_ok = sum(len(piece) for piece in pieces) == len(remaining)\ndetail = f'棋盘 1=待覆盖，0=禁用；使用 (行,列)，不是绘图 (x,y)。目标 {len(remaining)} 格，拼块共 {sum(len(p) for p in pieces)} 格；面积一致={area_ok}。待覆盖坐标：{sorted(remaining)}。'",
+        "value": "board",
+        "display": "matrix",
+        "why": "先明确要填哪些格，避免把图片像素和离散棋盘坐标混在一起。",
+        "watch": "场景 0 是 2×3 全可用棋盘；场景 1 的两个角禁用。面积相同只是必要条件，不能直接宣告成功。",
+        "failure": "board 中 0 是不能放的格，不是等待填满的空格。原始 board 和剩余集合 remaining 含义不同。",
+        "question": "有 4 个目标格和两块二连块，为什么还可能拼不成？",
+        "answer": "格子的位置决定可达布局。即使总面积相同，也可能留下不能由整块覆盖的形状。",
+        "lines": [
+          "enumerate 得到行列下标；集合只保留值为 1 的坐标。",
+          "sum(len(piece)...) 检查数量，不检查形状。",
+          "本题输入是已经离散化的棋盘与拼块，不包含从相机识别棋盘的过程。"
+        ],
+        "before": "input"
+      },
+      {
+        "id": "step2",
+        "title": "旋转、归一化，再去掉重复朝向",
+        "code": "variants = []\nrotation_rows = []\nfor index, piece in enumerate(pieces):\n    points = [tuple(point) for point in piece]\n    rotations = set()\n    for turn in range(4):\n        min_r = min(r for r, c in points)\n        min_c = min(c for r, c in points)\n        rotations.add(tuple(sorted((r - min_r, c - min_c) for r, c in points)))\n        points = [(c, -r) for r, c in points]\n    variants.append(sorted(rotations))\n    rotation_rows.append([index, len(piece), len(rotations)])\nrotation_table = np.asarray(rotation_rows, dtype=np.int32).reshape(-1, 3)\ndetail = f'每块只允许旋转和平移，不允许镜像。归一化后的实际朝向：{variants}。二连块有 2 种、正方形有 1 种；没有拼块时表格为 0 行。'",
+        "value": "rotation_table",
+        "display": "matrix",
+        "why": "同一个正方形转四次仍是同一个朝向，去重可以减少重复搜索。",
+        "watch": "减去最小行列是平移到统一原点，不改变形状；排序后才能用 tuple 放进 set 去重。",
+        "failure": "不要额外翻转拼块；翻转后的手性形状可能违反原题约束。外层没有拼块时不会执行 min()。",
+        "question": "为什么不能直接把 list 放进 set？",
+        "answer": "list 可变，不能作为集合元素。这里将坐标和形状转为不可变 tuple，用它识别重复朝向。",
+        "lines": [
+          "(r,c) → (c,-r) 产生一次 90° 旋转，随后归一化。",
+          "四轮只代表枚举四次，不代表一定得到四种不同形状。",
+          "variants 保留原拼块下标；相同形状的两块仍然是两个不同编号。"
+        ],
+        "before": "step1",
+        "columns": [
+          "拼块编号",
+          "格子数量",
+          "不同朝向数"
+        ]
+      },
+      {
+        "id": "step3",
+        "title": "固定一个空格，检查每个根节点候选",
+        "code": "candidate_rows = []\nif remaining:\n    anchor_r, anchor_c = min(remaining)\n    for index, rotations in enumerate(variants):\n        for rotation, shape in enumerate(rotations):\n            for local_r, local_c in shape:\n                cells = {(r + anchor_r - local_r, c + anchor_c - local_c) for r, c in shape}\n                candidate_rows.append([index, rotation, local_r, local_c, int(cells <= remaining)])\ncandidates = np.asarray(candidate_rows, dtype=np.int32).reshape(-1, 5)\ndetail = '本表只检查根节点的局部合法性，不是完整搜索日志。1=候选全部落在剩余格，0=至少一格越界、禁用或已占用。固定最小空格后，把每个朝向的每一格分别对齐它，避免漏掉合法平移。'",
+        "value": "candidates",
+        "display": "matrix",
+        "why": "不用任意扫描整个棋盘；任何完整解都必须覆盖当前选中的空格。",
+        "watch": "场景 0 中第一块的横放局部合法，但它会留下无法放入正方形的余区。局部合法不保证最终可解。",
+        "failure": "只把拼块左上角对齐锚点会漏解。cells <= remaining 同时排除越界、禁用与重叠，无需分别猜测。",
+        "question": "候选合法，为什么还需要递归？",
+        "answer": "它只验证本块没有冲突，剩余区域是否能被剩余拼块覆盖，需要继续搜索。",
+        "lines": [
+          "min(remaining) 按 (行,列) 字典序选一个锚点。",
+          "每个 local_r/local_c 都尝试成为覆盖锚点的那一格。",
+          "此表用于学习候选构造；求解器会在每个递归节点重新生成候选。"
+        ],
+        "before": "step2",
+        "columns": [
+          "拼块编号",
+          "朝向编号",
+          "对齐格行",
+          "对齐格列",
+          "局部合法"
+        ]
+      },
+      {
+        "id": "step4",
+        "title": "实际搜索：试放、递归、失败后撤销",
+        "code": "used, path, events, frames = set(), [], [], []\ndef record(event, depth, piece, empty):\n    events.append([event, depth, piece, len(empty), len(used)])\n    state = np.where(board == 1, 0, -1).astype(np.int32)\n    for item in path:\n        for r, c in item['cells']:\n            state[r, c] = item['piece'] + 1\n    frames.append(state.copy())\ndef search(empty):\n    if not empty:\n        if len(used) == len(variants):\n            record(4, len(path), -1, empty)\n            return list(path)\n        record(2, len(path), -1, empty)\n        return None\n    anchor_r, anchor_c = min(empty)\n    for index, rotations in enumerate(variants):\n        if index in used:\n            continue\n        for shape in rotations:\n            for local_r, local_c in shape:\n                cells = {(r + anchor_r - local_r, c + anchor_c - local_c) for r, c in shape}\n                if not cells <= empty:\n                    continue\n                used.add(index)\n                path.append({'piece': index, 'cells': [list(p) for p in sorted(cells)]})\n                record(1, len(path), index, empty - cells)\n                answer = search(empty - cells)\n                if answer is not None:\n                    return answer\n                path.pop()\n                used.remove(index)\n                record(3, len(path), index, empty)\n    record(2, len(path), -1, empty)\n    return None\nif area_ok:\n    result = search(remaining)\nelse:\n    result = None\n    record(5, 0, -1, remaining)\ntrace = np.asarray(events, dtype=np.int32).reshape(-1, 5)\ndetail = f'实际记录 {len(events)} 个事件，无预写答案、无截断：1=试放，2=死路，3=撤销完成，4=成功，5=面积拒绝；拼块 -1 表示事件不针对单块。深度是事件发生后 path 中的块数。撤销同时恢复 path 和 used；empty-cells 创建新集合，父层 empty 未改变。'",
+        "value": "trace",
+        "display": "matrix",
+        "why": "把递归内部不可见的状态变成实际事件记录，找到第一次走错和恢复的位置。",
+        "watch": "场景 0 的事件顺序为 1→2→3→1→1→4。撤销后剩余格恢复为 6、已用块为 0，然后再试另一朝向。",
+        "failure": "判断成功必须用 answer is not None；合法空解 [] 是假值，不能用 if answer。只 pop 路径但不移除 used 会让后续分支丢失可用拼块。",
+        "question": "递归返回 None 后，是清空所有历史还是只撤销本次试放？",
+        "answer": "只撤销本层追加的那一块，父层布局仍然有效。每层对自己的 append/add 配对 pop/remove。",
+        "lines": [
+          "record 从实际 path 生成快照，不参与选择或判定。",
+          "empty-cells 返回新的集合，因此不需要向父层 empty 加回格子。",
+          "先试放再递归；子层无解时恢复两份可变状态。",
+          "无空格且所有块已使用，才返回路径副本。",
+          "某节点所有候选都试完仍失败，记录死路并返回 None。",
+          "area_ok 为假时直接拒绝，不进入递归。"
+        ],
+        "before": "step3",
+        "columns": [
+          "事件编码",
+          "当前深度",
+          "拼块编号",
+          "剩余格数",
+          "已用块数"
+        ]
+      },
+      {
+        "id": "step5",
+        "title": "按时间看棋盘：失败前后真的恢复了吗",
+        "code": "tile, panel_w, panel_h = 36, 210, 145\ntimeline = np.full((((len(frames) + 2) // 3) * panel_h, 3 * panel_w, 3), 245, np.uint8)\ncolors = [(210, 210, 210), (80, 170, 240), (170, 210, 90)]\nnames = {1: 'PLACE', 2: 'DEAD END', 3: 'UNDO', 4: 'SUCCESS', 5: 'AREA REJECT'}\nfor index, (event, state) in enumerate(zip(events, frames)):\n    ox, oy = (index % 3) * panel_w, (index // 3) * panel_h\n    cv2.putText(timeline, f'{index}: {names[event[0]]}', (ox + 8, oy + 20), 0, 0.42, (30, 30, 30), 1)\n    for r, row in enumerate(state):\n        for c, value in enumerate(row):\n            x, y = ox + 12 + c * tile, oy + 35 + r * tile\n            color = (55, 55, 55) if value < 0 else colors[int(value)]\n            cv2.rectangle(timeline, (x, y), (x + tile - 2, y + tile - 2), color, -1)\n            label = 'X' if value < 0 else '.' if value == 0 else str(value - 1)\n            cv2.putText(timeline, label, (x + 11, y + 23), 0, 0.5, (255,255,255) if value < 0 else (25,25,25), 1)\ndetail = '按从左到右、从上到下阅读。PLACE=试放，DEAD END=死路，UNDO=撤销完成，SUCCESS=成功，AREA REJECT=面积拒绝。灰底点号=待填，深底 X=禁用，彩色数字=原拼块编号。每格图由上一阶段实际保存的状态生成。'",
+        "value": "timeline",
+        "display": "image",
+        "why": "把数字日志与棋盘形状联系起来，看见横放为何堵死正方形、撤销后竖放为何成功。",
+        "watch": "场景 0 的第 0 帧横放留下 L 形余区；第 2 帧撤销后全灰；第 3 帧竖放留下 2×2 区域。场景 1 最后一帧仍为空棋盘，代表搜索已耗尽。",
+        "failure": "每次记录必须复制当时的状态。如果把同一个可变数组反复保存，所有帧可能最后看起来都一样。图片只是解释，正式返回值不是图片。",
+        "question": "死路事件和撤销事件的棋盘为什么不同？",
+        "answer": "死路时仍保留导致失败的试放；回到父层后执行撤销，才能看到恢复的棋盘。",
+        "lines": [
+          "frames 保存每个实际事件的棋盘副本。",
+          "拼块颜色只为区分编号，不作为搜索条件。",
+          "本课小场景最多 7 个事件，完整展示；图像不是适合任意大棋盘的性能分析工具。"
+        ],
+        "before": "step4"
+      },
+      {
+        "id": "step6",
+        "title": "检查交付：无解 None 与空解 [] 不同",
+        "code": "final_board = np.where(board == 1, 0, -1).astype(np.int32)\nif result is not None:\n    for item in result:\n        for r, c in item['cells']:\n            final_board[r, c] = item['piece'] + 1\nstatus = '无解 None' if result is None else '合法空解 []' if not result else '找到完整布局'\ndetail = f'状态：{status}。正式返回值 result={result!r}。本表 -1=禁用，0=未填，正数=原拼块编号+1；它是辅助图，不替代 result。不同搜索顺序可以得到不同合法布局；和演示数组不一致时，应回原题检查完整覆盖、无重叠和每块恰好一次。'",
+        "value": "final_board",
+        "display": "matrix",
+        "why": "将可视化状态与正式接口对应，避免把无解当成程序异常，也避免把空解误判失败。",
+        "watch": "场景 1、2 返回 None；场景 3 返回 []，禁用格仍为 -1。成功结果包含原始 piece 编号和实际 cells 坐标。",
+        "failure": "局部候选、事件表或棋盘数组都不是正式返回结构。图解数值对照不判断所有合法解是否等价，也不自动授予原题成绩。",
+        "question": "自己的合法布局和演示不同，是否必须改到一模一样？",
+        "answer": "不必。先用原题的几何约束验收；求解允许多解，事件顺序和中间数组本就可能不同。",
+        "lines": [
+          "用 is not None 区分失败与合法空列表。",
+          "结果列表逐项保留 piece 和 cells，编号不因搜索顺序而改变。",
+          "正式 A06 验收覆盖、旋转合法性、重叠和块使用次数；观察与导入不替代验收。"
+        ],
+        "before": "step1"
+      }
+    ]
   }
 }

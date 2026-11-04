@@ -130,6 +130,18 @@ def supplement(key,value,image,raw):
             if i==2:frame+=np.array([value,value*.5])
             frames.append(frame[rng.permutation(3)].tolist())
         params['frames']=frames
+    elif key=='A06':
+        domino=[[0,0],[0,1]]
+        square=[[0,0],[0,1],[1,0],[1,1]]
+        boards=[[[1,1,1],[1,1,1]],[[0,1,0],[1,1,1]],[[1,1,1],[1,1,1]],[[0,0],[0,0]]]
+        blocks=[[domino,square],[domino,domino],[square],[]]
+        params.update(board=boards[value],pieces=blocks[value])
+        image=np.full((160,220,3),245,np.uint8)
+        for r,row in enumerate(params['board']):
+            for c,cell in enumerate(row):
+                x,y=25+c*50,30+r*50
+                cv2.rectangle(image,(x,y),(x+47,y+47),(210,210,210) if cell else (55,55,55),-1)
+                cv2.putText(image,f'{r},{c}',(x+4,y+28),0,.4,(30,30,30) if cell else (255,255,255),1)
     elif key=='A04':
         image=np.full((250,420,3),245,np.uint8)
         params.update(box_a=[40,60,180,170],box_b=[90+value,90,230+value,200])

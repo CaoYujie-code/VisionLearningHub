@@ -18,9 +18,9 @@ class TextDiagnosticChecks(unittest.TestCase):
         old=json.loads((Path(__file__).parent/'data/visual-v0150-revisions.json').read_text())
         self.assertEqual(len(old),39)
         for key,revision in old.items():self.assertEqual(w.revision(key),revision)
-        self.assertEqual(len(w.CATALOG),43)
-        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),131)
-        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),133)
+        self.assertEqual(len(w.CATALOG),44)
+        self.assertEqual(sum(len(v['steps']) for v in w.CATALOG.values()),137)
+        self.assertEqual(sum(len(v['control']['values']) for v in w.CATALOG.values()),137)
 
     def test_label_repair_stages_and_reason_codes(self):
         for stage,expected in [(0,[2,3,4,5,6,7,9]),(1,[5,6,7,9]),(2,[])]:
