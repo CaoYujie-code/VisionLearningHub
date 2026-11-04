@@ -44,6 +44,7 @@ jobs:
       - run: python tests/test_candidate_selection.py
       - run: python tests/test_detector_pipeline.py
       - run: python tests/test_backtracking.py
+      - run: python tests/test_study_desk.py
       - run: npm ci --prefix extensions/vscode
       - run: npm --prefix extensions/vscode run check
       - run: npm --prefix extensions/vscode test

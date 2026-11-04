@@ -111,7 +111,7 @@ def active():
 
 @app.get('/api/health')
 def health():
-    return {'app': 'vision-learning-hub', 'version': '0.20.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
+    return {'app': 'vision-learning-hub', 'version': '0.21.0', 'pid': os.getpid(), 'instance': os.environ.get('VLH_INSTANCE', ''),
             'workspace': hashlib.sha256((str(PROJECT.resolve())+'|'+str(ROOT.resolve())).encode()).hexdigest()}
 
 
@@ -157,6 +157,23 @@ def bootstrap():
                 'resources': json.loads((PROJECT / 'content/resource_catalog.json').read_text(encoding='utf-8'))['resources'],
                 'passed': progress(store), 'settings': settings, 'attempts': total,
                 'active_job': next(({k:v for k,v in j.items() if k != 'process'} for j in JOBS.values() if j['status'] in ('queued','running','stopping')), None)}
+
+
+@app.get('/api/study-desk')
+def study_desk():
+    from learning.study_desk import snapshot
+    with LOCK, database() as store:
+        return snapshot(ROOT, store, progress(store))
+
+
+@app.get('/api/study-desk/export')
+def study_desk_export():
+    from learning.study_desk import snapshot, notebook
+    from fastapi.responses import Response
+    with LOCK, database() as store:
+        text = notebook(snapshot(ROOT, store, progress(store)))
+    return Response(text.encode('utf-8'), media_type='text/markdown; charset=utf-8',
+                    headers={'Content-Disposition':'attachment; filename="vision-study-notes.md"'})
 
 
 @app.get('/api/projects/{key}')

@@ -1,9 +1,11 @@
 # Vision Learning Hub · 视觉学习实验室
 
-**0.20.0：看清试放、失败和撤销，基础图解全部覆盖。** A06 新增六步回溯图解与四种场景，展示真实搜索事件、棋盘时间线以及 None 与合法空解 [] 的区别。累计 **44 / 44 道基础图解、137 步、137 组参数配置**，支持 VS Code 手敲、结果导入和进度记忆。[学习指南](VisionLearningHub/docs/回溯拼图分步学习指南-0.20.0.md)。
+**0.21.0：把学习记录集中到“我的学习台”。** 首页可检索题目与观察笔记，筛选继续学习、结果待检查和待正式验收的题；一键恢复图解位置或回原题练习，并导出全部图解笔记。自查、导入状态与正式成绩分别显示，覆盖现有 **44 道基础题**。[使用指南](VisionLearningHub/docs/学习台与笔记复习指南-0.21.0.md)。
 
 <details>
 <summary>历史版本亮点与指南</summary>
+
+**0.20.0：看清试放、失败和撤销，基础图解全部覆盖。** A06 新增六步回溯图解与四种场景，展示真实搜索事件、棋盘时间线以及 None 与合法空解 [] 的区别。累计 **44 / 44 道基础图解、137 步、137 组参数配置**，支持 VS Code 手敲、结果导入和进度记忆。[学习指南](VisionLearningHub/docs/回溯拼图分步学习指南-0.20.0.md)。
 
 **0.19.0：把处理步骤接成碎片检测器。** T14 新增七步图解、四组场景，连接背景分割、开闭运算、轮廓、几何描述与字典交付。展示相邻纸片误连的失败过程，区分“复现演示”与“场景成功”；累计 **43 / 44 道图解、131 步、133 组参数配置**。[学习指南](VisionLearningHub/docs/碎片检测器分步联调指南-0.19.0.md)。
 
@@ -48,9 +50,19 @@ E07 新增 ORB 特征、Hamming 筛选、RANSAC 定位、拟合对比、匹配�
 
 [![检查状态](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml/badge.svg)](https://github.com/CaoYujie-code/VisionLearningHub/actions/workflows/check.yml)
 
-[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.20.0.md)
+[下载安装包](https://github.com/CaoYujie-code/VisionLearningHub/releases) · [双模式学习指南](VisionLearningHub/docs/双模式工程学习指南-0.6.0.md) · [官方资料导航](VisionLearningHub/docs/官方学习资料导航.md) · [验收记录](VisionLearningHub/docs/验收记录-0.21.0.md)
 
-> 当前源码版本为 **0.20.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+> 当前源码版本为 **0.21.0**。安装包以 GitHub Releases 实际发布版本为准；已有插件可执行 **Vision: 检查插件更新**，首次安装可下载 VSIX。插件暂未发布到 Visual Studio Marketplace。
+
+## 0.21.0：找到记录，继续学下去
+
+![学习台与笔记检索](VisionLearningHub/docs/images/study-desk-0.21.0.png)
+
+在学习总览的“我的学习台”集中查看基础图解进度、保存位置、观察笔记和导入结果。可按题号、标题和笔记内容搜索，通过五种范围筛选找到下一步，再直接回到图解或原题任务标签。
+
+Markdown 导出包含全部图解观察笔记，便于在 VS Code 或其他阅读器复习；完整迁移仍使用原有备份。自查和数值一致不授予代码验收成绩，旧版结果、不同参数与无法读取的记录都有明确提示。
+
+[学习台使用指南](VisionLearningHub/docs/学习台与笔记复习指南-0.21.0.md) · [验收记录](VisionLearningHub/docs/验收记录-0.21.0.md)
 
 ## 0.20.0：跟着真实状态学会回溯
 

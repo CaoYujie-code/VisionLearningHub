@@ -192,8 +192,8 @@ class Hub {
       return Buffer.isBuffer(result)?{status:200,base64:result.toString('base64')}:{status:200,json:await this.images(result)};
     }
     if(action==='download'){
-      if(!['/backup','/export-code'].includes(args.path)&&!/^\/projects\/E\d{2}\/export$/.test(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/examples$/.test(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/walkthrough\/export\/\d{1,4}$/.test(args.path))throw new Error('不支持的导出');await this.saveFiles();
-      const destination=await vscode.window.showSaveDialog({defaultUri:vscode.Uri.file(path.join(this.project,path.basename(args.name))),filters:{ZIP:['zip']}});
+      if(!['/backup','/export-code','/study-desk/export'].includes(args.path)&&!/^\/projects\/E\d{2}\/export$/.test(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/examples$/.test(args.path)&&!/^\/lesson\/[A-Z]\d{2}\/walkthrough\/export\/\d{1,4}$/.test(args.path))throw new Error('不支持的导出');if(args.path!=='/study-desk/export')await this.saveFiles();
+      const destination=await vscode.window.showSaveDialog({defaultUri:vscode.Uri.file(path.join(this.project,path.basename(args.name))),filters:args.path==='/study-desk/export'?{Markdown:['md']}:{ZIP:['zip']}});
       if(!destination)throw new Error('已取消导出');const bytes=await this.request(args.path);await vscode.workspace.fs.writeFile(destination,bytes);return true;
     }
     if(['openWalkthrough','runWalkthrough','readWalkthrough'].includes(action)){

@@ -121,6 +121,10 @@ exports.run=async()=>{
   const visualOwn=await hub.message('readWalkthrough',{key:'T03',parameter:130});assert.equal(Object.keys(visualOwn.results).length,2);assert.ok(visualOwn.results.step2.output);assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
   const visualState={...visual.json.progress,step:1,notes:{step2:'host visual note'},done:[0]};await hub.message('api',{path:'/lesson/T03/walkthrough/progress',method:'POST',body:visualState});
   await hub.stop();await hub.ensure();assert.equal((await hub.request('/lesson/T03/walkthrough')).progress.notes.step2,'host visual note');passed.push('native result imports and step progress survive service restart without granting grades');
+  const desk=(await hub.message('api',{path:'/study-desk',method:'GET'})).json;
+  assert.equal(desk.counts.total,44);const resumedDesk=desk.rows.find(r=>r.id==='T03');assert.equal(resumedDesk.step,1);assert.equal(resumedDesk.notes[0].text,'host visual note');
+  const notesFile=await hub.request('/study-desk/export');assert.ok(Buffer.isBuffer(notesFile));assert.ok(notesFile.toString('utf8').includes('host visual note'));assert.deepEqual((await hub.request('/bootstrap')).passed,gradesBeforeQuiz);
+  passed.push('native study desk reads saved position and exports original notes without awarding grades');
   const expandedBoot=await hub.request('/bootstrap');assert.equal(expandedBoot.walkthroughs.length,44);
   const matrixDemo=(await hub.message('api',{path:'/lesson/A03/walkthrough',method:'GET'})).json.demo;
   assert.equal(matrixDemo.results.step2.cells.length,3);assert.equal(matrixDemo.results.step2.spatial,false);passed.push('native course catalog discovers 44 lessons and renders perspective matrix data');
